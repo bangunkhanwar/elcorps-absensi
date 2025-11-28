@@ -49,25 +49,12 @@ const EditKaryawan: React.FC<Props> = ({
   const [shifts, setShifts] = useState<Shift[]>([])
   const [loadingShifts, setLoadingShifts] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
-  const [statusMessage, setStatusMessage] = useState('')
 
   // Inisialisasi form data dengan data dari selectedEmployee
   useEffect(() => {
     if (selectedEmployee && showEditModal) {
-      console.log('Selected Employee:', selectedEmployee)
-      setFormData({
-        email: selectedEmployee.email || '',
-        password: '', // Password dikosongkan untuk keamanan
-        nik: selectedEmployee.nik || '',
-        nama: selectedEmployee.nama || '',
-        jabatan: selectedEmployee.jabatan || '',
-        departemen: selectedEmployee.departemen || '',
-        divisi: selectedEmployee.divisi || '',
-        unit_kerja: selectedEmployee.unit_kerja || '', // Pastikan unit_kerja terisi
-        role: selectedEmployee.role || 'karyawan',
-        shift_id: selectedEmployee.shift_id || null
-      })
-      setStatusMessage('') // Reset status message ketika modal dibuka
+      // Pastikan formData sudah di-set dengan nilai yang benar
+      console.log('Selected employee unit kerja:', selectedEmployee.nama_unit)
     }
   }, [selectedEmployee, showEditModal])
 
@@ -80,7 +67,6 @@ const EditKaryawan: React.FC<Props> = ({
         setLoadingShifts(true)
         
         if (unitKerjaList && unitKerjaList.length > 0) {
-          // Gunakan unit_kerja dari selectedEmployee
           const employeeUnit = unitKerjaList.find((unit: any) => unit.nama_unit === selectedEmployee.unit_kerja)
           const unitId = employeeUnit ? employeeUnit.id : (unitKerjaList[0]?.id || null)
           
@@ -89,7 +75,6 @@ const EditKaryawan: React.FC<Props> = ({
             const shiftsData = shiftsResponse.data || []
             setShifts(shiftsData)
 
-            // Jika shift_id belum ada, set shift default
             if (!selectedEmployee.shift_id) {
               const defaultShift = shiftsData.find((shift: Shift) => shift.is_default) || shiftsData[0]
               if (defaultShift) {
@@ -102,7 +87,7 @@ const EditKaryawan: React.FC<Props> = ({
           }
         }
       } catch (error) {
-        console.error('Error fetching data:', error)
+        console.error('Error fetching shifts:', error)
       } finally {
         setLoadingShifts(false)
       }
@@ -119,19 +104,24 @@ const EditKaryawan: React.FC<Props> = ({
       try {
         setLoadingShifts(true)
         const selectedUnit = unitKerjaList.find(unit => unit.nama_unit === formData.unit_kerja)
-        if (!selectedUnit) return
+        if (!selectedUnit) {
+          console.log('Unit kerja tidak ditemukan:', formData.unit_kerja)
+          return
+        }
 
         const shiftsResponse = await shiftAPI.getShiftsByUnit(selectedUnit.id)
         const unitShifts = shiftsResponse.data || []
         setShifts(unitShifts)
         
-        // Set shift default untuk unit ini jika shift_id belum sesuai
-        const defaultShift = unitShifts.find((shift: Shift) => shift.is_default) || unitShifts[0]
-        if (defaultShift && !formData.shift_id) {
-          setFormData(prev => ({
-            ...prev,
-            shift_id: defaultShift.id
-          }))
+        // Jika shift_id belum ada atau tidak valid, set ke default
+        if (!formData.shift_id || !unitShifts.some(shift => shift.id === formData.shift_id)) {
+          const defaultShift = unitShifts.find((shift: Shift) => shift.is_default) || unitShifts[0]
+          if (defaultShift) {
+            setFormData(prev => ({
+              ...prev,
+              shift_id: defaultShift.id
+            }))
+          }
         }
       } catch (error) {
         console.error('Error fetching shifts for unit:', error)
@@ -157,114 +147,12 @@ const EditKaryawan: React.FC<Props> = ({
     setShowPassword(!showPassword)
   }
 
-  // Fungsi handleEdit yang diperbaiki dengan endpoint yang benar
-  const handleEditFixed = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitLoading(true)
-    setStatusMessage('')
     
     try {
-      if (!formData.unit_kerja || !formData.shift_id) {
-        setStatusMessage('❌ Unit kerja dan shift harus dipilih')
-        return
-      }
-
-      const selectedUnit = unitKerjaList.find(unit => unit.nama_unit === formData.unit_kerja)
-      
-      if (!selectedUnit) {
-        setStatusMessage('❌ Unit kerja tidak valid')
-        return
-      }
-
-      // Ambil token dari localStorage
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setStatusMessage('❌ Token tidak ditemukan. Silakan login ulang.')
-        return
-      }
-
-      // Siapkan payload untuk update - SESUAI dengan struktur database
-      const payload: any = {
-        nama: formData.nama,
-        nik: formData.nik,
-        email: formData.email,
-        jabatan: formData.jabatan,
-        departemen: formData.departemen,
-        divisi: formData.divisi,
-        role: formData.role,
-        unit_kerja_id: selectedUnit.id, // Kirim ID unit kerja
-        shift_id: formData.shift_id
-      }
-
-      // Hanya sertakan password jika diisi
-      if (formData.password && formData.password.trim() !== '') {
-        payload.password = formData.password
-      }
-
-      console.log('Data yang dikirim untuk update:', payload)
-      console.log('Employee ID:', selectedEmployee.id)
-
-      // COBA BEBERAPA ENDPOINT YANG MUNGKIN
-      const endpoints = [
-        `http://localhost:5000/api/users/${selectedEmployee.id}`,
-        `http://localhost:5000/api/auth/users/${selectedEmployee.id}`,
-        `http://localhost:5000/api/karyawan/${selectedEmployee.id}`,
-        `http://localhost:5000/api/employees/${selectedEmployee.id}`
-      ]
-
-      let response = null
-      let lastError = null
-
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`Mencoba endpoint: ${endpoint}`)
-          response = await fetch(endpoint, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(payload)
-          })
-
-          if (response.ok) {
-            console.log(`✅ Berhasil dengan endpoint: ${endpoint}`)
-            break
-          } else {
-            console.log(`❌ Gagal dengan endpoint: ${endpoint} - Status: ${response.status}`)
-            lastError = `HTTP error! status: ${response.status}`
-          }
-        } catch (error) {
-          console.log(`❌ Error dengan endpoint: ${endpoint}`, error)
-          lastError = error
-        }
-      }
-
-      if (!response) {
-        throw new Error('Tidak ada response dari server')
-      }
-
-      if (!response.ok) {
-        // Coba parsing error message
-        const errorText = await response.text()
-        throw new Error(`Update gagal: ${response.status} ${response.statusText} - ${errorText}`)
-      }
-
-      const result = await response.json()
-      console.log('✅ Update success:', result)
-      
-      // Tampilkan pesan sukses
-      setStatusMessage('✅ Update data karyawan berhasil!')
-      
-      // Tunggu sebentar sebelum tutup modal dan reload
-      setTimeout(() => {
-        setShowEditModal(false)
-        window.location.reload()
-      }, 1500)
-      
-    } catch (error: any) {
-      console.error('❌ Update error:', error)
-      setStatusMessage(`❌ Gagal mengupdate karyawan: ${error.message || 'Unknown error'}`)
+      await handleEdit(e, formData.shift_id)
     } finally {
       setSubmitLoading(false)
     }
@@ -282,7 +170,7 @@ const EditKaryawan: React.FC<Props> = ({
   const [openShift, setOpenShift] = useState(false)
   const [searchShift, setSearchShift] = useState("")
 
-  const jabatanOptions = ["Director", "Team Leader", "Staff"]
+  const jabatanOptions = ["Director", "Store Leader", "Staff"]
   const departemenOptions = ["HR & GA", "Finance & Accounting", "IT & Technology", "Operations"]
   const divisiOptions = ["Strategi Support", "HR & GA", "Sales Marketing"]
   const unitOptions = unitKerjaList ? unitKerjaList.map(unit => unit.nama_unit) : []
@@ -334,22 +222,8 @@ const EditKaryawan: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Status Message Alert - Sama seperti di TambahKaryawan */}
-        {statusMessage && (
-          <div className={`mx-4 mt-3 p-2 rounded-lg border-l-4 text-xs ${
-            statusMessage.includes('✅') || statusMessage.includes('berhasil') 
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-400' 
-              : 'bg-rose-50 text-rose-800 border-rose-400'
-          }`}>
-            <div className="flex items-center space-x-1">
-              <span>{statusMessage.includes('✅') || statusMessage.includes('berhasil') ? '✅' : '⚠️'}</span>
-              <span>{statusMessage}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Tampilkan juga message dari props jika ada */}
-        {message && !statusMessage && (
+        {/* Message Alert - Konsisten dengan TambahKaryawan */}
+        {message && (
           <div className={`mx-4 mt-3 p-2 rounded-lg border-l-4 text-xs ${
             message.includes('berhasil') 
               ? 'bg-emerald-50 text-emerald-800 border-emerald-400' 
@@ -363,7 +237,7 @@ const EditKaryawan: React.FC<Props> = ({
         )}
 
         <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50">
-          <form onSubmit={handleEditFixed} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-100">
                 <div className="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
@@ -741,7 +615,7 @@ const EditKaryawan: React.FC<Props> = ({
               </button>
               <button
                 type="button"
-                onClick={handleEditFixed}
+                onClick={handleSubmit}
                 disabled={!formData.shift_id || loadingShifts || !formData.unit_kerja || submitLoading}
                 className="px-4 py-2 text-xs bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >

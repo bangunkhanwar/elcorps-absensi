@@ -231,7 +231,7 @@ const DataKaryawan: React.FC = () => {
       jabatan: employee.jabatan,
       departemen: employee.departemen,
       divisi: employee.divisi,
-      unit_kerja: employee.unit_kerja_id ? employee.unit_kerja_id.toString() : '',
+      unit_kerja: employee.nama_unit,
       role: employee.role,
       shift_id: employee.shift_id
     })
@@ -248,6 +248,8 @@ const DataKaryawan: React.FC = () => {
     if (!selectedEmployee) return
     
     try {
+      const selectedUnit = unitKerjaList.find(unit => unit.nama_unit === formData.unit_kerja)
+      
       const updateData: any = {
         nama: formData.nama,
         nik: formData.nik,
@@ -255,7 +257,7 @@ const DataKaryawan: React.FC = () => {
         jabatan: formData.jabatan,
         departemen: formData.departemen,
         divisi: formData.divisi,
-        unit_kerja_id: formData.unit_kerja ? parseInt(formData.unit_kerja) : null,
+        unit_kerja_id: selectedUnit ? selectedUnit.id : null,
         role: formData.role,
         shift_id: shift_id
       }
@@ -264,14 +266,13 @@ const DataKaryawan: React.FC = () => {
         updateData.password = formData.password
       }
 
-      console.log('📤 Sending update data:', updateData)
       await authAPI.updateUser(selectedEmployee.id, updateData)
       setMessage('Karyawan berhasil diupdate!')
       setShowEditModal(false)
       setSelectedEmployee(null)
       fetchEmployees()
     } catch (error: any) {
-      console.error('❌ Update error:', error)
+      console.error('Update error:', error)
       setMessage(error.response?.data?.error || 'Gagal mengupdate karyawan')
     }
   }
