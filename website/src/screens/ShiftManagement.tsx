@@ -58,6 +58,11 @@ const ShiftManagement: React.FC = () => {
   const [employeeShifts, setEmployeeShifts] = useState<{[key: number]: Shift}>({})
   const [pendingChanges, setPendingChanges] = useState<{[key: number]: number}>({})
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPageKalender, setCurrentPageKalender] = useState(1)
+  const itemsPerPage = 10
+
   useEffect(() => {
     sessionStorage.setItem('shiftActiveTab', activeTab)
   }, [activeTab])
@@ -89,6 +94,12 @@ const ShiftManagement: React.FC = () => {
       localStorage.setItem('selectedUnitName', selectedUnitName)
     }
   }, [selectedUnit, selectedUnitName])
+
+  // Reset pagination when search or unit changes
+  useEffect(() => {
+    setCurrentPage(1)
+    setCurrentPageKalender(1)
+  }, [searchData, selectedUnit])
 
   const fetchUserProfile = async () => {
     try {
@@ -296,8 +307,37 @@ const ShiftManagement: React.FC = () => {
 
   const formatTimeForDisplay = (timeString: string) => {
     if (!timeString) return ''
-    // Format dari "09:00:00" menjadi "09:00"
     return timeString.substring(0, 5)
+  }
+
+  // Pagination functions for Pengaturan tab
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  // Pagination functions for Kalender tab
+  const paginateKalender = (pageNumber: number) => setCurrentPageKalender(pageNumber)
+
+  const nextPageKalender = () => {
+    if (currentPageKalender < totalPagesKalender) {
+      setCurrentPageKalender(currentPageKalender + 1)
+    }
+  }
+
+  const prevPageKalender = () => {
+    if (currentPageKalender > 1) {
+      setCurrentPageKalender(currentPageKalender - 1)
+    }
   }
 
   const filteredUnits = units.filter(unit =>
@@ -311,6 +351,18 @@ const ShiftManagement: React.FC = () => {
     employee.jabatan.toLowerCase().includes(searchData.toLowerCase()) ||
     (employee.nama_shift && employee.nama_shift.toLowerCase().includes(searchData.toLowerCase()))
   )
+
+  // Pagination calculations for Pengaturan tab
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentEmployees = filteredEmployees.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage)
+
+  // Pagination calculations for Kalender tab
+  const indexOfLastItemKalender = currentPageKalender * itemsPerPage
+  const indexOfFirstItemKalender = indexOfLastItemKalender - itemsPerPage
+  const currentEmployeesKalender = filteredEmployees.slice(indexOfFirstItemKalender, indexOfLastItemKalender)
+  const totalPagesKalender = Math.ceil(filteredEmployees.length / itemsPerPage)
 
   const weekDates = getWeekDates()
   const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
@@ -556,87 +608,127 @@ const ShiftManagement: React.FC = () => {
                       <p className="text-slate-500">Pilih unit kerja terlebih dahulu</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider w-12">No</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nama</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">NIK</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Jabatan</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Unit Kerja</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Shift</th>
-                            <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredEmployees.length > 0 ? (
-                            filteredEmployees.map((employee, index) => (
-                              <tr 
-                                key={employee.id} 
-                                className={`hover:bg-slate-50 border-b border-slate-100 ${
-                                  pendingChanges[employee.id] ? 'bg-yellow-50 hover:bg-yellow-100' : ''
-                                }`}
-                              >
-                                <td className="px-4 py-3 text-center">
-                                  <div className="text-sm font-medium text-slate-900">{index + 1}</div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="text-sm font-medium text-slate-900">{employee.nama}</div>
-                                  <div className="text-xs text-slate-500">{employee.email}</div>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <div className="text-sm text-slate-600">{employee.nik}</div>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <div className="text-sm text-slate-600">{employee.jabatan}</div>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <div className="text-sm text-slate-600">{employee.nama_unit}</div>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  {employeeShifts[employee.id] ? (
-                                    <div>
-                                      <div className="text-sm font-medium text-slate-900">
-                                        {employeeShifts[employee.id].nama_shift}
-                                        {pendingChanges[employee.id] && (
-                                          <span className="ml-1 text-xs text-orange-600">*</span>
-                                        )}
+                    <>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider w-12">No</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nama</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">NIK</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Jabatan</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Unit Kerja</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Shift</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentEmployees.length > 0 ? (
+                              currentEmployees.map((employee, index) => (
+                                <tr 
+                                  key={employee.id} 
+                                  className={`hover:bg-slate-50 border-b border-slate-100 ${
+                                    pendingChanges[employee.id] ? 'bg-yellow-50 hover:bg-yellow-100' : ''
+                                  }`}
+                                >
+                                  <td className="px-4 py-3 text-center">
+                                    <div className="text-sm font-medium text-slate-900">{indexOfFirstItem + index + 1}</div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="text-sm font-medium text-slate-900">{employee.nama}</div>
+                                    <div className="text-xs text-slate-500">{employee.email}</div>
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <div className="text-sm text-slate-600">{employee.nik}</div>
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <div className="text-sm text-slate-600">{employee.jabatan}</div>
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <div className="text-sm text-slate-600">{employee.nama_unit}</div>
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    {employeeShifts[employee.id] ? (
+                                      <div>
+                                        <div className="text-sm font-medium text-slate-900">
+                                          {employeeShifts[employee.id].nama_shift}
+                                          {pendingChanges[employee.id] && (
+                                            <span className="ml-1 text-xs text-orange-600">*</span>
+                                          )}
+                                        </div>
+                                        <div className="text-xs text-slate-500">
+                                          {formatTimeForDisplay(employeeShifts[employee.id].jam_masuk)} - {formatTimeForDisplay(employeeShifts[employee.id].jam_keluar)}
+                                        </div>
                                       </div>
-                                      <div className="text-xs text-slate-500">
-                                        {formatTimeForDisplay(employeeShifts[employee.id].jam_masuk)} - {formatTimeForDisplay(employeeShifts[employee.id].jam_keluar)}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-400 text-sm">-</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  <select
-                                    value={employeeShifts[employee.id]?.id || ''}
-                                    onChange={(e) => handleShiftChange(employee.id, Number(e.target.value))}
-                                    className="text-sm border border-slate-300 rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#25a298] focus:border-[#25a298]"
-                                  >
-                                    <option value="">Pilih Shift</option>
-                                    {shifts.filter(shift => shift.is_active).map((shift) => (
-                                      <option key={shift.id} value={shift.id}>
-                                        {shift.nama_shift} ({formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)})
-                                      </option>
-                                    ))}
-                                  </select>
+                                    ) : (
+                                      <span className="text-slate-400 text-sm">-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-center">
+                                    <select
+                                      value={employeeShifts[employee.id]?.id || ''}
+                                      onChange={(e) => handleShiftChange(employee.id, Number(e.target.value))}
+                                      className="text-sm border border-slate-300 rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#25a298] focus:border-[#25a298]"
+                                    >
+                                      <option value="">Pilih Shift</option>
+                                      {shifts.filter(shift => shift.is_active).map((shift) => (
+                                        <option key={shift.id} value={shift.id}>
+                                          {shift.nama_shift} ({formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={7} className="px-6 py-6 text-center text-sm text-slate-500">
+                                  {searchData ? 'Tidak ada karyawan yang sesuai' : 'Tidak ada karyawan di unit ini'}
                                 </td>
                               </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={7} className="px-6 py-6 text-center text-sm text-slate-500">
-                                {searchData ? 'Tidak ada karyawan yang sesuai' : 'Tidak ada karyawan di unit ini'}
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                          <p className="text-sm text-slate-600">
+                            Menampilkan {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
+                          </p>
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={prevPage}
+                              disabled={currentPage === 1}
+                              className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Sebelumnya
+                            </button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                              <button
+                                key={page}
+                                onClick={() => paginate(page)}
+                                className={`px-3 py-1 rounded-lg transition-colors duration-200 ${
+                                  currentPage === page
+                                    ? 'bg-[#25a298] text-white'
+                                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                            <button 
+                              onClick={nextPage}
+                              disabled={currentPage === totalPages}
+                              className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Selanjutnya
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -740,53 +832,82 @@ const ShiftManagement: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
-                        {filteredEmployees.slice(0, 10).map((employee) => (
-                          <tr key={employee.id} className="hover:bg-slate-50 transition-colors duration-150">
-                            <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
-                              <div className="text-sm font-medium text-slate-900">{employee.nama}</div>
-                              <div className="text-xs text-slate-500">{employee.nik} • {employee.jabatan}</div>
-                              <div className="text-xs text-slate-400">{employee.nama_unit}</div>
-                            </td>
-                            {weekDates.map((date, index) => (
-                              <td key={index} className="px-4 py-4 text-center">
-                                {employeeShifts[employee.id] ? (
-                                  <div className="flex flex-col items-center">
-                                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                                      employeeShifts[employee.id].is_default 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-blue-100 text-blue-800'
-                                    }`}>
-                                      {employeeShifts[employee.id].kode_shift}
-                                    </span>
-                                    <div className="text-xs text-slate-500 mt-1">
-                                      {formatTimeForDisplay(employeeShifts[employee.id].jam_masuk)}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-300 text-sm">-</span>
-                                )}
+                        {currentEmployeesKalender.length > 0 ? (
+                          currentEmployeesKalender.map((employee) => (
+                            <tr key={employee.id} className="hover:bg-slate-50 transition-colors duration-150">
+                              <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
+                                <div className="text-sm font-medium text-slate-900">{employee.nama}</div>
+                                <div className="text-xs text-slate-500">{employee.nik} • {employee.jabatan}</div>
+                                <div className="text-xs text-slate-400">{employee.nama_unit}</div>
                               </td>
-                            ))}
+                              {weekDates.map((date, index) => (
+                                <td key={index} className="px-4 py-4 text-center">
+                                  {employeeShifts[employee.id] ? (
+                                    <div className="flex flex-col items-center">
+                                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
+                                        employeeShifts[employee.id].is_default 
+                                          ? 'bg-green-100 text-green-800' 
+                                          : 'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {employeeShifts[employee.id].kode_shift}
+                                      </span>
+                                      <div className="text-xs text-slate-500 mt-1">
+                                        {formatTimeForDisplay(employeeShifts[employee.id].jam_masuk)}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-300 text-sm">-</span>
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-500">
+                              {searchData ? 'Tidak ada karyawan yang sesuai' : 'Tidak ada karyawan di unit ini'}
+                            </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
 
-                  {filteredEmployees.length === 0 && (
-                    <div className="px-6 py-8 text-center">
-                      <div className="text-slate-500">
-                        <p className="text-lg">👥</p>
-                        <p className="mt-2">Tidak ada karyawan yang sesuai</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {filteredEmployees.length > 10 && (
-                    <div className="px-6 py-4 border-t border-slate-200 text-center">
-                      <p className="text-sm text-slate-500">
-                        Menampilkan 10 dari {filteredEmployees.length} karyawan
+                  {/* Pagination for Kalender */}
+                  {totalPagesKalender > 1 && (
+                    <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                      <p className="text-sm text-slate-600">
+                        Menampilkan {currentEmployeesKalender.length > 0 ? indexOfFirstItemKalender + 1 : 0}-{Math.min(indexOfLastItemKalender, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
                       </p>
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={prevPageKalender}
+                          disabled={currentPageKalender === 1}
+                          className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Sebelumnya
+                        </button>
+                        {Array.from({ length: totalPagesKalender }, (_, i) => i + 1).map(page => (
+                          <button
+                            key={page}
+                            onClick={() => paginateKalender(page)}
+                            className={`px-3 py-1 rounded-lg transition-colors duration-200 ${
+                              currentPageKalender === page
+                                ? 'bg-[#25a298] text-white'
+                                : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                        <button 
+                          onClick={nextPageKalender}
+                          disabled={currentPageKalender === totalPagesKalender}
+                          className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Selanjutnya
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

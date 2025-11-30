@@ -78,10 +78,10 @@ const EditKaryawan: React.FC<Props> = ({
             if (!selectedEmployee.shift_id) {
               const defaultShift = shiftsData.find((shift: Shift) => shift.is_default) || shiftsData[0]
               if (defaultShift) {
-                setFormData(prev => ({
-                  ...prev,
+                setFormData({
+                  ...formData,
                   shift_id: defaultShift.id
-                }))
+                })
               }
             }
           }
@@ -117,10 +117,10 @@ const EditKaryawan: React.FC<Props> = ({
         if (!formData.shift_id || !unitShifts.some(shift => shift.id === formData.shift_id)) {
           const defaultShift = unitShifts.find((shift: Shift) => shift.is_default) || unitShifts[0]
           if (defaultShift) {
-            setFormData(prev => ({
-              ...prev,
+            setFormData({
+              ...formData,
               shift_id: defaultShift.id
-            }))
+            })
           }
         }
       } catch (error) {
@@ -170,7 +170,8 @@ const EditKaryawan: React.FC<Props> = ({
   const [openShift, setOpenShift] = useState(false)
   const [searchShift, setSearchShift] = useState("")
 
-  const jabatanOptions = ["Director", "Store Leader", "Staff"]
+  const jabatanOptions = ["Director", "Store Leader", "Staff", "Leader Area", "Content Creator", "Sales Assistant", "IT Support", "Accounting",
+    "Corporate Secretary", "Merchandise Control", "Office Audit", "Standard Operating Procedure", "People Development",]
   const departemenOptions = ["HR & GA", "Finance & Accounting", "IT & Technology", "Operations"]
   const divisiOptions = ["Strategi Support", "HR & GA", "Sales Marketing"]
   const unitOptions = unitKerjaList ? unitKerjaList.map(unit => unit.nama_unit) : []
@@ -571,7 +572,7 @@ const EditKaryawan: React.FC<Props> = ({
                                   shift.is_default ? 'bg-blue-50 border-l-4 border-blue-500' : ''
                                 }`}
                                 onClick={() => {
-                                  setFormData(prev => ({ ...prev, shift_id: shift.id }))
+                                  setFormData({ ...formData, shift_id: shift.id })
                                   setOpenShift(false)
                                   setSearchShift('')
                                 }}

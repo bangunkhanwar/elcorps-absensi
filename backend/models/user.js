@@ -9,6 +9,11 @@ class User {
     } = userData;
     
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
+    const websiteAccess = isStoreLeaderOrLeaderArea;
+    const websitePrivileges = isStoreLeaderOrLeaderArea ? ['attendance', 'reports', 'employees'] : [];
+
     
     const query = `
       INSERT INTO users (nama, nik, email, password, jabatan, departemen, divisi, 
@@ -68,6 +73,11 @@ class User {
 
   static async updateUser(id, updateData) {
     const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role } = updateData;
+
+    // Tentukan website_access dan website_privileges berdasarkan jabatan
+    const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
+    const websiteAccess = isStoreLeaderOrLeaderArea;
+    const websitePrivileges = isStoreLeaderOrLeaderArea ? ['attendance', 'reports', 'employees'] : [];
     
     let query = '';
     let values = [];
