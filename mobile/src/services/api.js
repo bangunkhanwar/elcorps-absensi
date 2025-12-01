@@ -83,8 +83,22 @@ export const authAPI = {
 };
 
 export const attendanceAPI = {
-  checkIn: (data) => api.post('/attendance/checkin', data),
-  checkOut: (data) => api.post('/attendance/checkout', data),
+  checkIn: (data) => {
+    if (data instanceof FormData) {
+      return api.post('/attendance/checkin', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return api.post('/attendance/checkin', data);
+  },
+  checkOut: (data) => {
+    if (data instanceof FormData) {
+      return api.post('/attendance/checkout', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    }
+    return api.post('/attendance/checkout', data);
+  },
   getToday: () => api.get('/attendance/today'),
   getHistory: (startDate, endDate) => 
     api.get(`/attendance/history?startDate=${startDate}&endDate=${endDate}`),

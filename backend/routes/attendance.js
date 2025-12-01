@@ -1,7 +1,9 @@
 const express = require('express');
 const Attendance = require('../models/attendance');
 const User = require('../models/user');
+
 const { auth } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -50,7 +52,7 @@ function getCurrentJakartaTime() {
 }
 
 // CHECK-IN
-router.post('/checkin', auth, async (req, res) => {
+router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
   try {
     console.log('📱 Check-in request received:', {
       user_id: req.user.id,
@@ -95,13 +97,13 @@ router.post('/checkin', auth, async (req, res) => {
       });
     }
 
-    const { latitude, longitude, foto_masuk } = req.body;
+    const { latitude, longitude } = req.body;
     console.log('📍 Raw location data from mobile:', { 
       latitude, 
       longitude,
       type_lat: typeof latitude,
       type_lng: typeof longitude,
-      foto_masuk: foto_masuk ? 'Photo provided' : 'No photo'
+      foto_masuk: req.file ? req.file.filename : 'No photo'
     });
     
     if (latitude === undefined || longitude === undefined) {
@@ -163,7 +165,7 @@ router.post('/checkin', auth, async (req, res) => {
       user_id: req.user.id,
       tanggal_absen: today,
       waktu_masuk: currentTime,
-      foto_masuk: foto_masuk || '',
+      foto_masuk: req.file ? req.file.filename : '',
       status: status,
       user_latitude: lat,
       user_longitude: lng,
@@ -199,7 +201,7 @@ router.post('/checkin', auth, async (req, res) => {
 });
 
 // CHECK-OUT 
-router.post('/checkout', auth, async (req, res) => {
+router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) => {
   try {
     console.log('📱 Check-out request received:', {
       user_id: req.user.id,
@@ -244,11 +246,11 @@ router.post('/checkout', auth, async (req, res) => {
       });
     }
 
-    const { latitude, longitude, foto_keluar } = req.body;
+    const { latitude, longitude } = req.body;
     console.log('📍 Check-out location data:', { 
       latitude, 
       longitude,
-      foto_keluar: foto_keluar ? 'Photo provided' : 'No photo'
+      foto_keluar: req.file ? req.file.filename : 'No photo'
     });
     
     if (latitude === undefined || longitude === undefined) {
@@ -294,7 +296,7 @@ router.post('/checkout', auth, async (req, res) => {
     const updatedAttendance = await Attendance.updateCheckOut(
       attendance.id,
       currentTime,
-      foto_keluar || ''
+      req.file ? req.file.filename : ''
     );
 
     console.log('✅ Check-out successful for user:', req.user.id);
