@@ -1,6 +1,9 @@
+
 const express = require('express');
 const Attendance = require('../models/attendance');
 const User = require('../models/user');
+const fs = require('fs');
+const path = require('path');
 
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -21,7 +24,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // Distance in meters
-}
+} 
 
 // Helper function: Calculate attendance status based on shift rules
 function calculateStatus(waktuMasuk, jamMasukShift, toleransi) {
@@ -53,6 +56,17 @@ function getCurrentJakartaTime() {
 
 // CHECK-IN
 router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
+  // Helper untuk hapus file jika ada
+  function removeUploadedFile() {
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log('🗑️ File upload dihapus:', req.file.path);
+      } catch (err) {
+        console.error('Gagal menghapus file upload:', err);
+      }
+    }
+  }
   try {
     console.log('📱 Check-in request received:', {
       user_id: req.user.id,
@@ -64,6 +78,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     const existingAttendance = await Attendance.findByUserAndDate(req.user.id, today);
     if (existingAttendance) {
       console.log('❌ User already checked in today');
+      removeUploadedFile();
       return res.status(400).json({ error: 'Anda sudah check-in hari ini' });
     }
 
@@ -83,6 +98,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
 
     if (!user) {
       console.log('❌ User not found');
+      removeUploadedFile();
       return res.status(404).json({ error: 'User tidak ditemukan' });
     }
 
@@ -92,6 +108,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
         latitude: user.latitude,
         longitude: user.longitude
       });
+      removeUploadedFile();
       return res.status(400).json({ 
         error: `Unit kerja ${user.nama_unit} belum memiliki koordinat lokasi` 
       });
@@ -108,6 +125,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     
     if (latitude === undefined || longitude === undefined) {
       console.log('❌ Coordinates undefined from mobile');
+      removeUploadedFile();
       return res.status(400).json({ 
         error: 'Koordinat lokasi tidak terdeteksi. Pastikan GPS aktif dan izin lokasi diberikan.' 
       });
@@ -115,6 +133,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
 
     if (!latitude || !longitude) {
       console.log('❌ Missing coordinates from mobile');
+      removeUploadedFile();
       return res.status(400).json({ error: 'Koordinat lokasi diperlukan' });
     }
 
@@ -123,6 +142,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     
     if (isNaN(lat) || isNaN(lng)) {
       console.log('❌ Invalid coordinate format:', { lat, lng });
+      removeUploadedFile();
       return res.status(400).json({ 
         error: 'Format koordinat tidak valid. Pastikan aplikasi memiliki akses lokasi.' 
       });
@@ -146,6 +166,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
 
     if (distance > user.radius_meter) {
       console.log('❌ User outside radius');
+      removeUploadedFile();
       return res.status(400).json({ 
         error: `Anda berada di luar radius unit kerja. Jarak: ${Math.round(distance)}m, Radius: ${user.radius_meter}m` 
       });
@@ -196,6 +217,15 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     
   } catch (error) {
     console.error('❌ Check-in error:', error);
+    // Rollback file jika upload ada
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log('🗑️ File upload dihapus karena error:', req.file.path);
+      } catch (err) {
+        console.error('Gagal menghapus file upload (error):', err);
+      }
+    }
     res.status(500).json({ error: 'Internal server error: ' + error.message });
   }
 });
