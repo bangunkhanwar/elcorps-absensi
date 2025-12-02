@@ -239,9 +239,9 @@ const DetailAbsensi: React.FC = () => {
                 {attendance.foto_masuk && (
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-2">Foto Masuk</label>
-                    <img 
-                      src={attendance.foto_masuk} 
-                      alt="Foto masuk" 
+                    <img
+                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/${attendance.foto_masuk}`}
+                      alt="Foto masuk"
                       className="w-32 h-32 object-cover rounded-lg border border-slate-200"
                     />
                   </div>
@@ -255,9 +255,9 @@ const DetailAbsensi: React.FC = () => {
                 {attendance.foto_keluar && (
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-2">Foto Keluar</label>
-                    <img 
-                      src={attendance.foto_keluar} 
-                      alt="Foto keluar" 
+                    <img
+                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/${attendance.foto_keluar}`}
+                      alt="Foto keluar"
                       className="w-32 h-32 object-cover rounded-lg border border-slate-200"
                     />
                   </div>
