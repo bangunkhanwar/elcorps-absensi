@@ -58,7 +58,7 @@ export default function AttendanceScreen({ navigation }: any) {
           },
         }
       );
-      
+
       console.log('Response status:', response.status);
 
       if (!response.ok) {

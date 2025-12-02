@@ -120,15 +120,15 @@ export default function HomeScreen({ navigation }: any) {
         allowsEditing: false,
         aspect: [4, 3],
         quality: 0.7,
-        base64: true,
+        base64: false,
       });
 
-      if (!result.canceled && result.assets[0].base64) {
-        const base64String = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      if (!result.canceled && result.assets[0].uri) {
+        const fileUri = result.assets[0].uri;
         if (type === 'in') {
-          setClockInPhoto(base64String);
+          setClockInPhoto(fileUri);
         } else {
-          setClockOutPhoto(base64String);
+          setClockOutPhoto(fileUri);
         }
       }
     } catch (error) {
@@ -144,34 +144,7 @@ export default function HomeScreen({ navigation }: any) {
     }
 
     try {
-      // Cek izin lokasi terlebih dahulu
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Izin Lokasi Ditolak',
-          'Aplikasi membutuhkan akses lokasi untuk clock in. Silakan berikan izin lokasi di pengaturan device Anda.',
-          [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Buka Pengaturan', onPress: () => Linking.openSettings() }
-          ]
-        );
-        return;
-      }
-
-      // Cek apakah GPS aktif
-      const isGPSEnabled = await Location.hasServicesEnabledAsync();
-      if (!isGPSEnabled) {
-        Alert.alert(
-          'GPS Tidak Aktif',
-          'Silakan aktifkan GPS untuk mendeteksi lokasi Anda saat ini.',
-          [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Buka Pengaturan', onPress: () => Linking.openSettings() }
-          ]
-        );
-        return;
-      }
-
+      // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
@@ -182,24 +155,25 @@ export default function HomeScreen({ navigation }: any) {
         return;
       }
 
-      console.log('📍 Location data:', location);
+      // Kirim data sebagai FormData
+      const formData = new FormData();
+      formData.append('latitude', location.latitude);
+      formData.append('longitude', location.longitude);
+      // Ambil nama file dari uri
+      const fileName = clockInPhoto?.split('/').pop() || 'clockin.jpg';
+      formData.append('foto_masuk', {
+        uri: clockInPhoto,
+        name: fileName,
+        type: 'image/jpeg',
+      });
 
-      const clockInData = {
-        foto_masuk: clockInPhoto,
-        latitude: location.latitude,
-        longitude: location.longitude
-      };
-      
-      const response = await attendanceAPI.checkIn(clockInData);
-      
+      const response = await attendanceAPI.checkIn(formData);
+
       setShowClockInModal(false);
       setClockInStatus('Sudah Clock In');
       setClockInPhoto(null);
       Alert.alert('Success', 'Clock in berhasil!');
-      
-      // Refresh data attendance
       checkTodayAttendance();
-      
     } catch (error: any) {
       console.error('❌ Clock in error:', error);
       
@@ -239,34 +213,7 @@ export default function HomeScreen({ navigation }: any) {
     }
 
     try {
-      // Cek izin lokasi terlebih dahulu
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Izin Lokasi Ditolak',
-          'Aplikasi membutuhkan akses lokasi untuk clock out. Silakan berikan izin lokasi di pengaturan device Anda.',
-          [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Buka Pengaturan', onPress: () => Linking.openSettings() }
-          ]
-        );
-        return;
-      }
-
-      // Cek apakah GPS aktif
-      const isGPSEnabled = await Location.hasServicesEnabledAsync();
-      if (!isGPSEnabled) {
-        Alert.alert(
-          'GPS Tidak Aktif',
-          'Silakan aktifkan GPS untuk mendeteksi lokasi Anda saat ini.',
-          [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Buka Pengaturan', onPress: () => Linking.openSettings() }
-          ]
-        );
-        return;
-      }
-
+      // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
@@ -277,22 +224,24 @@ export default function HomeScreen({ navigation }: any) {
         return;
       }
 
-      const clockOutData = {
-        foto_keluar: clockOutPhoto,
-        latitude: location.latitude,
-        longitude: location.longitude
-      };
-      
-      const response = await attendanceAPI.checkOut(clockOutData);
-      
+      // Kirim data sebagai FormData
+      const formData = new FormData();
+      formData.append('latitude', location.latitude);
+      formData.append('longitude', location.longitude);
+      const fileName = clockOutPhoto?.split('/').pop() || 'clockout.jpg';
+      formData.append('foto_keluar', {
+        uri: clockOutPhoto,
+        name: fileName,
+        type: 'image/jpeg',
+      });
+
+      const response = await attendanceAPI.checkOut(formData);
+
       setShowClockOutModal(false);
       setClockInStatus('Sudah Clock Out');
       setClockOutPhoto(null);
       Alert.alert('Success', 'Clock out berhasil!');
-      
-      // Refresh data attendance
       checkTodayAttendance();
-      
     } catch (error: any) {
       console.error('❌ Clock out error:', error);
       
