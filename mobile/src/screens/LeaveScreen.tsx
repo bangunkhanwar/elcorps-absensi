@@ -108,7 +108,7 @@ export default function LeaveScreen({ navigation }: any) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.250';
+      const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.118';
 
       console.log('🔍 Token:', token ? 'exists' : 'missing');
       console.log('🔍 Server IP:', serverIP);

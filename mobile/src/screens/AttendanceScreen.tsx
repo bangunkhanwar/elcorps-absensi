@@ -44,7 +44,7 @@ export default function AttendanceScreen({ navigation }: any) {
   const fetchAttendanceHistory = async (userId: number) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.250';
+      const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.118';
       
       console.log('Fetching attendance from server:', serverIP);
 
