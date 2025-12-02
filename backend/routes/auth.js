@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { auth } = require('../middleware/auth');
+const User = require('../models/user');
 
 const router = express.Router();
 
@@ -31,8 +32,6 @@ router.post('/register', auth, async (req, res) => {
       return res.status(400).json({ error: 'NIK sudah terdaftar' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
     // Jika unit_kerja_id tidak diberikan, cari berdasarkan nama unit_kerja
     let finalUnitKerjaId = unit_kerja_id;
     if (!finalUnitKerjaId && unit_kerja) {
@@ -59,23 +58,26 @@ router.post('/register', auth, async (req, res) => {
       }
     }
 
-    const query = `
-      INSERT INTO users (nama, nik, email, password, jabatan, departemen, divisi, 
-                        foto_profile, role, unit_kerja_id, shift_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      RETURNING *
-    `;
-    
-    const values = [
-      nama, nik, email, hashedPassword, jabatan, departemen, divisi,
-      foto_profile || '', role || 'karyawan', finalUnitKerjaId, finalShiftId
-    ];
-    
-    const result = await pool.query(query, values);
+    // Gunakan model User.create yang sudah otomatis mengatur website_access
+    const userData = {
+      nama,
+      nik,
+      email,
+      password,
+      jabatan,
+      departemen,
+      divisi,
+      foto_profile: foto_profile || '',
+      role: role || 'karyawan',
+      unit_kerja_id: finalUnitKerjaId,
+      shift_id: finalShiftId
+    };
+
+    const newUser = await User.create(userData);
     
     res.status(201).json({ 
       message: 'User berhasil dibuat', 
-      user: result.rows[0]
+      user: newUser
     });
   } catch (error) {
     console.error('❌ Register error:', error);
@@ -229,21 +231,11 @@ router.get('/users', auth, async (req, res) => {
       return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
     }
 
-    const query = `
-      SELECT 
-        u.*,
-        uk.nama_unit,
-        s.nama_shift
-      FROM users u
-      LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id
-      LEFT JOIN shifts s ON u.shift_id = s.id
-      ORDER BY u.nama
-    `;
-    const result = await pool.query(query);
+    const users = await User.getAll();
     
     res.json({
       message: 'Data semua user',
-      users: result.rows
+      users: users
     });
   } catch (error) {
     console.error('❌ Get users error:', error);
@@ -285,39 +277,28 @@ router.put('/users/:id', auth, async (req, res) => {
     }
 
     const userId = req.params.id;
-    const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, website_access, website_privileges } = req.body;
+    // Hapus website_access dan website_privileges dari body karena sudah dihandle otomatis
+    const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role } = req.body;
     
-    let query = '';
-    let values = [];
-    
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      query = `
-        UPDATE users 
-        SET nama = $1, nik = $2, email = $3, password = $4, jabatan = $5, 
-            departemen = $6, divisi = $7, unit_kerja_id = $8, shift_id = $9, role = $10, 
-            website_access = $11, website_privileges = $12, updated_at = NOW()
-        WHERE id = $13
-        RETURNING *
-      `;
-      values = [nama, nik, email, hashedPassword, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, website_access, website_privileges, userId];
-    } else {
-      query = `
-        UPDATE users 
-        SET nama = $1, nik = $2, email = $3, jabatan = $4, 
-            departemen = $5, divisi = $6, unit_kerja_id = $7, shift_id = $8, role = $9,
-            website_access = $10, website_privileges = $11, updated_at = NOW()
-        WHERE id = $12
-        RETURNING *
-      `;
-      values = [nama, nik, email, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, website_access, website_privileges, userId];
-    }
-    
-    const result = await pool.query(query, values);
+    // Gunakan model User.updateUser yang sudah otomatis mengatur website_access
+    const updateData = {
+      nama,
+      nik,
+      email,
+      password, // akan dihash otomatis di model jika ada
+      jabatan,
+      departemen,
+      divisi,
+      unit_kerja_id,
+      shift_id,
+      role
+    };
+
+    const updatedUser = await User.updateUser(userId, updateData);
     
     res.json({
       message: 'User berhasil diupdate',
-      user: result.rows[0]
+      user: updatedUser
     });
   } catch (error) {
     console.error('❌ Update user error:', error);
@@ -460,6 +441,36 @@ router.put('/employees/:id/shift', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Update employee shift error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update all employees shift in a unit (for HR only)
+router.put('/unit/:unitId/update-all-shifts', auth, async (req, res) => {
+  try {
+    // Hanya HR yang bisa update massal
+    if (req.user.role !== 'hr') {
+      return res.status(403).json({ error: 'Hanya HR yang dapat mengupdate shift massal' });
+    }
+
+    const { unitId } = req.params;
+    const { shift_id } = req.body;
+
+    const updateQuery = `
+      UPDATE users 
+      SET shift_id = $1, updated_at = NOW() 
+      WHERE unit_kerja_id = $2 AND role = 'karyawan'
+      RETURNING *
+    `;
+    const updateResult = await pool.query(updateQuery, [shift_id, unitId]);
+    
+    res.json({
+      message: `Berhasil mengupdate shift ${updateResult.rows.length} karyawan`,
+      updatedCount: updateResult.rows.length,
+      users: updateResult.rows
+    });
+  } catch (error) {
+    console.error('❌ Update all employees shift error:', error);
     res.status(500).json({ error: error.message });
   }
 });

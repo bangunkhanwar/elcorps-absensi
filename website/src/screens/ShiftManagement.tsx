@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { authAPI, shiftAPI } from '../services/api'
+import { authAPI, shiftAPI, settingsAPI } from '../services/api'
+import ShiftCalendar from './ShiftCalendar'
+import ShiftModal from './ShiftModal'
 
 interface Shift {
   id: number
@@ -47,7 +49,6 @@ const ShiftManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pengaturan' | 'kalender'>(() => {
     return (sessionStorage.getItem('shiftActiveTab') as 'pengaturan' | 'kalender') || 'pengaturan'
   })
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [searchData, setSearchData] = useState('')
   
   const [showUnitDropdown, setShowUnitDropdown] = useState(false)
@@ -57,6 +58,20 @@ const ShiftManagement: React.FC = () => {
 
   const [employeeShifts, setEmployeeShifts] = useState<{[key: number]: Shift}>({})
   const [pendingChanges, setPendingChanges] = useState<{[key: number]: number}>({})
+
+  // State untuk modal shift
+  const [showShiftModal, setShowShiftModal] = useState(false)
+  const [editingShift, setEditingShift] = useState<Shift | null>(null)
+  const [shiftForm, setShiftForm] = useState({
+    kode_shift: '',
+    nama_shift: '',
+    jam_masuk: '',
+    jam_keluar: '',
+    toleransi_telat_minutes: 5,
+    is_default: false
+  })
+
+  const [savingShift, setSavingShift] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -95,11 +110,26 @@ const ShiftManagement: React.FC = () => {
     }
   }, [selectedUnit, selectedUnitName])
 
-  // Reset pagination when search or unit changes
   useEffect(() => {
     setCurrentPage(1)
     setCurrentPageKalender(1)
   }, [searchData, selectedUnit])
+
+  // PERBAIKAN: useEffect untuk sinkronisasi employeeShifts dengan data terbaru
+  useEffect(() => {
+    if (employees.length > 0 && shifts.length > 0) {
+      const updatedShiftsMap: {[key: number]: Shift} = {}
+      employees.forEach(employee => {
+        if (employee.shift_id) {
+          const shift = shifts.find(s => s.id === employee.shift_id)
+          if (shift) {
+            updatedShiftsMap[employee.id] = shift
+          }
+        }
+      })
+      setEmployeeShifts(updatedShiftsMap)
+    }
+  }, [employees, shifts])
 
   const fetchUserProfile = async () => {
     try {
@@ -143,33 +173,39 @@ const ShiftManagement: React.FC = () => {
         shiftAPI.getShiftsByUnit(unitId)
       ])
       
+      // PERBAIKAN: Simpan data employees dan shifts
+      let employeesData: Employee[] = []
+      let shiftsData: Shift[] = []
+
       if (employeesRes.status === 'fulfilled') {
-        const employeesData = employeesRes.value.data || []
+        employeesData = employeesRes.value.data || []
         const sortedEmployees = employeesData.sort((a: Employee, b: Employee) => 
           a.nama.localeCompare(b.nama)
         )
         setEmployees(sortedEmployees)
-        
-        const shiftsMap: {[key: number]: Shift} = {}
-        sortedEmployees.forEach((emp: Employee) => {
-          if (emp.shift_id) {
-            const shift = shifts.find(s => s.id === emp.shift_id)
-            if (shift) {
-              shiftsMap[emp.id] = shift
-            }
-          }
-        })
-        setEmployeeShifts(shiftsMap)
+        employeesData = sortedEmployees
       } else {
         setEmployees([])
-        setEmployeeShifts({})
       }
       
       if (shiftsRes.status === 'fulfilled') {
-        setShifts(shiftsRes.value.data || [])
+        shiftsData = shiftsRes.value.data || []
+        setShifts(shiftsData)
       } else {
         setShifts([])
       }
+
+      // PERBAIKAN: Build employee shifts mapping dengan data yang sudah di-fetch
+      const shiftsMap: {[key: number]: Shift} = {}
+      employeesData.forEach((emp: Employee) => {
+        if (emp.shift_id) {
+          const shift = shiftsData.find(s => s.id === emp.shift_id)
+          if (shift) {
+            shiftsMap[emp.id] = shift
+          }
+        }
+      })
+      setEmployeeShifts(shiftsMap)
       
     } catch (error) {
       console.error('Error in fetchData:', error)
@@ -188,6 +224,13 @@ const ShiftManagement: React.FC = () => {
           ...prev,
           [employeeId]: shift
         }))
+        
+        // PERBAIKAN: Update juga employee state
+        setEmployees(prev => prev.map(emp => 
+          emp.id === employeeId 
+            ? { ...emp, shift_id: shiftId, nama_shift: shift.nama_shift, jam_masuk: shift.jam_masuk, jam_keluar: shift.jam_keluar }
+            : emp
+        ))
       }
       
       setPendingChanges(prev => {
@@ -197,7 +240,6 @@ const ShiftManagement: React.FC = () => {
       })
       
     } catch (error: any) {
-      console.error('Error updating shift:', error)
       alert(`Gagal mengupdate shift: ${error.response?.data?.error || error.message}`)
     }
   }
@@ -242,6 +284,13 @@ const ShiftManagement: React.FC = () => {
         ...prev,
         [employeeId]: shift
       }))
+      
+      // PERBAIKAN: Update juga employee state untuk konsistensi
+      setEmployees(prev => prev.map(emp => 
+        emp.id === employeeId 
+          ? { ...emp, shift_id: shiftId, nama_shift: shift.nama_shift, jam_masuk: shift.jam_masuk, jam_keluar: shift.jam_keluar }
+          : emp
+      ))
     }
   }
 
@@ -261,48 +310,117 @@ const ShiftManagement: React.FC = () => {
       alert('Semua perubahan berhasil disimpan!')
       
     } catch (error) {
-      console.error('Error saving changes:', error)
       alert('Terjadi kesalahan saat menyimpan perubahan')
     } finally {
       setLoading(false)
     }
   }
 
-  // Calendar functions
-  const getWeekDates = () => {
-    const dates = []
-    const current = new Date(selectedDate)
-    const startOfWeek = new Date(current)
-    startOfWeek.setDate(current.getDate() - current.getDay())
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startOfWeek)
-      date.setDate(startOfWeek.getDate() + i)
-      dates.push(date)
-    }
-    return dates
-  }
-
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const current = new Date(selectedDate)
-    current.setDate(current.getDate() + (direction === 'prev' ? -7 : 7))
-    setSelectedDate(current.toISOString().split('T')[0])
-  }
-
-  const goToToday = () => {
-    setSelectedDate(new Date().toISOString().split('T')[0])
-  }
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('id-ID', { 
-      day: 'numeric', 
-      month: 'short'
+  // Shift Management Functions
+  const openAddShiftModal = () => {
+    setEditingShift(null)
+    setShiftForm({
+      kode_shift: '',
+      nama_shift: '',
+      jam_masuk: '',
+      jam_keluar: '',
+      toleransi_telat_minutes: 5,
+      is_default: false
     })
+    setShowShiftModal(true)
   }
 
-  const isToday = (date: Date) => {
-    const today = new Date()
-    return date.toDateString() === today.toDateString()
+  const openEditShiftModal = (shift: Shift) => {
+    setEditingShift(shift)
+    setShiftForm({
+      kode_shift: shift.kode_shift,
+      nama_shift: shift.nama_shift,
+      jam_masuk: shift.jam_masuk.substring(0, 5),
+      jam_keluar: shift.jam_keluar.substring(0, 5),
+      toleransi_telat_minutes: shift.toleransi_telat_minutes,
+      is_default: shift.is_default
+    })
+    setShowShiftModal(true)
+  }
+
+  const saveShift = async () => {
+    if (!selectedUnit) {
+      alert('Pilih unit kerja terlebih dahulu')
+      return
+    }
+
+    try {
+      setSavingShift(true)
+      const shiftData = {
+        ...shiftForm,
+        unit_kerja_id: selectedUnit,
+        jam_masuk: `${shiftForm.jam_masuk}:00`,
+        jam_keluar: `${shiftForm.jam_keluar}:00`
+      }
+
+      let savedShift
+      if (editingShift) {
+        const response = await settingsAPI.updateShift(editingShift.id, shiftData)
+        savedShift = response.data.shift
+      } else {
+        const response = await settingsAPI.createShift(shiftData)
+        savedShift = response.data
+      }
+
+      // Jika shift dijadikan default, update semua karyawan di unit ini
+      if (shiftForm.is_default && savedShift) {
+        try {
+          // PERBAIKAN: Gunakan fungsi update massal
+          await authAPI.updateAllEmployeesShift(selectedUnit, savedShift.id)
+          
+          // PERBAIKAN: Update local state secara langsung
+          const newEmployeeShifts: {[key: number]: Shift} = {}
+          const updatedEmployees = employees.map(emp => {
+            newEmployeeShifts[emp.id] = savedShift
+            return {
+              ...emp,
+              shift_id: savedShift.id,
+              nama_shift: savedShift.nama_shift,
+              jam_masuk: savedShift.jam_masuk,
+              jam_keluar: savedShift.jam_keluar
+            }
+          })
+          
+          setEmployees(updatedEmployees)
+          setEmployeeShifts(newEmployeeShifts)
+          
+          alert('Shift berhasil disimpan dan semua karyawan di unit ini telah diupdate ke shift default!')
+        } catch (error: any) {
+          console.error('Error updating employees to default shift:', error)
+          alert('Shift berhasil disimpan, tetapi gagal mengupdate semua karyawan ke shift default')
+        }
+      } else {
+        alert(editingShift ? 'Shift berhasil diperbarui!' : 'Shift berhasil ditambahkan!')
+      }
+
+      setShowShiftModal(false)
+      fetchData(selectedUnit) // Refresh data untuk konsistensi
+    } catch (error: any) {
+      alert(`Gagal menyimpan shift: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setSavingShift(false)
+    }
+  }
+
+  const deleteShift = async (shiftId: number) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus shift ini?')) {
+      return
+    }
+
+    try {
+      await shiftAPI.deleteShift(shiftId)
+      alert('Shift berhasil dihapus!')
+      if (selectedUnit) {
+        fetchData(selectedUnit)
+      }
+    } catch (error: any) {
+      alert(`Gagal menghapus shift: ${error.response?.data?.error || error.message}`)
+    }
   }
 
   const formatTimeForDisplay = (timeString: string) => {
@@ -310,35 +428,10 @@ const ShiftManagement: React.FC = () => {
     return timeString.substring(0, 5)
   }
 
-  // Pagination functions for Pengaturan tab
+  // Pagination functions
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
-
-  const nextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1)
-    }
-  }
-
-  const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1)
-    }
-  }
-
-  // Pagination functions for Kalender tab
-  const paginateKalender = (pageNumber: number) => setCurrentPageKalender(pageNumber)
-
-  const nextPageKalender = () => {
-    if (currentPageKalender < totalPagesKalender) {
-      setCurrentPageKalender(currentPageKalender + 1)
-    }
-  }
-
-  const prevPageKalender = () => {
-    if (currentPageKalender > 1) {
-      setCurrentPageKalender(currentPageKalender - 1)
-    }
-  }
+  const nextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1)
+  const prevPage = () => currentPage > 1 && setCurrentPage(currentPage - 1)
 
   const filteredUnits = units.filter(unit =>
     unit.nama_unit.toLowerCase().includes(searchUnit.toLowerCase()) ||
@@ -352,38 +445,11 @@ const ShiftManagement: React.FC = () => {
     (employee.nama_shift && employee.nama_shift.toLowerCase().includes(searchData.toLowerCase()))
   )
 
-  // Pagination calculations for Pengaturan tab
+  // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentEmployees = filteredEmployees.slice(indexOfFirstItem, indexOfLastItem)
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage)
-
-  // Pagination calculations for Kalender tab
-  const indexOfLastItemKalender = currentPageKalender * itemsPerPage
-  const indexOfFirstItemKalender = indexOfLastItemKalender - itemsPerPage
-  const currentEmployeesKalender = filteredEmployees.slice(indexOfFirstItemKalender, indexOfLastItemKalender)
-  const totalPagesKalender = Math.ceil(filteredEmployees.length / itemsPerPage)
-
-  const weekDates = getWeekDates()
-  const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
-
-  // Stats for calendar view
-  const getShiftStats = () => {
-    const stats: {[key: string]: number} = {}
-    shifts.forEach(shift => {
-      stats[shift.kode_shift] = 0
-    })
-    
-    Object.values(employeeShifts).forEach(shift => {
-      if (shift && stats[shift.kode_shift] !== undefined) {
-        stats[shift.kode_shift]++
-      }
-    })
-    
-    return stats
-  }
-
-  const shiftStats = getShiftStats()
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -405,15 +471,17 @@ const ShiftManagement: React.FC = () => {
               </div>
             </div>
             
-            {Object.keys(pendingChanges).length > 0 && (
-              <button
-                onClick={saveAllChanges}
-                disabled={loading}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 text-sm"
-              >
-                {loading ? 'Menyimpan...' : `Simpan ${Object.keys(pendingChanges).length} Perubahan`}
-              </button>
-            )}
+            <div className="flex items-center space-x-3">
+              {Object.keys(pendingChanges).length > 0 && (
+                <button
+                  onClick={saveAllChanges}
+                  disabled={loading}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 text-sm"
+                >
+                  {loading ? 'Menyimpan...' : `Simpan ${Object.keys(pendingChanges).length} Perubahan`}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -547,22 +615,69 @@ const ShiftManagement: React.FC = () => {
             {activeTab === 'pengaturan' && (
               <div>
                 {/* Shift Summary */}
-                {selectedUnit && shifts.length > 0 && (
+                {selectedUnit && (
                   <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-3">Shift Tersedia</h3>
-                    <div className="flex flex-wrap gap-3">
-                      {shifts.filter(shift => shift.is_active).map((shift) => (
-                        <div key={shift.id} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            shift.is_default ? 'bg-green-500' : 'bg-blue-500'
-                          }`}></div>
-                          <span className="text-sm font-medium">{shift.nama_shift}</span>
-                          <span className="text-xs text-slate-500">
-                            ({formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)})
-                          </span>
-                        </div>
-                      ))}
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-lg font-semibold text-slate-900">Shift Tersedia</h3>
+                      {user?.role === 'hr' && (
+                        <button
+                          onClick={openAddShiftModal}
+                          className="px-3 py-1 bg-[#25a298] hover:bg-[#1f8a80] text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                          + Tambah Shift
+                        </button>
+                      )}
                     </div>
+                    {shifts.filter(shift => shift.is_active).length > 0 ? (
+                      <div className="space-y-2">
+                        {shifts.filter(shift => shift.is_active).map((shift) => (
+                          <div key={shift.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${
+                                shift.is_default ? 'bg-green-500' : 'bg-blue-500'
+                              }`}></div>
+                              <span className="text-sm font-medium">{shift.nama_shift}</span>
+                              <span className="text-xs text-slate-500">
+                                ({formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)})
+                              </span>
+                              {shift.is_default && (
+                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            {user?.role === 'hr' && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => openEditShiftModal(shift)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteShift(shift.id)}
+                                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                >
+                                  Hapus
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-slate-500">Belum ada shift yang dibuat untuk unit ini.</p>
+                        {user?.role === 'hr' && (
+                          <button
+                            onClick={openAddShiftModal}
+                            className="mt-2 px-4 py-2 bg-[#25a298] hover:bg-[#1f8a80] text-white text-sm font-medium rounded-lg transition-colors"
+                          >
+                            + Buat Shift Pertama
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -668,12 +783,16 @@ const ShiftManagement: React.FC = () => {
                                     <select
                                       value={employeeShifts[employee.id]?.id || ''}
                                       onChange={(e) => handleShiftChange(employee.id, Number(e.target.value))}
-                                      className="text-sm border border-slate-300 rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#25a298] focus:border-[#25a298]"
+                                      disabled={shifts.filter(shift => shift.is_active).length === 0}
+                                      className={`text-sm border border-slate-300 rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#25a298] focus:border-[#25a298] ${
+                                        shifts.filter(shift => shift.is_active).length === 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                                      }`}
                                     >
                                       <option value="">Pilih Shift</option>
                                       {shifts.filter(shift => shift.is_active).map((shift) => (
                                         <option key={shift.id} value={shift.id}>
                                           {shift.nama_shift} ({formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)})
+                                          {shift.is_default && ' (Default)'}
                                         </option>
                                       ))}
                                     </select>
@@ -691,7 +810,6 @@ const ShiftManagement: React.FC = () => {
                         </table>
                       </div>
 
-                      {/* Pagination */}
                       {totalPages > 1 && (
                         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
                           <p className="text-sm text-slate-600">
@@ -735,187 +853,33 @@ const ShiftManagement: React.FC = () => {
             )}
 
             {activeTab === 'kalender' && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      Kalender Shift Mingguan
-                    </h2>
-                    <p className="text-sm text-slate-500">Jadwal shift {selectedUnitName && `- ${selectedUnitName}`}</p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={goToToday}
-                      className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      Hari Ini
-                    </button>
-                    <div className="flex border border-slate-300 rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => navigateWeek('prev')}
-                        className="px-4 py-2 hover:bg-slate-50 transition-colors"
-                      >
-                        ←
-                      </button>
-                      <button
-                        onClick={() => navigateWeek('next')}
-                        className="px-4 py-2 hover:bg-slate-50 transition-colors"
-                      >
-                        →
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Cari nama atau NIK..."
-                        value={searchData}
-                        onChange={(e) => setSearchData(e.target.value)}
-                        className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-                      />
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
-                        🔍
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Shift Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  {shifts.filter(shift => shift.is_active).map((shift) => (
-                    <div key={shift.id} className="bg-white rounded-xl p-4 border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-slate-600">{shift.nama_shift}</p>
-                          <p className="text-2xl font-bold text-slate-900 mt-1">{shiftStats[shift.kode_shift] || 0}</p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)}
-                          </p>
-                        </div>
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          shift.is_default ? 'bg-green-50' : 'bg-blue-50'
-                        }`}>
-                          <span className={`text-lg ${
-                            shift.is_default ? 'text-green-600' : 'text-blue-600'
-                          }`}>
-                            {shift.kode_shift}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Calendar Grid */}
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider sticky left-0 bg-slate-50 z-10 min-w-40">
-                            Karyawan
-                          </th>
-                          {weekDates.map((date, index) => (
-                            <th 
-                              key={index}
-                              className={`px-4 py-4 text-center text-xs font-medium text-slate-500 uppercase tracking-wider min-w-32 ${
-                                isToday(date) ? 'bg-[#25a298] text-white' : ''
-                              }`}
-                            >
-                              <div>{dayNames[index]}</div>
-                              <div className={`text-sm font-normal mt-1 ${
-                                isToday(date) ? 'text-white' : 'text-slate-600'
-                              }`}>
-                                {formatDate(date)}
-                              </div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {currentEmployeesKalender.length > 0 ? (
-                          currentEmployeesKalender.map((employee) => (
-                            <tr key={employee.id} className="hover:bg-slate-50 transition-colors duration-150">
-                              <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white z-10">
-                                <div className="text-sm font-medium text-slate-900">{employee.nama}</div>
-                                <div className="text-xs text-slate-500">{employee.nik} • {employee.jabatan}</div>
-                                <div className="text-xs text-slate-400">{employee.nama_unit}</div>
-                              </td>
-                              {weekDates.map((date, index) => (
-                                <td key={index} className="px-4 py-4 text-center">
-                                  {employeeShifts[employee.id] ? (
-                                    <div className="flex flex-col items-center">
-                                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                                        employeeShifts[employee.id].is_default 
-                                          ? 'bg-green-100 text-green-800' 
-                                          : 'bg-blue-100 text-blue-800'
-                                      }`}>
-                                        {employeeShifts[employee.id].kode_shift}
-                                      </span>
-                                      <div className="text-xs text-slate-500 mt-1">
-                                        {formatTimeForDisplay(employeeShifts[employee.id].jam_masuk)}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <span className="text-slate-300 text-sm">-</span>
-                                  )}
-                                </td>
-                              ))}
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-500">
-                              {searchData ? 'Tidak ada karyawan yang sesuai' : 'Tidak ada karyawan di unit ini'}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Pagination for Kalender */}
-                  {totalPagesKalender > 1 && (
-                    <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                      <p className="text-sm text-slate-600">
-                        Menampilkan {currentEmployeesKalender.length > 0 ? indexOfFirstItemKalender + 1 : 0}-{Math.min(indexOfLastItemKalender, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
-                      </p>
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={prevPageKalender}
-                          disabled={currentPageKalender === 1}
-                          className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Sebelumnya
-                        </button>
-                        {Array.from({ length: totalPagesKalender }, (_, i) => i + 1).map(page => (
-                          <button
-                            key={page}
-                            onClick={() => paginateKalender(page)}
-                            className={`px-3 py-1 rounded-lg transition-colors duration-200 ${
-                              currentPageKalender === page
-                                ? 'bg-[#25a298] text-white'
-                                : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
-                        <button 
-                          onClick={nextPageKalender}
-                          disabled={currentPageKalender === totalPagesKalender}
-                          className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Selanjutnya
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ShiftCalendar
+                employees={employees}
+                shifts={shifts}
+                employeeShifts={employeeShifts}
+                searchData={searchData}
+                setSearchData={setSearchData}
+                selectedUnit={selectedUnit}
+                selectedUnitName={selectedUnitName}
+                currentPage={currentPageKalender}
+                setCurrentPage={setCurrentPageKalender}
+                itemsPerPage={itemsPerPage}
+                loading={loading}
+              />
             )}
           </div>
         </div>
       </div>
+
+      <ShiftModal
+        show={showShiftModal}
+        editingShift={editingShift}
+        shiftForm={shiftForm}
+        setShiftForm={setShiftForm}
+        onClose={() => setShowShiftModal(false)}
+        onSave={saveShift}
+        saving={savingShift}
+      />
     </div>
   )
 }
