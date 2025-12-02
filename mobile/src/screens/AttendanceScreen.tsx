@@ -67,7 +67,7 @@ export default function AttendanceScreen({ navigation }: any) {
       }
 
       const data = await response.json();
-      console.log('Received data:', data);
+      console.log('DEBUG DATA API:', JSON.stringify(data, null, 2));
       setAttendanceData(data);
     } catch (error: any) {
       console.error('Error fetching attendance:', error);
