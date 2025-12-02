@@ -51,6 +51,9 @@ export const authAPI = {
   updateLeaderPrivileges: (leaderId, privileges) => 
     api.put(`/auth/store-leaders/${leaderId}/privileges`, { privileges }),
   getStoreEmployees: (unitId) => api.get(`/auth/unit/${unitId}/store-employees`),
+  // Tambahkan fungsi baru untuk update massal shift
+  updateAllEmployeesShift: (unitId, shiftId) => 
+    api.put(`/auth/unit/${unitId}/update-all-shifts`, { shift_id: shiftId }),
 };
 
 // Attendance services
@@ -80,6 +83,9 @@ export const shiftAPI = {
   getShiftsByUnit: (unitId) => api.get(`/shifts/unit/${unitId}`),
   updateEmployeeShift: (employeeId, shiftId) => 
     api.put(`/auth/employees/${employeeId}/shift`, { shift_id: shiftId }),
+  createShift: (data) => api.post('/shifts', data),
+  updateShift: (id, data) => api.put(`/shifts/${id}`, data),
+  deleteShift: (id) => api.delete(`/shifts/${id}`),
 };
 
 // Settings services
@@ -109,6 +115,5 @@ export const reportsAPI = {
       responseType: 'blob'
     })
 }
-
 
 export default api;

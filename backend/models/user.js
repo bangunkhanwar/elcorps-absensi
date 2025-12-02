@@ -10,21 +10,21 @@ class User {
     
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Tentukan website_access dan website_privileges berdasarkan jabatan
     const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
     const websiteAccess = isStoreLeaderOrLeaderArea;
-    const websitePrivileges = isStoreLeaderOrLeaderArea ? ['attendance', 'reports', 'employees'] : [];
-
+    const websitePrivileges = isStoreLeaderOrLeaderArea ? ['shift-management'] : [];
     
     const query = `
       INSERT INTO users (nama, nik, email, password, jabatan, departemen, divisi, 
-                        foto_profile, role, unit_kerja_id, shift_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                        foto_profile, role, unit_kerja_id, shift_id, website_access, website_privileges)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::boolean, $13::jsonb)
       RETURNING *
     `;
     
     const values = [
       nama, nik, email, hashedPassword, jabatan, departemen, divisi,
-      foto_profile, role, unit_kerja_id, shift_id
+      foto_profile, role, unit_kerja_id, shift_id, websiteAccess, JSON.stringify(websitePrivileges)
     ];
     
     const result = await pool.query(query, values);
@@ -74,11 +74,29 @@ class User {
   static async updateUser(id, updateData) {
     const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role } = updateData;
 
-    // Tentukan website_access dan website_privileges berdasarkan jabatan
+    // Ambil data user saat ini untuk mempertahankan website_privileges
+    const currentUser = await this.findById(id);
+    if (!currentUser) {
+      throw new Error('User tidak ditemukan');
+    }
+
+    // Tentukan website_access berdasarkan jabatan
     const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
     const websiteAccess = isStoreLeaderOrLeaderArea;
-    const websitePrivileges = isStoreLeaderOrLeaderArea ? ['attendance', 'reports', 'employees'] : [];
-    
+
+    // SELALU PERTAHANKAN website_privileges yang sudah ada, jangan pernah reset
+    // Kecuali jika berubah dari non-leader menjadi leader, maka berikan default
+    let websitePrivileges = currentUser.website_privileges || [];
+
+    if (isStoreLeaderOrLeaderArea && !currentUser.website_access) {
+      // Jika berubah dari non-leader menjadi leader, berikan default privileges
+      websitePrivileges = ['shift-management'];
+    } else if (!isStoreLeaderOrLeaderArea) {
+      // Jika bukan leader, kosongkan privileges
+      websitePrivileges = [];
+    }
+    // Jika tetap leader, pertahankan privileges yang sudah ada (tidak diubah)
+
     let query = '';
     let values = [];
     
@@ -87,20 +105,22 @@ class User {
       query = `
         UPDATE users 
         SET nama = $1, nik = $2, email = $3, password = $4, jabatan = $5, 
-            departemen = $6, divisi = $7, unit_kerja_id = $8, shift_id = $9, role = $10
-        WHERE id = $11
+            departemen = $6, divisi = $7, unit_kerja_id = $8, shift_id = $9, role = $10,
+            website_access = $11::boolean, website_privileges = $12::jsonb, updated_at = NOW()
+        WHERE id = $13
         RETURNING *
       `;
-      values = [nama, nik, email, hashedPassword, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, id];
+      values = [nama, nik, email, hashedPassword, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, websiteAccess, JSON.stringify(websitePrivileges), id];
     } else {
       query = `
         UPDATE users 
         SET nama = $1, nik = $2, email = $3, jabatan = $4, 
-            departemen = $5, divisi = $6, unit_kerja_id = $7, shift_id = $8, role = $9
-        WHERE id = $10
+            departemen = $5, divisi = $6, unit_kerja_id = $7, shift_id = $8, role = $9,
+            website_access = $10::boolean, website_privileges = $11::jsonb, updated_at = NOW()
+        WHERE id = $12
         RETURNING *
       `;
-      values = [nama, nik, email, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, id];
+      values = [nama, nik, email, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, websiteAccess, JSON.stringify(websitePrivileges), id];
     }
     
     const result = await pool.query(query, values);
