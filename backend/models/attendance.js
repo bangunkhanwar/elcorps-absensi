@@ -54,7 +54,7 @@ class Attendance {
     const query = `
       SELECT 
         a.*, 
-        uk.nama_unit,
+        uk.nama_unit AS location,
         s.nama_shift,
         s.jam_masuk as jam_masuk_shift,
         s.jam_keluar as jam_keluar_shift,
