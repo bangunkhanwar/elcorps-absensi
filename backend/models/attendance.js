@@ -69,21 +69,29 @@ class Attendance {
     return result.rows;
   }
 
-// GET ALL ATTENDANCE - DENGAN TIMEZONE JAKARTA
+  // GET ALL ATTENDANCE - DENGAN TIMEZONE DINAMIS
   static async getAllAttendance(startDate, endDate) {
     console.log('📅 Executing getAllAttendance with:', { startDate, endDate });
     
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
     
-    console.log('📊 Final query dates:', queryStartDate, queryEndDate);
-    
     const query = `
       SELECT 
         a.*, 
         u.nama, u.nik, u.jabatan, u.departemen, u.divisi,
         uk.nama_unit,
-        s.nama_shift
+        uk.timezone,
+        s.nama_shift,
+        -- Konversi waktu ke timezone unit_kerja
+        TO_CHAR(
+          (a.waktu_masuk AT TIME ZONE 'UTC' AT TIME ZONE COALESCE(uk.timezone, 'Asia/Jakarta')), 
+          'HH24:MI'
+        ) as waktu_masuk_jakarta,
+        TO_CHAR(
+          (a.waktu_keluar AT TIME ZONE 'UTC' AT TIME ZONE COALESCE(uk.timezone, 'Asia/Jakarta')), 
+          'HH24:MI'
+        ) as waktu_keluar_jakarta
       FROM absensi a 
       LEFT JOIN users u ON a.user_id = u.id 
       LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
@@ -92,21 +100,21 @@ class Attendance {
       ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
     `;
     
-    console.log('🔍 Executing SQL query...');
-    
     try {
       const result = await pool.query(query, [queryStartDate, queryEndDate]);
-      console.log('✅ Query successful, row count:', result.rows.length);
+      console.log('✅ Query dengan timezone, row count:', result.rows.length);
       
-      // Log sample data untuk debugging waktu
+      // Log sample untuk debugging timezone
       if (result.rows.length > 0) {
-        console.log('🕒 Sample time data (first 3 records):');
+        console.log('🌍 Sample timezone data:');
         result.rows.slice(0, 3).forEach((row, index) => {
           console.log(`Record ${index + 1}:`, {
             nama: row.nama,
-            waktu_masuk: row.waktu_masuk,
-            waktu_keluar: row.waktu_keluar,
-            tanggal_absen: row.tanggal_absen
+            unit: row.nama_unit,
+            timezone: row.timezone,
+            waktu_masuk_original: row.waktu_masuk,
+            waktu_masuk_converted: row.waktu_masuk_jakarta,
+            waktu_keluar_converted: row.waktu_keluar_jakarta
           });
         });
       }
