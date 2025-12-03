@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { attendanceAPI, leaveAPI } from '../../services/api'
 import PengajuanIzin from './PengajuanIzin'
+import * as XLSX from 'xlsx'
+import { saveAs } from 'file-saver'
 
 interface AttendanceData {
   id: number
@@ -282,6 +284,100 @@ const Absensi: React.FC = () => {
 
   const stats = getStats()
 
+  const exportToExcel = () => {
+    // Siapkan data untuk export
+    const dataToExport = filteredAttendanceData.map(item => {
+      // Hitung work time category seperti di Excel contoh
+      const getWorkTimeCategory = (jamMasuk: string) => {
+        if (jamMasuk === '-' || !jamMasuk) return ''
+        
+        const [hours, minutes] = jamMasuk.split(':').map(Number)
+        const totalMinutes = hours * 60 + minutes
+        
+        // Kategori seperti di contoh Excel
+        if (totalMinutes <= 540) return '<09:00' // <= 09:00
+        else if (totalMinutes <= 570) return '09:01 - 09:30' // <= 09:30
+        else if (totalMinutes <= 600) return '09:31 - 10:00' // <= 10:00
+        else return '10:00'
+      }
+      
+      // Hitung lembur jika ada
+      const calculateOvertime = (jamPulang: string) => {
+        if (jamPulang === '-' || !jamPulang) return ''
+        
+        const [hours, minutes] = jamPulang.split(':').map(Number)
+        const totalMinutes = hours * 60 + minutes
+        
+        // Jika pulang setelah 18:00
+        if (totalMinutes > 1080) { // 18:00 = 1080 menit
+          const overtimeMinutes = totalMinutes - 1080
+          const overtimeHours = Math.floor(overtimeMinutes / 60)
+          const overtimeMins = overtimeMinutes % 60
+          return `${overtimeHours.toString().padStart(2, '0')}:${overtimeMins.toString().padStart(2, '0')}:00`
+        }
+        return ''
+      }
+      
+      // Hitung rata-rata jam kerja
+      const calculateWorkDuration = (jamMasuk: string, jamPulang: string) => {
+        if (jamMasuk === '-' || !jamMasuk || jamPulang === '-' || !jamPulang) return ''
+        
+        const parseTime = (timeStr: string) => {
+          const [hours, minutes] = timeStr.split(':').map(Number)
+          return hours * 60 + minutes
+        }
+        
+        const start = parseTime(jamMasuk)
+        const end = parseTime(jamPulang)
+        
+        if (end <= start) return ''
+        
+        const durationMinutes = end - start
+        const hours = Math.floor(durationMinutes / 60)
+        const minutes = durationMinutes % 60
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`
+      }
+      
+      const workTimeCategory = getWorkTimeCategory(item.jamMasuk)
+      const overtime = calculateOvertime(item.jamPulang)
+      const workDuration = calculateWorkDuration(item.jamMasuk, item.jamPulang)
+      
+      return {
+        "DIVISI": item.divisi || '-',
+        "DEPARTEMEN": item.departemen || '-',
+        "NAMA": item.nama,
+        "Date": new Date(item.tanggal_absen).toLocaleDateString('en-GB'), // Format dd/mm/yyyy
+        "Clock In": item.jamMasuk,
+        "Clock Out": item.jamPulang,
+        "Work Time": workTimeCategory,
+        "LEMBUR": overtime,
+        "Rata - rata jam kerja": workDuration,
+        "Keterangan": item.keteranganIzin || (item.status === 'izin' ? 'Izin' : '')
+      }
+    })
+    
+    // Buat worksheet dan workbook
+    const ws = XLSX.utils.json_to_sheet(dataToExport)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Absensi")
+    
+    // Generate excel file
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([excelBuffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' 
+    })
+    
+    // Format tanggal untuk nama file
+    const formattedDate = new Date(selectedDate).toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, '-')
+    
+    saveAs(blob, `absensi_${formattedDate}.xlsx`)
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -359,6 +455,17 @@ const Absensi: React.FC = () => {
                         🔍
                       </div>
                     </div>
+                    <button
+                      onClick={exportToExcel}
+                      disabled={filteredAttendanceData.length === 0}
+                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
+                        filteredAttendanceData.length === 0
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-primary-500 text-white hover:bg-primary-600'
+                      }`}
+                    >
+                      <span>Export Excel</span>
+                    </button>
                   </div>
                 </div>
 
