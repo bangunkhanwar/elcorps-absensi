@@ -224,7 +224,7 @@ const TambahKaryawan: React.FC<Props> = ({
 
   const jabatanOptions = ["Director", "Store Leader", "Staff", "Leader Area", "Content Creator", "Sales Assistant", "IT Support", "Accounting",
     "Corporate Secretary", "Merchandise Control", "Office Audit", "Standard Operating Procedure", "People Development",]
-  const departemenOptions = ["HR & GA", "Finance & Accounting", "IT & Technology", "Operations"]
+  const departemenOptions = ["HR & GA", "Finance & Accounting", "IT & Technology", "Operations", "Sales Assistant"]
   const divisiOptions = ["Strategi Support", "HR & GA", "Sales Marketing"]
   const unitOptions = unitKerjaList ? unitKerjaList.map(unit => unit.nama_unit) : []
 

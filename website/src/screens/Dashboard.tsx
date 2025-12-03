@@ -122,7 +122,7 @@ const Dashboard: React.FC = () => {
 
         console.log('👤 User role:', profileResponse.data.user.role)
 
-        // Untuk HR - get semua data
+        // Hanya HR yang mengambil data statistik
         if (profileResponse.data.user.role === 'hr') {
           console.log('🔄 Fetching HR dashboard data...')
           
@@ -169,7 +169,8 @@ const Dashboard: React.FC = () => {
             onTimePercentage: onTimePercentage
           })
         } else {
-          // Untuk user lain, set default values
+          // Untuk user non-HR (Leader), set stat kosong
+          // Tidak perlu fetch data statistik yang berat
           setStats({
             totalEmployees: 0,
             presentToday: 0,
@@ -277,63 +278,63 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-600">
             {user?.role === 'hr' 
               ? 'Kelola sistem absensi dan data karyawan dengan mudah' 
-              : user?.website_privileges && Array.isArray(user.website_privileges)
-              ? `${user?.jabatan || 'Leader'} - ${user?.unit_kerja || 'Unit'}`
-              : 'Sistem manajemen absensi karyawan'
+              : `${user?.jabatan || 'Karyawan'} - ${user?.nama_unit}`
             }
           </p>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Total Karyawan</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.totalEmployees}</p>
+        {/* Stats Overview - Hanya untuk HR */}
+          {user?.role === 'hr' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Total Karyawan</p>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{stats.totalEmployees}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl text-[#25a298]">👥</span>
+                  </div>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                <span className="text-2xl text-[#25a298]">👥</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Hadir Hari Ini</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.presentToday}</p>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Hadir Hari Ini</p>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{stats.presentToday}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl text-[#25a298]">✅</span>
+                  </div>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-                <span className="text-2xl text-[#25a298]">✅</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Terlambat</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.lateToday}</p>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Terlambat</p>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{stats.lateToday}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl text-[#25a298]">⏰</span>
+                  </div>
+                </div>
               </div>
-              <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
-                <span className="text-2xl text-[#25a298]">⏰</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">Tepat Waktu</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stats.onTimePercentage}%</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-                <span className="text-2xl text-[#25a298]">📝</span>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 transform transition-all duration-300 hover:shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-600">Tepat Waktu</p>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{stats.onTimePercentage}%</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl text-[#25a298]">📝</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
 
         {/* Quick Actions Grid */}
         <div className="mb-8">

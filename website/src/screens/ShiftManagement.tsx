@@ -134,18 +134,48 @@ const ShiftManagement: React.FC = () => {
   const fetchUserProfile = async () => {
     try {
       const response = await authAPI.getProfile()
-      setUser(response.data.user)
+      const userData = response.data.user
+      setUser(userData)
+      
+      console.log('👤 User profile loaded:', {
+        id: userData.id,
+        nama: userData.nama,
+        role: userData.role,
+        jabatan: userData.jabatan,
+        unit_kerja_id: userData.unit_kerja_id,
+        unit_kerja: userData.unit_kerja,
+        website_access: userData.website_access,
+        website_privileges: userData.website_privileges
+      })
       
       await fetchUnits()
       
-      if (response.data.user.role === 'leader_store' && response.data.user.unit_kerja_id) {
-        const unitId = response.data.user.unit_kerja_id
-        const unitName = response.data.user.unit_kerja || ''
+      // HR: bisa pilih unit mana saja
+      if (userData.role === 'hr') {
+        if (selectedUnit) {
+          fetchData(selectedUnit)
+        }
+      } 
+      // Leader (karyawan dengan website_access=true): otomatis pilih unit mereka
+      else if (userData.website_access === true && userData.unit_kerja_id) {
+        const unitId = userData.unit_kerja_id
+        const unitName = userData.unit_kerja || ''
+        
+        console.log('📍 Auto-selecting unit for leader:', { 
+          unitId, 
+          unitName,
+          userUnitId: userData.unit_kerja_id 
+        })
+        
         setSelectedUnit(unitId)
         setSelectedUnitName(unitName)
         fetchData(unitId)
-      } else if (selectedUnit) {
+      }
+      // Fallback: jika ada selectedUnit sebelumnya (untuk kompatibilitas)
+      else if (selectedUnit) {
         fetchData(selectedUnit)
+      } else {
+        console.warn('⚠️ No unit selected and user is not a leader with website_access')
       }
     } catch (error) {
       console.error('Error fetching user profile:', error)

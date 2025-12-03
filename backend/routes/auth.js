@@ -345,17 +345,47 @@ router.delete('/users/:id', auth, async (req, res) => {
   }
 });
 
-// Get employees by unit (for leader_store and HR)
+// Get employees by unit (for HR and leaders with website_access)
 router.get('/unit/:unitId/employees', auth, async (req, res) => {
   try {
-    // Hanya HR dan karyawan dengan website_access yang bisa akses
-    if (req.user.role !== 'hr' && !req.user.website_access) {
-      return res.status(403).json({ error: 'Akses ditolak' });
-    }
+    const unitId = req.params.unitId;
+    const user = req.user;
+    
+    console.log('👥 Access request for employees:', {
+      userId: user.id,
+      nama: user.nama,
+      role: user.role,
+      jabatan: user.jabatan,
+      userUnitId: user.unit_kerja_id,
+      requestedUnitId: unitId,
+      website_access: user.website_access
+    });
 
-    // Jika bukan HR, hanya bisa akses unitnya sendiri
-    if (req.user.role !== 'hr' && req.user.unit_kerja_id != req.params.unitId) {
-      return res.status(403).json({ error: 'Akses ditolak untuk unit kerja ini' });
+    // HR bisa akses semua unit
+    if (user.role === 'hr') {
+      console.log('✅ HR access granted for unit:', unitId);
+    } 
+    // Leader (karyawan dengan website_access) hanya bisa akses unit mereka sendiri
+    else if (user.website_access === true) {
+      console.log('🔄 Checking leader access:', {
+        leaderUnit: user.unit_kerja_id,
+        requestedUnit: unitId
+      });
+      
+      if (user.unit_kerja_id != unitId) {
+        console.log('❌ Leader access denied - wrong unit');
+        return res.status(403).json({ 
+          error: 'Akses ditolak. Anda hanya bisa mengakses karyawan di unit kerja Anda sendiri.' 
+        });
+      }
+      console.log('✅ Leader access granted for own unit');
+    }
+    // User lain tidak boleh akses
+    else {
+      console.log('❌ Access denied - no website_access');
+      return res.status(403).json({ 
+        error: 'Akses ditolak. Hanya HR dan leader yang bisa mengakses data karyawan.' 
+      });
     }
 
     const query = `
@@ -368,8 +398,11 @@ router.get('/unit/:unitId/employees', auth, async (req, res) => {
       WHERE u.unit_kerja_id = $1 AND u.role = 'karyawan'
       ORDER BY u.nama
     `;
-    const result = await pool.query(query, [req.params.unitId]);
     
+    console.log('📋 Querying employees for unit:', unitId);
+    const result = await pool.query(query, [unitId]);
+    
+    console.log(`✅ Found ${result.rows.length} employees in unit ${unitId}`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Get employees by unit error:', error);
