@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/shifts', shiftRoutes); 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Basic routes
 app.get('/', (req, res) => {

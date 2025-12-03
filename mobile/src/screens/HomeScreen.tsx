@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { attendanceAPI } from '../services/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import Ionicons from '@expo/vector-icons/build/Ionicons';
 
 // Define route params type
 type RootStackParamList = {
@@ -165,7 +166,7 @@ export default function HomeScreen({ navigation }: any) {
         uri: clockInPhoto,
         name: fileName,
         type: 'image/jpeg',
-      });
+      } as any);
 
       const response = await attendanceAPI.checkIn(formData);
 
@@ -233,7 +234,7 @@ export default function HomeScreen({ navigation }: any) {
         uri: clockOutPhoto,
         name: fileName,
         type: 'image/jpeg',
-      });
+      } as any);
 
       const response = await attendanceAPI.checkOut(formData);
 
@@ -296,12 +297,24 @@ export default function HomeScreen({ navigation }: any) {
         {/* Header dengan informasi karyawan */}
         <View className="bg-white rounded-xl p-6 shadow-sm mb-6">
           {/* Tombol menu di pojok kanan atas */}
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             className="absolute top-9 right-4 z-10"
             onPress={() => setShowMenu(true)}
           >
-            <Text className="text-2xl">📋</Text>
-          </TouchableOpacity>
+            <Text className="text-2xl">Menu</Text>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity 
+          onPress={() => setShowMenu(true)} 
+          className="absolute top-7 p-1 rounded-md bg-primary right-4 z-10"
+          // style={{ marginLeft: 15 }} // Atur jarak dari tepi kiri
+        >
+          <Ionicons 
+            name="menu" // Nama ikon hamburger
+            size={28} 
+            color="white" // Warna ikon
+          />
+        </TouchableOpacity>
 
           <View className="mb-4">
             <Text className="text-xl font-bold text-gray-800">{user?.nama || 'Bangun Chaerudin Anwar'}</Text>

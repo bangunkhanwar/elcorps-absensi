@@ -347,29 +347,67 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
 });
 
 // GET HISTORY
+// backend/routes/attendance.js
+
+// ... endpoint lainnya ...
+
+// Endpoint Get History (Update Bagian Ini)
 router.get('/history', auth, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
-    const defaultStartDate = new Date();
-    defaultStartDate.setDate(1);
-    const defaultEndDate = new Date();
+    const user_id = req.user.id;
 
-    const start = startDate || defaultStartDate.toISOString().split('T')[0];
-    const end = endDate || defaultEndDate.toISOString().split('T')[0];
+    // Perubahan Query SQL:
+    // Kita tambahkan JOIN ke tabel unit_kerja untuk mengambil 'nama_unit'
+    // Lalu kita alias-kan menjadi 'location' agar sesuai dengan frontend (item.location)
+    const query = `
+      SELECT 
+        a.*, 
+        COALESCE(u.nama_unit, 'Lokasi Tidak Terdeteksi') AS location,
+        s.nama_shift
+      FROM absensi a
+      LEFT JOIN unit_kerja u ON a.unit_kerja_id = u.id
+      LEFT JOIN shifts s ON a.shift_id = s.id
+      WHERE a.user_id = $1 
+      AND a.tanggal_absen BETWEEN $2 AND $3
+      ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
+    `;
 
-    const attendance = await Attendance.getUserAttendance(req.user.id, start, end);
-    
+    const result = await pool.query(query, [user_id, startDate, endDate]);
+
     res.json({
-      message: 'Riwayat absensi',
-      period: { start, end },
-      data: attendance
+      message: 'Data history berhasil diambil',
+      data: result.rows
     });
+
   } catch (error) {
-    console.error('History error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error getting history:', error);
+    res.status(500).json({ error: 'Terjadi kesalahan pada server' });
   }
 });
+// router.get('/history', auth, async (req, res) => {
+//   try {
+//     const { startDate, endDate } = req.query;
+    
+//     const defaultStartDate = new Date();
+//     defaultStartDate.setDate(1);
+//     const defaultEndDate = new Date();
+
+//     const start = startDate || defaultStartDate.toISOString().split('T')[0];
+//     const end = endDate || defaultEndDate.toISOString().split('T')[0];
+
+//     const attendance = await Attendance.getUserAttendance(req.user.id, start, end);
+    
+//     res.json({
+//       message: 'Riwayat absensi',
+//       period: { start, end },
+//       data: attendance
+//     });
+//   } catch (error) {
+//     console.error('History error:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
 
 // GET TODAY
 router.get('/today', auth, async (req, res) => {
