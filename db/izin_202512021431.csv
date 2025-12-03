@@ -1,0 +1,15 @@
+"user_id","start_date","end_date","keterangan","status","created_at","jenis_izin","lampiran","id"
+3,2025-11-17,2025-11-17,pergi memancing,pending,2025-11-17 17:21:39.408,cuti,,17
+3,2025-11-17,2025-11-17,Acara gatering keluarga,pending,2025-11-17 17:24:59.824,cuti,,18
+4,2025-11-17,2025-11-17,demam batuk pilek,pending,2025-11-17 17:29:44.469,sakit,,19
+4,2025-11-17,2025-11-17,"Gatering keluarga,",pending,2025-11-17 17:36:50.417,cuti,,20
+4,2025-11-17,2025-11-17,Demam berdarah,pending,2025-11-17 17:44:35.715,sakit,,21
+16,2025-11-18,2025-11-18,Panas dingin,approved,2025-11-18 11:25:01.559,sakit,,22
+3,2025-11-18,2025-11-18,acara keluarga,approved,2025-11-18 13:07:48.825,cuti,,23
+4,2025-11-18,2025-11-18,kepentingan keluarga,approved,2025-11-18 13:21:35.701,lainnya,,24
+24,2025-11-25,2025-11-25,Darah tinggi,pending,2025-11-25 11:19:20.261,sakit,,25
+3,2025-11-11,2025-11-12,Cuti tahunan,pending,2025-11-25 13:21:29.664,lainnya,,27
+3,2025-11-25,2025-11-25,Panas dingin,approved,2025-11-25 11:22:05.342,sakit,,26
+25,2025-11-25,2025-11-26,Acara keluarga,approved,2025-11-25 14:15:57.768,cuti,,28
+26,2025-11-27,2025-11-27,Melahirkan,approved,2025-11-26 22:33:27.970,cuti,,29
+3,2025-11-11,2025-11-12,Cuti tahunan,pending,2025-11-27 10:24:22.203,lainnya,,30

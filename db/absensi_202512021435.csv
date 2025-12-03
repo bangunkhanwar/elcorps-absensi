@@ -1,0 +1,2 @@
+"user_id","tanggal_absen","waktu_masuk","waktu_keluar","foto_masuk","foto_keluar","created_at","user_latitude","user_longitude","distance_meter","jam_seharusnya_masuk","jam_seharusnya_keluar","unit_kerja_id","shift_id","status","id"
+25,2025-12-02,14:02:33,14:03:51,"1764658929030-535755067-ef2f32fc-adab-44b6-b4a5-4a7599e1455e.jpeg","1764659031311-382643719-86dd24eb-37cc-43d6-9900-fffdda46257d.jpeg",2025-12-02 14:02:33.231,-6.93254980,107.56681780,89,09:00:00,18:00:00,7,25,Terlambat,1

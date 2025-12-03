@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  ScrollView, 
+  Modal, 
+  Alert, 
+  StatusBar as RNStatusBar, 
+  Platform,
+  StyleSheet 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 export default function AttendanceScreen({ navigation }: any) {
   const [selectedFilter, setSelectedFilter] = useState('semua');
@@ -44,8 +55,8 @@ export default function AttendanceScreen({ navigation }: any) {
   const fetchAttendanceHistory = async (userId: number) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.118';
-      
+      const serverIP = await AsyncStorage.getItem('server_ip') || '10.1.10.219';
+
       console.log('Fetching attendance from server:', serverIP);
 
       const response = await fetch(
@@ -78,10 +89,10 @@ export default function AttendanceScreen({ navigation }: any) {
   const calculateStatus = (waktuMasuk: string | null, waktuKeluar: string | null, statusFromDB: string) => {
     if (statusFromDB === 'izin' || statusFromDB === 'Izin') return 'Izin';
     if (!waktuMasuk) return 'Tidak Hadir';
-    
+
     const jamMasuk = new Date(`2000-01-01T${waktuMasuk}`);
     const batasTelat = new Date(`2000-01-01T09:00:00`);
-    
+
     return jamMasuk <= batasTelat ? 'Tepat Waktu' : 'Terlambat';
   };
 
@@ -102,7 +113,7 @@ export default function AttendanceScreen({ navigation }: any) {
   // Update filteredData dengan calculateStatus
   const filteredData = attendanceData.filter(item => {
     const status = calculateStatus(item.waktu_masuk, item.waktu_keluar, item.status);
-    
+
     if (selectedFilter === 'semua') return true;
     if (selectedFilter === 'tepat-waktu') return status === 'Tepat Waktu';
     if (selectedFilter === 'terlambat') return status === 'Terlambat';
@@ -112,11 +123,11 @@ export default function AttendanceScreen({ navigation }: any) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     };
     return date.toLocaleDateString('id-ID', options);
   };
@@ -124,9 +135,9 @@ export default function AttendanceScreen({ navigation }: any) {
   const formatTime = (timeString: string | null) => {
     if (!timeString) return '-';
     const time = new Date(`2000-01-01T${timeString}`);
-    return time.toLocaleTimeString('id-ID', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return time.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -142,139 +153,156 @@ export default function AttendanceScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-primary py-6 px-4">
-        <View className="flex-row items-center">
-          <TouchableOpacity 
-            onPress={() => {
-              navigation.navigate('Home', { showMenuModal: true });
-            }}
-            className="mr-4"
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <View>
-            <Text className="text-white text-xl font-bold">Riwayat Absensi</Text>
-            <Text className="text-white opacity-90">{user?.nama}</Text>
+    <View style={styles.container}>
+      {/* Status Bar untuk iOS */}
+      {Platform.OS === 'ios' && (
+        <View style={styles.iosStatusBar} />
+      )}
+
+      {/* Status Bar untuk Android */}
+      {Platform.OS === 'android' && (
+        <RNStatusBar backgroundColor="#25a298" barStyle="light-content" />
+      )}
+
+      {/* SafeAreaView untuk konten */}
+      <SafeAreaView style={styles.safeArea}
+        edges={
+          Platform.OS === 'ios' 
+            ? ['left', 'right', 'bottom'] // iOS: hanya kiri, kanan, bawah
+            : ['top', 'left', 'right', 'bottom'] // Android: semua sisi
+        }>
+        {/* Header */}
+        <View className="bg-primary py-4 px-4 rounded-b-3xl shadow-lg">
+          <View className="flex-row items-center">
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center mr-4"
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-white">Riwayat Absensi</Text>
+              <Text className="text-white/80 text-sm mt-1">
+                {user?.nama}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {/* Filter Section */}
-      <View className="bg-white p-4 shadow-sm">
-        <View className="flex-row justify-between items-center mb-4">
-          <Text className="text-lg font-semibold text-gray-800">Filter Data</Text>
-          <TouchableOpacity 
-            onPress={() => setShowFilterModal(true)}
-            className="flex-row items-center bg-primary rounded-lg px-4 py-2"
-          >
-            <Ionicons name="filter" size={16} color="white" />
-            <Text className="text-white ml-2 font-semibold">Filter</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Filter Section */}
+        <View className="bg-white p-4 shadow-sm">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-lg font-semibold text-gray-800">Filter Data</Text>
+            <TouchableOpacity
+              onPress={() => setShowFilterModal(true)}
+              className="flex-row items-center bg-primary rounded-lg px-4 py-2"
+            >
+              <Ionicons name="filter" size={16} color="white" />
+              <Text className="text-white ml-2 font-semibold">Filter</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Quick Filter Buttons */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-          <View className="flex-row space-x-2">
-            {filterOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setSelectedFilter(option.value)}
-                className={`px-4 py-2 rounded-full ${
-                  selectedFilter === option.value 
-                    ? 'bg-primary' 
+          {/* Quick Filter Buttons */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+            <View className="flex-row space-x-2">
+              {filterOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => setSelectedFilter(option.value)}
+                  className={`px-4 py-2 rounded-full ${selectedFilter === option.value
+                    ? 'bg-primary'
                     : 'bg-gray-200'
-                }`}
-              >
-                <Text className={
-                  selectedFilter === option.value 
-                    ? 'text-white font-semibold' 
-                    : 'text-gray-700'
-                }>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+                    }`}
+                >
+                  <Text className={
+                    selectedFilter === option.value
+                      ? 'text-white font-semibold'
+                      : 'text-gray-700'
+                  }>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
 
-        {/* Selected Period */}
-        <View className="bg-blue-50 rounded-lg p-3">
-          <Text className="text-blue-800 text-center font-medium">
-            Periode: {months[selectedMonth]} {selectedYear}
-          </Text>
+          {/* Selected Period */}
+          <View className="bg-blue-50 rounded-lg p-3">
+            <Text className="text-blue-800 text-center font-medium">
+              Periode: {months[selectedMonth]} {selectedYear}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      {/* Attendance List */}
-      <ScrollView className="flex-1 p-4">
-        {loading ? (
-          <View className="items-center justify-center py-12">
-            <Ionicons name="refresh" size={64} color="#9CA3AF" />
-            <Text className="text-gray-500 text-lg font-semibold mt-4">
-              Memuat data...
-            </Text>
-          </View>
-        ) : (
-          <View className="space-y-3">
-            {filteredData.map((item) => {
-              const status = calculateStatus(item.waktu_masuk, item.waktu_keluar, item.status);
-              return (
-                <View key={item.id} className="bg-white rounded-xl p-4 shadow-sm">
-                  {/* Date Header */}
-                  <View className="flex-row justify-between items-center mb-3">
-                    <Text className="text-lg font-semibold text-gray-800">
-                      {formatDate(item.tanggal_absen)}
-                    </Text>
-                    <View className={`px-3 py-1 rounded-full ${getStatusColor(status)}`}>
-                      <Text className="font-semibold text-sm">{status}</Text>
-                    </View>
-                  </View>
-
-                  {/* Time Information */}
-                  <View className="flex-row justify-between items-center mb-2">
-                    <View className="flex-1">
-                      <Text className="text-gray-600 text-sm">Clock In</Text>
-                      <Text className="text-gray-800 font-semibold text-lg">
-                        {formatTime(item.waktu_masuk)}
+        {/* Attendance List */}
+        <ScrollView className="flex-1 p-4 bg-white" contentContainerStyle={{ flexGrow: 1 }}>
+          {loading ? (
+            <View className="items-center justify-center py-12">
+              <Ionicons name="refresh" size={64} color="#9CA3AF" />
+              <Text className="text-gray-500 text-lg font-semibold mt-4">
+                Memuat data...
+              </Text>
+            </View>
+          ) : (
+            <View className="space-y-3">
+              {filteredData.map((item) => {
+                const status = calculateStatus(item.waktu_masuk, item.waktu_keluar, item.status);
+                return (
+                  <View key={item.id} className="bg-white rounded-xl p-4 shadow-sm">
+                    {/* Date Header */}
+                    <View className="flex-row justify-between items-center mb-3">
+                      <Text className="text-lg font-semibold text-gray-800">
+                        {formatDate(item.tanggal_absen)}
                       </Text>
+                      <View className={`px-3 py-1 rounded-full ${getStatusColor(status)}`}>
+                        <Text className="font-semibold text-sm">{status}</Text>
+                      </View>
                     </View>
-                    <View className="flex-1 items-center">
-                      <Text className="text-gray-400">-</Text>
+
+                    {/* Time Information */}
+                    <View className="flex-row justify-between items-center mb-2">
+                      <View className="flex-1">
+                        <Text className="text-gray-600 text-sm">Clock In</Text>
+                        <Text className="text-gray-800 font-semibold text-lg">
+                          {formatTime(item.waktu_masuk)}
+                        </Text>
+                      </View>
+                      <View className="flex-1 items-center">
+                        <Text className="text-gray-400">-</Text>
+                      </View>
+                      <View className="flex-1 items-end">
+                        <Text className="text-gray-600 text-sm">Clock Out</Text>
+                        <Text className="text-gray-800 font-semibold text-lg">
+                          {formatTime(item.waktu_keluar)}
+                        </Text>
+                      </View>
                     </View>
-                    <View className="flex-1 items-end">
-                      <Text className="text-gray-600 text-sm">Clock Out</Text>
-                      <Text className="text-gray-800 font-semibold text-lg">
-                        {formatTime(item.waktu_keluar)}
-                      </Text>
+
+                    {/* Location */}
+                    <View className="flex-row items-center mt-2">
+                      <Ionicons name="location" size={16} color="#6B7280" />
+                      <Text className="text-gray-600 ml-2 text-sm">{item.location || 'Lokasi tidak tersedia'}</Text>
                     </View>
                   </View>
+                );
+              })}
+            </View>
+          )}
 
-                  {/* Location */}
-                  <View className="flex-row items-center mt-2">
-                    <Ionicons name="location" size={16} color="#6B7280" />
-                    <Text className="text-gray-600 ml-2 text-sm">{item.location || 'Lokasi tidak tersedia'}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Empty State */}
-        {!loading && filteredData.length === 0 && (
-          <View className="items-center justify-center py-12">
-            <Ionicons name="calendar-outline" size={64} color="#9CA3AF" />
-            <Text className="text-gray-500 text-lg font-semibold mt-4">
-              Tidak ada data absensi
-            </Text>
-            <Text className="text-gray-400 text-center mt-2">
-              Tidak ada riwayat absensi untuk filter yang dipilih
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+          {/* Empty State */}
+          {!loading && filteredData.length === 0 && (
+            <View className="items-center justify-center py-12">
+              <Ionicons name="calendar-outline" size={64} color="#9CA3AF" />
+              <Text className="text-gray-500 text-lg font-semibold mt-4">
+                Tidak ada data absensi
+              </Text>
+              <Text className="text-gray-400 text-center mt-2">
+                Tidak ada riwayat absensi untuk filter yang dipilih
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
 
       {/* Filter Modal */}
       <Modal
@@ -302,15 +330,14 @@ export default function AttendanceScreen({ navigation }: any) {
                     <TouchableOpacity
                       key={month}
                       onPress={() => setSelectedMonth(index)}
-                      className={`px-4 py-3 rounded-lg ${
-                        selectedMonth === index 
-                          ? 'bg-primary' 
-                          : 'bg-gray-100'
-                      }`}
+                      className={`px-4 py-3 rounded-lg ${selectedMonth === index
+                        ? 'bg-primary'
+                        : 'bg-gray-100'
+                        }`}
                     >
                       <Text className={
-                        selectedMonth === index 
-                          ? 'text-white font-semibold' 
+                        selectedMonth === index
+                          ? 'text-white font-semibold'
                           : 'text-gray-700'
                       }>
                         {month}
@@ -330,15 +357,14 @@ export default function AttendanceScreen({ navigation }: any) {
                     <TouchableOpacity
                       key={year}
                       onPress={() => setSelectedYear(year)}
-                      className={`px-4 py-3 rounded-lg ${
-                        selectedYear === year 
-                          ? 'bg-primary' 
-                          : 'bg-gray-100'
-                      }`}
+                      className={`px-4 py-3 rounded-lg ${selectedYear === year
+                        ? 'bg-primary'
+                        : 'bg-gray-100'
+                        }`}
                     >
                       <Text className={
-                        selectedYear === year 
-                          ? 'text-white font-semibold' 
+                        selectedYear === year
+                          ? 'text-white font-semibold'
                           : 'text-gray-700'
                       }>
                         {year}
@@ -357,15 +383,14 @@ export default function AttendanceScreen({ navigation }: any) {
                   <TouchableOpacity
                     key={option.value}
                     onPress={() => setSelectedFilter(option.value)}
-                    className={`mx-1 mb-2 px-4 py-3 rounded-lg flex-1 min-w-[45%] ${
-                      selectedFilter === option.value 
-                        ? 'bg-primary' 
-                        : 'bg-gray-100'
-                    }`}
+                    className={`mx-1 mb-2 px-4 py-3 rounded-lg flex-1 min-w-[45%] ${selectedFilter === option.value
+                      ? 'bg-primary'
+                      : 'bg-gray-100'
+                      }`}
                   >
                     <Text className={
-                      selectedFilter === option.value 
-                        ? 'text-white font-semibold text-center' 
+                      selectedFilter === option.value
+                        ? 'text-white font-semibold text-center'
                         : 'text-gray-700 text-center'
                     }>
                       {option.label}
@@ -377,7 +402,7 @@ export default function AttendanceScreen({ navigation }: any) {
 
             {/* Action Buttons */}
             <View className="flex-row space-x-3">
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="flex-1 bg-gray-200 rounded-xl py-4"
                 onPress={() => {
                   setSelectedFilter('semua');
@@ -389,7 +414,7 @@ export default function AttendanceScreen({ navigation }: any) {
                   Reset
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="flex-1 bg-primary rounded-xl py-4"
                 onPress={() => setShowFilterModal(false)}
               >
@@ -401,6 +426,22 @@ export default function AttendanceScreen({ navigation }: any) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white', // Background utama putih
+  },
+  iosStatusBar: {
+    backgroundColor: '#25a298', // Warna primary (hijau) untuk status bar iOS
+    height: Platform.OS === 'ios' ? Constants.statusBarHeight : 0,
+    width: '100%',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'white', // Background putih untuk konten di bawah status bar
+  },
+});
