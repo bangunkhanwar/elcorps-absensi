@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, Image, Alert, Linking, Platform, StatusBar as RNStatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Image, Alert, Linking, Platform, StatusBar as RNStatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,6 +30,8 @@ export default function HomeScreen({ navigation }: any) {
   const [clockOutPhoto, setClockOutPhoto] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: string, longitude: string } | null>(null);
   const [locationStatus, setLocationStatus] = useState<'waiting' | 'granted' | 'denied' | 'gps_off' | 'error'>('waiting');
+  const [isClockingIn, setIsClockingIn] = useState(false);
+  const [isClockingOut, setIsClockingOut] = useState(false);
 
   const route = useRoute<HomeScreenRouteProp>();
 
@@ -147,6 +149,7 @@ export default function HomeScreen({ navigation }: any) {
       return;
     }
 
+    setIsClockingIn(true);
     try {
       // ...existing code...
       // Dapatkan lokasi
@@ -156,6 +159,7 @@ export default function HomeScreen({ navigation }: any) {
           'Lokasi Tidak Terdeteksi',
           'Tidak dapat mendapatkan lokasi Anda. Pastikan GPS aktif dan memiliki sinyal yang baik.'
         );
+        setIsClockingIn(false);
         return;
       }
 
@@ -207,6 +211,8 @@ export default function HomeScreen({ navigation }: any) {
       }
 
       Alert.alert('Error', errorMessage);
+    } finally {
+      setIsClockingIn(false);
     }
   };
 
@@ -216,6 +222,7 @@ export default function HomeScreen({ navigation }: any) {
       return;
     }
 
+    setIsClockingOut(true);
     try {
       // ...existing code...
       // Dapatkan lokasi
@@ -225,6 +232,7 @@ export default function HomeScreen({ navigation }: any) {
           'Lokasi Tidak Terdeteksi',
           'Tidak dapat mendapatkan lokasi Anda. Pastikan GPS aktif dan memiliki sinyal yang baik.'
         );
+        setIsClockingOut(false);
         return;
       }
 
@@ -268,6 +276,8 @@ export default function HomeScreen({ navigation }: any) {
       }
 
       Alert.alert('Error', errorMessage);
+    } finally {
+      setIsClockingOut(false);
     }
   };
 
@@ -589,12 +599,21 @@ export default function HomeScreen({ navigation }: any) {
                     <TouchableOpacity
                       className="flex-1 bg-green-500 rounded-xl py-3"
                       onPress={handleClockIn}
-                      disabled={!clockInPhoto}
-                      style={{ opacity: clockInPhoto ? 1 : 0.5 }}
+                      disabled={!clockInPhoto || isClockingIn}
+                      style={{ opacity: (clockInPhoto && !isClockingIn) ? 1 : 0.5 }}
                     >
-                      <Text className="text-white text-center font-semibold">
-                        Konfirmasi
-                      </Text>
+                      {isClockingIn ? (
+                        <View className="flex-row items-center justify-center">
+                          <ActivityIndicator size="small" color="#fff" />
+                          <Text className="text-white text-center font-semibold ml-2">
+                            Memproses...
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text className="text-white text-center font-semibold">
+                          Konfirmasi
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -674,12 +693,21 @@ export default function HomeScreen({ navigation }: any) {
                     <TouchableOpacity
                       className="flex-1 bg-blue-500 rounded-xl py-3"
                       onPress={handleClockOut}
-                      disabled={!clockOutPhoto}
-                      style={{ opacity: clockOutPhoto ? 1 : 0.5 }}
+                      disabled={!clockOutPhoto || isClockingOut}
+                      style={{ opacity: (clockOutPhoto && !isClockingOut) ? 1 : 0.5 }}
                     >
-                      <Text className="text-white text-center font-semibold">
-                        Konfirmasi
-                      </Text>
+                      {isClockingOut ? (
+                        <View className="flex-row items-center justify-center">
+                          <ActivityIndicator size="small" color="#fff" />
+                          <Text className="text-white text-center font-semibold ml-2">
+                            Memproses...
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text className="text-white text-center font-semibold">
+                          Konfirmasi
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>

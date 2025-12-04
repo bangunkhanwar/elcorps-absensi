@@ -4,6 +4,7 @@ const Attendance = require('../models/attendance');
 const User = require('../models/user');
 const fs = require('fs');
 const path = require('path');
+const pool = require('../config/database');
 
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -24,6 +25,30 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // Distance in meters
+}
+
+// Helper function: Calculate attendance status
+function calculateStatus(waktuMasuk, jamMasukShift, toleransiMinutes) {
+  const [masukHour, masukMinute] = waktuMasuk.split(':').map(Number);
+  const [shiftHour, shiftMinute] = jamMasukShift.split(':').map(Number);
+  
+  const masukTotalMinutes = masukHour * 60 + masukMinute;
+  const shiftTotalMinutes = shiftHour * 60 + shiftMinute;
+  const batasTelat = shiftTotalMinutes + toleransiMinutes;
+  
+  if (masukTotalMinutes <= batasTelat) {
+    return 'Tepat Waktu';
+  } else {
+    return 'Terlambat';
+  }
+}
+
+// Helper function: Get current Jakarta date
+function getCurrentJakartaDate() {
+  const now = new Date();
+  // Convert to Jakarta timezone (UTC+7)
+  const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  return jakartaTime.toISOString().split('T')[0]; // YYYY-MM-DD format
 } 
 
 // Helper function: Calculate attendance status with timezone
