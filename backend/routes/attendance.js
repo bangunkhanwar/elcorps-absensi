@@ -46,9 +46,18 @@ function calculateStatus(waktuMasuk, jamMasukShift, toleransiMinutes) {
 // Helper function: Get current Jakarta date
 function getCurrentJakartaDate() {
   const now = new Date();
-  // Convert to Jakarta timezone (UTC+7)
-  const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
-  return jakartaTime.toISOString().split('T')[0]; // YYYY-MM-DD format
+  // Convert to Jakarta timezone (UTC+7) using Intl.DateTimeFormat
+  const formatter = new Intl.DateTimeFormat('en-CA', { 
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(now);
+  const year = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day = parts.find(p => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`; // YYYY-MM-DD format
 } 
 
 // Helper function: Calculate attendance status with timezone
