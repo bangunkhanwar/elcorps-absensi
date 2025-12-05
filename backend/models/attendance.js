@@ -69,30 +69,22 @@ class Attendance {
     return result.rows;
   }
 
-<<<<<<< HEAD
 // GET ALL ATTENDANCE - DENGAN TIMEZONE JAKARTA
-=======
   // GET ALL ATTENDANCE - DENGAN TIMEZONE DINAMIS
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
   static async getAllAttendance(startDate, endDate) {
     console.log('📅 Executing getAllAttendance with:', { startDate, endDate });
     
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
     
-<<<<<<< HEAD
     console.log('📊 Final query dates:', queryStartDate, queryEndDate);
     
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     const query = `
       SELECT 
         a.*, 
         u.nama, u.nik, u.jabatan, u.departemen, u.divisi,
         uk.nama_unit,
-<<<<<<< HEAD
         s.nama_shift
-=======
         uk.timezone,
         s.nama_shift,
         -- Konversi waktu ke timezone unit_kerja
@@ -104,7 +96,6 @@ class Attendance {
           (a.waktu_keluar AT TIME ZONE 'UTC' AT TIME ZONE COALESCE(uk.timezone, 'Asia/Jakarta')), 
           'HH24:MI'
         ) as waktu_keluar_jakarta
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
       FROM absensi a 
       LEFT JOIN users u ON a.user_id = u.id 
       LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
@@ -113,7 +104,6 @@ class Attendance {
       ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
     `;
     
-<<<<<<< HEAD
     console.log('🔍 Executing SQL query...');
     
     try {
@@ -129,7 +119,6 @@ class Attendance {
             waktu_masuk: row.waktu_masuk,
             waktu_keluar: row.waktu_keluar,
             tanggal_absen: row.tanggal_absen
-=======
     try {
       const result = await pool.query(query, [queryStartDate, queryEndDate]);
       console.log('✅ Query dengan timezone, row count:', result.rows.length);
@@ -145,7 +134,6 @@ class Attendance {
             waktu_masuk_original: row.waktu_masuk,
             waktu_masuk_converted: row.waktu_masuk_jakarta,
             waktu_keluar_converted: row.waktu_keluar_jakarta
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
           });
         });
       }
