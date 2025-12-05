@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 import {
     View,
     Text,
@@ -59,7 +58,7 @@ export default function AttendanceScreen({ navigation }: any) {
     const fetchAttendanceHistory = async (userId: number) => {
         try {
             const token = await AsyncStorage.getItem('token');
-            const serverIP = await AsyncStorage.getItem('server_ip') || '10.1.10.219';
+            const serverIP = await AsyncStorage.getItem('server_ip') || '10.1.10.236';
 
             console.log('Fetching leave history from server:', serverIP);
 
@@ -192,29 +191,6 @@ export default function AttendanceScreen({ navigation }: any) {
         const year = date.getFullYear();
 
         return `${day} ${month} ${year}`;
-    };
-
-    // Fungsi untuk memilih atau mengambil foto dari galeri/kamera
-    const handlePickImage = async () => {
-        try {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Izin Ditolak', 'Akses galeri diperlukan untuk memilih file.');
-                return;
-            }
-            const mediaTypeImages = ImagePicker.MediaTypeOptions?.Images ?? 'photo';
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: mediaTypeImages,
-                allowsEditing: false,
-                quality: 0.7,
-            });
-            if (!result.canceled && result.assets && result.assets[0].uri) {
-                Alert.alert('File Dipilih', result.assets[0].uri);
-                // Lakukan sesuatu dengan file, misal upload atau preview
-            }
-        } catch (error) {
-            Alert.alert('Error', 'Gagal memilih file: ' + error.message);
-        }
     };
 
     const handleOpenAttachment = async (lampiran: string) => {
@@ -519,15 +495,6 @@ export default function AttendanceScreen({ navigation }: any) {
                                                         {item.lampiran.split('/').pop() || 'Lihat File'}
                                                     </Text>
                                                     <Ionicons name="chevron-forward" size={14} color="#3B82F6" />
-                                                </TouchableOpacity>
-                                                <TouchableOpacity
-                                                    className="flex-row items-center mt-2 p-2 bg-gray-100 rounded-lg"
-                                                    onPress={handlePickImage}
-                                                >
-                                                    <Ionicons name="image-outline" size={16} color="#6366F1" />
-                                                    <Text className="text-indigo-600 font-medium text-sm ml-2 flex-1">
-                                                        Pilih dari Galeri
-                                                    </Text>
                                                 </TouchableOpacity>
                                             </View>
                                         )}

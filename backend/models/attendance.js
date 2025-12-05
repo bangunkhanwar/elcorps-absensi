@@ -78,20 +78,18 @@ class Attendance {
     
     // QUERY SEDERHANA TANPA KONVERSI TIMEZONE YANG ERROR
     const query = `
-      SELECT 
-        a.*, 
-        u.nama, u.nik, u.jabatan, u.departemen, u.divisi,
-        uk.nama_unit,
-        s.nama_shift
-        uk.timezone,
-        s.nama_shift
-      FROM absensi a 
-      LEFT JOIN users u ON a.user_id = u.id 
-      LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
-      LEFT JOIN shifts s ON a.shift_id = s.id
-      WHERE a.tanggal_absen BETWEEN $1 AND $2 
-      ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
-    `;
+  SELECT 
+    a.*, 
+    u.nama, u.nik, u.jabatan, u.departemen, u.divisi,
+    uk.nama_unit, uk.timezone,
+    s.nama_shift
+  FROM absensi a 
+  LEFT JOIN users u ON a.user_id = u.id 
+  LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
+  LEFT JOIN shifts s ON a.shift_id = s.id
+  WHERE a.tanggal_absen BETWEEN $1 AND $2 
+  ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
+`;
     
     console.log('🔍 Executing SQL query...');
     

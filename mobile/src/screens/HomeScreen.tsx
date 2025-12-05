@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-<<<<<<< HEAD
 import { View, Text, TouchableOpacity, Modal, Image, Alert, Linking, Platform, StatusBar as RNStatusBar, ActivityIndicator } from 'react-native';
-=======
-import { View, Text, TouchableOpacity, Modal, Image, Alert, Linking, Platform, StatusBar as RNStatusBar } from 'react-native';
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,6 +18,22 @@ type RootStackParamList = {
 
 type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white', // Background utama putih
+  },
+  iosStatusBar: {
+    backgroundColor: '#25a298', // Warna primary (hijau) untuk status bar iOS
+    height: Platform.OS === 'ios' ? Constants.statusBarHeight : 0,
+    width: '100%',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'white', // Background putih untuk konten di bawah status bar
+  },
+});
+
 export default function HomeScreen({ navigation }: any) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockInStatus, setClockInStatus] = useState('Belum Clock In');
@@ -34,10 +46,7 @@ export default function HomeScreen({ navigation }: any) {
   const [clockOutPhoto, setClockOutPhoto] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: string, longitude: string } | null>(null);
   const [locationStatus, setLocationStatus] = useState<'waiting' | 'granted' | 'denied' | 'gps_off' | 'error'>('waiting');
-<<<<<<< HEAD
   const [showLoading, setShowLoading] = useState(false);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 
   const route = useRoute<HomeScreenRouteProp>();
 
@@ -127,14 +136,9 @@ export default function HomeScreen({ navigation }: any) {
         return;
       }
 
-<<<<<<< HEAD
       const mediaTypeImages = ImagePicker.MediaTypeOptions?.Images ?? 'photo';
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: mediaTypeImages,
-=======
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         allowsEditing: false,
         aspect: [4, 3],
         quality: 0.7,
@@ -161,19 +165,13 @@ export default function HomeScreen({ navigation }: any) {
       return;
     }
 
-<<<<<<< HEAD
     setShowLoading(true);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     try {
       // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
-<<<<<<< HEAD
         setShowLoading(false);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         Alert.alert(
           'Lokasi Tidak Terdeteksi',
           'Tidak dapat mendapatkan lokasi Anda. Pastikan GPS aktif dan memiliki sinyal yang baik.'
@@ -229,11 +227,8 @@ export default function HomeScreen({ navigation }: any) {
       }
 
       Alert.alert('Error', errorMessage);
-<<<<<<< HEAD
     } finally {
       setShowLoading(false);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     }
   };
 
@@ -243,19 +238,13 @@ export default function HomeScreen({ navigation }: any) {
       return;
     }
 
-<<<<<<< HEAD
     setShowLoading(true);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     try {
       // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
-<<<<<<< HEAD
         setShowLoading(false);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         Alert.alert(
           'Lokasi Tidak Terdeteksi',
           'Tidak dapat mendapatkan lokasi Anda. Pastikan GPS aktif dan memiliki sinyal yang baik.'
@@ -303,11 +292,8 @@ export default function HomeScreen({ navigation }: any) {
       }
 
       Alert.alert('Error', errorMessage);
-<<<<<<< HEAD
     } finally {
       setShowLoading(false);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     }
   };
 
@@ -334,28 +320,23 @@ export default function HomeScreen({ navigation }: any) {
     return `${hours} . ${minutes} . ${seconds}`;
   };
 
-  return (
-<<<<<<< HEAD
-    <View style={styles.container}>
-            {/* Modal Loading Indicator */}
-            <Modal
-              visible={showLoading}
-              transparent
-              animationType="fade"
-              onRequestClose={() => {}}
-            >
-              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
-                <View style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, alignItems: 'center' }}>
-                  <ActivityIndicator size="large" color="#25a298" />
-                  <Text style={{ marginTop: 16, fontSize: 16, color: '#333', fontWeight: 'bold' }}>Memproses absensi...</Text>
-                </View>
-              </View>
-            </Modal>
-=======
+ return (
+    <>
+      {/* Modal Loading Indicator */}
+      <Modal
+        visible={showLoading}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#25a298" />
+            <Text style={{ marginTop: 16, fontSize: 16, color: '#333', fontWeight: 'bold' }}>Memproses absensi...</Text>
+          </View>
+        </View>
+      </Modal>
 
-
-    <View style={styles.container}>
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
       {/* Status Bar untuk iOS */}
       {Platform.OS === 'ios' && (
         <View style={styles.iosStatusBar} />
@@ -365,14 +346,14 @@ export default function HomeScreen({ navigation }: any) {
       {Platform.OS === 'android' && (
         <RNStatusBar backgroundColor="#25a298" barStyle="light-content" />
       )}
+      
       <SafeAreaView style={styles.safeArea}
         edges={
-          Platform.OS === 'ios' 
+          Platform.OS === 'ios'
             ? ['left', 'right', 'bottom'] // iOS: hanya kiri, kanan, bawah
             : ['top', 'left', 'right', 'bottom'] // Android: semua sisi
-        } >
-
-
+        }>
+        
         <View className='flex-1 bg-white'>
           <View className="flex-row items-center justify-between px-6 bg-primary rounded-b-3xl shadow-lg">
             <Image
@@ -393,8 +374,8 @@ export default function HomeScreen({ navigation }: any) {
               />
             </TouchableOpacity>
           </View>
+          
           <View className="flex-1 bg-white p-6 content-center">
-
             {/* Header dengan informasi karyawan */}
             <View className="mb-6">
               {/* Tombol menu di pojok kanan atas */}
@@ -403,7 +384,7 @@ export default function HomeScreen({ navigation }: any) {
                 <Text className="text-gray-600">{user?.nik || '52510.3138'}</Text>
                 <Text className="text-gray-600">{user?.jabatan || 'Staff Of Programmer'}</Text>
               </View>
-
+              
               {/* Garis pemisah setelah Staff Of Programmer */}
               <View className="border-t border-gray-200 pt-4 mb-4">
                 <Text className="text-lg font-semibold mb-2 text-primary">Informasi Karyawan</Text>
@@ -479,290 +460,272 @@ export default function HomeScreen({ navigation }: any) {
                 </View>
               </View>
             </View>
-
-            {/* Modal Menu */}
-            <Modal
-              animationType="fade"
-              transparent={true}
-              visible={showMenu}
-              onRequestClose={() => setShowMenu(false)}
-            >
-              <SafeAreaView className="flex-1 justify-center items-center bg-black/70">
-                <View className="bg-white rounded-2xl p-8 w-80 shadow-2xl">
-                  {/* Header Modal */}
-                  <View className="items-center mb-6">
-                    <View className="bg-primary w-16 h-16 rounded-full items-center justify-center mb-3">
-                      <Text className="text-2xl">📋</Text>
-                    </View>
-                    <Text className="text-2xl font-bold text-black">Menu</Text>
-                    <Text className="text-primary text-center mt-2">Pilih menu yang diinginkan</Text>
-                  </View>
-
-                  {/* Garis pemisah dekoratif */}
-                  <View className="border-t border-primary mb-6"></View>
-
-                  {/* Tombol Menu */}
-                  <View className="space-y-4">
-                    <TouchableOpacity
-                      className="bg-white border border-primary rounded-xl py-5 px-4"
-                      onPress={() => {
-                        setShowMenu(false);
-                        setTimeout(() => {
-                          navigation.navigate('Attendance');
-                        }, 100);
-                      }}
-                    >
-                      <View className="flex-row items-center justify-between">
-                        <View className="flex-row items-center">
-                          <View className="bg-primary w-10 h-10 rounded-lg items-center justify-center mr-3">
-                            <Text className="text-white font-bold text-lg">📊</Text>
-                          </View>
-                          <View>
-                            <Text className="text-black font-semibold text-lg">
-                              Riwayat Absensi
-                            </Text>
-                            <Text className="text-primary text-sm">
-                              Lihat history kehadiran
-                            </Text>
-                          </View>
-                        </View>
-                        <Text className="text-primary text-xl">›</Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      className="bg-white border border-primary rounded-xl py-5 px-4"
-                      onPress={() => {
-                        setShowMenu(false);
-                        setTimeout(() => {
-                          navigation.navigate('Leave');
-                        }, 100);
-                      }}
-                    >
-                      <View className="flex-row items-center justify-between">
-                        <View className="flex-row items-center">
-                          <View className="bg-primary w-10 h-10 rounded-lg items-center justify-center mr-3">
-                            <Text className="text-white font-bold text-lg">📝</Text>
-                          </View>
-                          <View>
-                            <Text className="text-black font-semibold text-lg">
-                              Pengajuan Izin
-                            </Text>
-                            <Text className="text-primary text-sm">
-                              Ajukan cuti atau izin
-                            </Text>
-                          </View>
-                        </View>
-                        <Text className="text-primary text-xl">›</Text>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Garis pemisah sebelum tombol tutup */}
-                  <View className="border-t border-primary my-6"></View>
-
-                  {/* Tombol Tutup */}
-                  <TouchableOpacity
-                    className="bg-primary border border-gray-200 rounded-xl py-4"
-                    onPress={() => setShowMenu(false)}
-                  >
-                    <Text className="text-white text-center font-semibold text-lg">
-                      Tutup Menu
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </SafeAreaView>
-            </Modal>
-
-            {/* Modal Konfirmasi Clock In */}
-            <Modal
-              animationType="fade"
-              transparent={true}
-              visible={showClockInModal}
-              onRequestClose={() => setShowClockInModal(false)}
-            >
-              <SafeAreaView className="flex-1 justify-center items-center bg-black/70">
-                <View className="bg-white rounded-2xl p-6 w-80 shadow-2xl">
-                  {/* Header Modal */}
-                  <View className="items-center mb-4">
-                    <View className="bg-green-100 w-16 h-16 rounded-full items-center justify-center mb-3">
-                      <Text className="text-2xl">📸</Text>
-                    </View>
-                    <Text className="text-2xl font-bold text-gray-800">Konfirmasi Clock In</Text>
-                    <Text className="text-gray-500 text-center mt-2">Pastikan data absensi sudah benar</Text>
-                  </View>
-
-                  {/* Informasi Absensi */}
-                  <View className="space-y-3 mb-6">
-                    <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
-                      <Text className="text-gray-600 font-medium">Lokasi Kerja:</Text>
-                      <Text className="text-gray-800 font-semibold">{user?.unit_kerja || 'Head Office'}</Text>
-                    </View>
-
-                    <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
-                      <Text className="text-gray-600 font-medium">Jam Clock In:</Text>
-                      <Text className="text-gray-800 font-semibold">{formatTime(new Date())}</Text>
-                    </View>
-                  </View>
-
-                  {/* Area Foto */}
-                  <View className="mb-6">
-                    <Text className="text-gray-700 font-semibold mb-3 text-center">Foto Clock In</Text>
-                    <View className="border-2 border-dashed border-gray-300 rounded-xl h-40 items-center justify-center bg-gray-50">
-                      {clockInPhoto ? (
-                        <Image
-                          source={{ uri: clockInPhoto }}
-                          className="w-full h-full rounded-xl"
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <Text className="text-gray-400 text-center">
-                          📷{'\n'}Ambil Foto untuk{'\n'}Clock In
-                        </Text>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      className="bg-primary rounded-lg py-3 mt-3"
-                      onPress={() => openCamera('in')}
-                    >
-                      <Text className="text-white text-center font-semibold">
-                        {clockInPhoto ? 'Ambil Ulang Foto' : 'Buka Kamera'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Tombol Aksi */}
-                  <View className="flex-row space-x-3">
-                    <TouchableOpacity
-                      className="flex-1 bg-gray-200 rounded-xl py-3"
-                      onPress={() => {
-                        setShowClockInModal(false);
-                        setClockInPhoto(null);
-                      }}
-                    >
-                      <Text className="text-gray-700 text-center font-semibold">
-                        Batal
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      className="flex-1 bg-green-500 rounded-xl py-3"
-                      onPress={handleClockIn}
-                      disabled={!clockInPhoto}
-                      style={{ opacity: clockInPhoto ? 1 : 0.5 }}
-                    >
-                      <Text className="text-white text-center font-semibold">
-                        Konfirmasi
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </SafeAreaView>
-            </Modal>
-
-            {/* Modal Konfirmasi Clock Out */}
-            <Modal
-              animationType="fade"
-              transparent={true}
-              visible={showClockOutModal}
-              onRequestClose={() => setShowClockOutModal(false)}
-            >
-              <SafeAreaView className="flex-1 justify-center items-center bg-black/70">
-                <View className="bg-white rounded-2xl p-6 w-80 shadow-2xl">
-                  {/* Header Modal */}
-                  <View className="items-center mb-4">
-                    <View className="bg-blue-100 w-16 h-16 rounded-full items-center justify-center mb-3">
-                      <Text className="text-2xl">📸</Text>
-                    </View>
-                    <Text className="text-2xl font-bold text-gray-800">Konfirmasi Clock Out</Text>
-                    <Text className="text-gray-500 text-center mt-2">Pastikan data absensi sudah benar</Text>
-                  </View>
-
-                  {/* Informasi Absensi */}
-                  <View className="space-y-3 mb-6">
-                    <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
-                      <Text className="text-gray-600 font-medium">Lokasi Kerja:</Text>
-                      <Text className="text-gray-800 font-semibold">{user?.unit_kerja || 'Head Office'}</Text>
-                    </View>
-
-                    <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
-                      <Text className="text-gray-600 font-medium">Jam Clock Out:</Text>
-                      <Text className="text-gray-800 font-semibold">{formatTime(new Date())}</Text>
-                    </View>
-                  </View>
-
-                  {/* Area Foto */}
-                  <View className="mb-6">
-                    <Text className="text-gray-700 font-semibold mb-3 text-center">Foto Clock Out</Text>
-                    <View className="border-2 border-dashed border-gray-300 rounded-xl h-40 items-center justify-center bg-gray-50">
-                      {clockOutPhoto ? (
-                        <Image
-                          source={{ uri: clockOutPhoto }}
-                          className="w-full h-full rounded-xl"
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <Text className="text-gray-400 text-center">
-                          📷{'\n'}Ambil Foto untuk{'\n'}Clock Out
-                        </Text>
-                      )}
-                    </View>
-                    <TouchableOpacity
-                      className="bg-primary rounded-lg py-3 mt-3"
-                      onPress={() => openCamera('out')}
-                    >
-                      <Text className="text-white text-center font-semibold">
-                        {clockOutPhoto ? 'Ambil Ulang Foto' : 'Buka Kamera'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Tombol Aksi */}
-                  <View className="flex-row space-x-3">
-                    <TouchableOpacity
-                      className="flex-1 bg-gray-200 rounded-xl py-3"
-                      onPress={() => {
-                        setShowClockOutModal(false);
-                        setClockOutPhoto(null);
-                      }}
-                    >
-                      <Text className="text-gray-700 text-center font-semibold">
-                        Batal
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      className="flex-1 bg-blue-500 rounded-xl py-3"
-                      onPress={handleClockOut}
-                      disabled={!clockOutPhoto}
-                      style={{ opacity: clockOutPhoto ? 1 : 0.5 }}
-                    >
-                      <Text className="text-white text-center font-semibold">
-                        Konfirmasi
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </SafeAreaView>
-            </Modal>
           </View>
         </View>
       </SafeAreaView>
-    </View>
 
-  );
-}
+      {/* Modal Menu */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showMenu}
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <SafeAreaView className="flex-1 justify-center items-center bg-black/70">
+          <View className="bg-white rounded-2xl p-8 w-80 shadow-2xl">
+            {/* Header Modal */}
+            <View className="items-center mb-6">
+              <View className="bg-primary w-16 h-16 rounded-full items-center justify-center mb-3">
+                <Text className="text-2xl">📋</Text>
+              </View>
+              <Text className="text-2xl font-bold text-black">Menu</Text>
+              <Text className="text-primary text-center mt-2">Pilih menu yang diinginkan</Text>
+            </View>
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white', // Background utama putih
-  },
-  iosStatusBar: {
-    backgroundColor: '#25a298', // Warna primary (hijau) untuk status bar iOS
-    height: Platform.OS === 'ios' ? Constants.statusBarHeight : 0,
-    width: '100%',
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'white', // Background putih untuk konten di bawah status bar
-  },
-});
+            {/* Garis pemisah dekoratif */}
+            <View className="border-t border-primary mb-6"></View>
+
+            {/* Tombol Menu */}
+            <View className="space-y-4">
+              <TouchableOpacity
+                className="bg-white border border-primary rounded-xl py-5 px-4"
+                onPress={() => {
+                  setShowMenu(false);
+                  setTimeout(() => {
+                    navigation.navigate('Attendance');
+                  }, 100);
+                }}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <View className="bg-primary w-10 h-10 rounded-lg items-center justify-center mr-3">
+                      <Text className="text-white font-bold text-lg">📊</Text>
+                    </View>
+                    <View>
+                      <Text className="text-black font-semibold text-lg">
+                        Riwayat Absensi
+                      </Text>
+                      <Text className="text-primary text-sm">
+                        Lihat history kehadiran
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-primary text-xl">›</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="bg-white border border-primary rounded-xl py-5 px-4"
+                onPress={() => {
+                  setShowMenu(false);
+                  setTimeout(() => {
+                    navigation.navigate('Leave');
+                  }, 100);
+                }}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <View className="bg-primary w-10 h-10 rounded-lg items-center justify-center mr-3">
+                      <Text className="text-white font-bold text-lg">📝</Text>
+                    </View>
+                    <View>
+                      <Text className="text-black font-semibold text-lg">
+                        Pengajuan Izin
+                      </Text>
+                      <Text className="text-primary text-sm">
+                        Ajukan cuti atau izin
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-primary text-xl">›</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Garis pemisah sebelum tombol tutup */}
+            <View className="border-t border-primary my-6"></View>
+
+            {/* Tombol Tutup */}
+            <TouchableOpacity
+              className="bg-primary border border-gray-200 rounded-xl py-4"
+              onPress={() => setShowMenu(false)}
+            >
+              <Text className="text-white text-center font-semibold text-lg">
+                Tutup Menu
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Modal Konfirmasi Clock In */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showClockInModal}
+        onRequestClose={() => setShowClockInModal(false)}
+      >
+        <SafeAreaView className="flex-1 justify-center items-center bg-black/70">
+          <View className="bg-white rounded-2xl p-6 w-80 shadow-2xl">
+            {/* Header Modal */}
+            <View className="items-center mb-4">
+              <View className="bg-green-100 w-16 h-16 rounded-full items-center justify-center mb-3">
+                <Text className="text-2xl">📸</Text>
+              </View>
+              <Text className="text-2xl font-bold text-gray-800">Konfirmasi Clock In</Text>
+              <Text className="text-gray-500 text-center mt-2">Pastikan data absensi sudah benar</Text>
+            </View>
+
+            {/* Informasi Absensi */}
+            <View className="space-y-3 mb-6">
+              <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 font-medium">Lokasi Kerja:</Text>
+                <Text className="text-gray-800 font-semibold">{user?.unit_kerja || 'Head Office'}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 font-medium">Jam Clock In:</Text>
+                <Text className="text-gray-800 font-semibold">{formatTime(new Date())}</Text>
+              </View>
+            </View>
+
+            {/* Area Foto */}
+            <View className="mb-6">
+              <Text className="text-gray-700 font-semibold mb-3 text-center">Foto Clock In</Text>
+              <View className="border-2 border-dashed border-gray-300 rounded-xl h-40 items-center justify-center bg-gray-50">
+                {clockInPhoto ? (
+                  <Image
+                    source={{ uri: clockInPhoto }}
+                    className="w-full h-full rounded-xl"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text className="text-gray-400 text-center">
+                    📷{'\n'}Ambil Foto untuk{'\n'}Clock In
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                className="bg-primary rounded-lg py-3 mt-3"
+                onPress={() => openCamera('in')}
+              >
+                <Text className="text-white text-center font-semibold">
+                  {clockInPhoto ? 'Ambil Ulang Foto' : 'Buka Kamera'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tombol Aksi */}
+            <View className="flex-row space-x-3">
+              <TouchableOpacity
+                className="flex-1 bg-gray-200 rounded-xl py-3"
+                onPress={() => {
+                  setShowClockInModal(false);
+                  setClockInPhoto(null);
+                }}
+              >
+                <Text className="text-gray-700 text-center font-semibold">
+                  Batal
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 bg-green-500 rounded-xl py-3"
+                onPress={handleClockIn}
+                disabled={!clockInPhoto}
+                style={{ opacity: clockInPhoto ? 1 : 0.5 }}
+              >
+                <Text className="text-white text-center font-semibold">
+                  Konfirmasi
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Modal Konfirmasi Clock Out */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showClockOutModal}
+        onRequestClose={() => setShowClockOutModal(false)}
+      >
+        <SafeAreaView className="flex-1 justify-center items-center bg-black/70">
+          <View className="bg-white rounded-2xl p-6 w-80 shadow-2xl">
+            {/* Header Modal */}
+            <View className="items-center mb-4">
+              <View className="bg-blue-100 w-16 h-16 rounded-full items-center justify-center mb-3">
+                <Text className="text-2xl">📸</Text>
+              </View>
+              <Text className="text-2xl font-bold text-gray-800">Konfirmasi Clock Out</Text>
+              <Text className="text-gray-500 text-center mt-2">Pastikan data absensi sudah benar</Text>
+            </View>
+
+            {/* Informasi Absensi */}
+            <View className="space-y-3 mb-6">
+              <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 font-medium">Lokasi Kerja:</Text>
+                <Text className="text-gray-800 font-semibold">{user?.unit_kerja || 'Head Office'}</Text>
+              </View>
+
+              <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 font-medium">Jam Clock Out:</Text>
+                <Text className="text-gray-800 font-semibold">{formatTime(new Date())}</Text>
+              </View>
+            </View>
+
+            {/* Area Foto */}
+            <View className="mb-6">
+              <Text className="text-gray-700 font-semibold mb-3 text-center">Foto Clock Out</Text>
+              <View className="border-2 border-dashed border-gray-300 rounded-xl h-40 items-center justify-center bg-gray-50">
+                {clockOutPhoto ? (
+                  <Image
+                    source={{ uri: clockOutPhoto }}
+                    className="w-full h-full rounded-xl"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text className="text-gray-400 text-center">
+                    📷{'\n'}Ambil Foto untuk{'\n'}Clock Out
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                className="bg-primary rounded-lg py-3 mt-3"
+                onPress={() => openCamera('out')}
+              >
+                <Text className="text-white text-center font-semibold">
+                  {clockOutPhoto ? 'Ambil Ulang Foto' : 'Buka Kamera'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Tombol Aksi */}
+            <View className="flex-row space-x-3">
+              <TouchableOpacity
+                className="flex-1 bg-gray-200 rounded-xl py-3"
+                onPress={() => {
+                  setShowClockOutModal(false);
+                  setClockOutPhoto(null);
+                }}
+              >
+                <Text className="text-gray-700 text-center font-semibold">
+                  Batal
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 bg-blue-500 rounded-xl py-3"
+                onPress={handleClockOut}
+                disabled={!clockOutPhoto}
+                style={{ opacity: clockOutPhoto ? 1 : 0.5 }}
+              >
+                <Text className="text-white text-center font-semibold">
+                  Konfirmasi
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    </>
+)};
