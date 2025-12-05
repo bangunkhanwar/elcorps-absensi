@@ -26,13 +26,11 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c; // Distance in meters
 } 
 
-<<<<<<< HEAD
 // Helper function: Calculate attendance status based on shift rules
 function calculateStatus(waktuMasuk, jamMasukShift, toleransi) {
   if (!waktuMasuk) return 'Tidak Hadir';
   
   const [masukHour, masukMinute] = waktuMasuk.split(':').map(Number);
-=======
 // Helper function: Calculate attendance status with timezone
 async function calculateStatusWithTimezone(waktuMasukUTC, unitKerjaId, shiftId) {
   if (!waktuMasukUTC) return 'Tidak Hadir';
@@ -58,7 +56,6 @@ async function calculateStatusWithTimezone(waktuMasukUTC, unitKerjaId, shiftId) 
   const localTime = convertResult.rows[0].local_time;
   
   const [masukHour, masukMinute] = localTime.split(':').map(Number);
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
   const [shiftHour, shiftMinute] = jamMasukShift.split(':').map(Number);
   
   const masukTotalMinutes = masukHour * 60 + masukMinute;
@@ -72,7 +69,6 @@ async function calculateStatusWithTimezone(waktuMasukUTC, unitKerjaId, shiftId) 
   }
 }
 
-<<<<<<< HEAD
 // Helper function: Get current date in Asia/Jakarta timezone
 function getCurrentJakartaDate() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
@@ -81,7 +77,6 @@ function getCurrentJakartaDate() {
 // Helper function: Get current time in Asia/Jakarta timezone  
 function getCurrentJakartaTime() {
   return new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Jakarta' });
-=======
 // Update pada checkin endpoint:
 const status = await calculateStatusWithTimezone(
   currentTime, 
@@ -97,7 +92,6 @@ function getCurrentUTCTime() {
 // Helper function: Get current UTC date
 function getCurrentUTCDate() {
   return new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 }
 
 // CHECK-IN
@@ -119,11 +113,8 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       body: req.body
     });
 
-<<<<<<< HEAD
     const today = getCurrentJakartaDate();
-=======
     const today = getCurrentUTCDate();
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     
     const existingAttendance = await Attendance.findByUserAndDate(req.user.id, today);
     if (existingAttendance) {
@@ -222,11 +213,8 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       });
     }
 
-<<<<<<< HEAD
     const currentTime = getCurrentJakartaTime();
-=======
     const currentTime = getCurrentUTCTime();
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     const status = calculateStatus(currentTime, user.jam_masuk, user.toleransi_telat_minutes);
 
     console.log('⏰ Attendance status calculation:', {
@@ -239,11 +227,8 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     const attendanceData = {
       user_id: req.user.id,
       tanggal_absen: today,
-<<<<<<< HEAD
       waktu_masuk: currentTime,
-=======
       waktu_masuk: currentTime, // UTC time
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
       foto_masuk: req.file ? req.file.filename : '',
       status: status,
       user_latitude: lat,
@@ -296,11 +281,8 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       body: req.body
     });
 
-<<<<<<< HEAD
     const today = getCurrentJakartaDate();
-=======
     const today = getCurrentUTCDate();
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     
     const attendance = await Attendance.findByUserAndDate(req.user.id, today);
     if (!attendance) {
@@ -384,11 +366,8 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       });
     }
 
-<<<<<<< HEAD
     const currentTime = getCurrentJakartaTime();
-=======
     const currentTime = getCurrentUTCTime();
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     const updatedAttendance = await Attendance.updateCheckOut(
       attendance.id,
       currentTime,
