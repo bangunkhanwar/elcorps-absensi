@@ -179,7 +179,11 @@ export default function LeaveScreen({ navigation }: any) {
       )}
       <SafeAreaView style={styles.safeArea}
         edges={
+<<<<<<< HEAD
+          Platform.OS === 'ios'
+=======
           Platform.OS === 'ios' 
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
             ? ['left', 'right', 'bottom'] // iOS: hanya kiri, kanan, bawah
             : ['top', 'left', 'right', 'bottom'] // Android: semua sisi
         }>
@@ -187,6 +191,36 @@ export default function LeaveScreen({ navigation }: any) {
         <StatusBar backgroundColor="#25a298" barStyle="light-content" />
 
         <View className="bg-primary py-4 px-4 rounded-b-3xl shadow-lg">
+<<<<<<< HEAD
+          <View className="flex-row items-center justify-between">
+            {/* Left: Back button + title */}
+            <View className="flex-row items-center flex-1">
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center mr-4"
+              >
+                <Ionicons name="arrow-back" size={24} color="white" />
+              </TouchableOpacity>
+              <View>
+                <Text className="text-2xl font-bold text-white">Pengajuan Izin</Text>
+                <Text className="text-white/80 text-sm mt-1">
+                  {user?.nama || 'Loading...'}
+                </Text>
+              </View>
+            </View>
+            {/* Right: Menu icon */}
+            <TouchableOpacity
+              className="items-center justify-center ml-4"
+              onPress={() => navigation.navigate('HistoryLeave')}
+              style={{ width: 40, height: 40 }}
+            >
+              <Ionicons
+                name="hourglass-outline"
+                size={38}
+                color="white"
+              />
+            </TouchableOpacity>
+=======
           <View className="flex-row items-center">
             <TouchableOpacity
               onPress={() => navigation.goBack()}
@@ -200,6 +234,7 @@ export default function LeaveScreen({ navigation }: any) {
                 {user?.nama || 'Loading...'}
               </Text>
             </View>
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
           </View>
         </View>
 

@@ -208,6 +208,7 @@ class User {
       const query = `
         SELECT u.id, u.nama, u.nik, u.email, u.jabatan, u.departemen, u.divisi, 
                u.unit_kerja_id, u.shift_id, s.nama_shift, s.jam_masuk, s.jam_keluar,
+               uk.nama_unit
                uk.nama_unit, uk.timezone
         FROM users u
         LEFT JOIN shifts s ON u.shift_id = s.id

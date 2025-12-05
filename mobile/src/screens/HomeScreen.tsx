@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
+<<<<<<< HEAD
+import { View, Text, TouchableOpacity, Modal, Image, Alert, Linking, Platform, StatusBar as RNStatusBar, ActivityIndicator } from 'react-native';
+=======
 import { View, Text, TouchableOpacity, Modal, Image, Alert, Linking, Platform, StatusBar as RNStatusBar } from 'react-native';
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,6 +34,10 @@ export default function HomeScreen({ navigation }: any) {
   const [clockOutPhoto, setClockOutPhoto] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: string, longitude: string } | null>(null);
   const [locationStatus, setLocationStatus] = useState<'waiting' | 'granted' | 'denied' | 'gps_off' | 'error'>('waiting');
+<<<<<<< HEAD
+  const [showLoading, setShowLoading] = useState(false);
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 
   const route = useRoute<HomeScreenRouteProp>();
 
@@ -119,8 +127,14 @@ export default function HomeScreen({ navigation }: any) {
         return;
       }
 
+<<<<<<< HEAD
+      const mediaTypeImages = ImagePicker.MediaTypeOptions?.Images ?? 'photo';
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: mediaTypeImages,
+=======
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         allowsEditing: false,
         aspect: [4, 3],
         quality: 0.7,
@@ -147,11 +161,19 @@ export default function HomeScreen({ navigation }: any) {
       return;
     }
 
+<<<<<<< HEAD
+    setShowLoading(true);
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     try {
       // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
+<<<<<<< HEAD
+        setShowLoading(false);
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         Alert.alert(
           'Lokasi Tidak Terdeteksi',
           'Tidak dapat mendapatkan lokasi Anda. Pastikan GPS aktif dan memiliki sinyal yang baik.'
@@ -207,6 +229,11 @@ export default function HomeScreen({ navigation }: any) {
       }
 
       Alert.alert('Error', errorMessage);
+<<<<<<< HEAD
+    } finally {
+      setShowLoading(false);
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     }
   };
 
@@ -216,11 +243,19 @@ export default function HomeScreen({ navigation }: any) {
       return;
     }
 
+<<<<<<< HEAD
+    setShowLoading(true);
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     try {
       // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
+<<<<<<< HEAD
+        setShowLoading(false);
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         Alert.alert(
           'Lokasi Tidak Terdeteksi',
           'Tidak dapat mendapatkan lokasi Anda. Pastikan GPS aktif dan memiliki sinyal yang baik.'
@@ -268,6 +303,11 @@ export default function HomeScreen({ navigation }: any) {
       }
 
       Alert.alert('Error', errorMessage);
+<<<<<<< HEAD
+    } finally {
+      setShowLoading(false);
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     }
   };
 
@@ -295,9 +335,27 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   return (
+<<<<<<< HEAD
+    <View style={styles.container}>
+            {/* Modal Loading Indicator */}
+            <Modal
+              visible={showLoading}
+              transparent
+              animationType="fade"
+              onRequestClose={() => {}}
+            >
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color="#25a298" />
+                  <Text style={{ marginTop: 16, fontSize: 16, color: '#333', fontWeight: 'bold' }}>Memproses absensi...</Text>
+                </View>
+              </View>
+            </Modal>
+=======
 
 
     <View style={styles.container}>
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
       {/* Status Bar untuk iOS */}
       {Platform.OS === 'ios' && (
         <View style={styles.iosStatusBar} />

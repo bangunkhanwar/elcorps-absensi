@@ -3,6 +3,17 @@ const path = require('path');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '..', 'uploads/attendance/'));
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    let prefix = '';
+    if (file.fieldname === 'foto_masuk') {
+      prefix = 'clockin-';
+    } else if (file.fieldname === 'foto_keluar') {
+      prefix = 'clockout-';
+    }
+    cb(null, prefix + uniqueSuffix + '-' + file.originalname);
     cb(null, path.join(__dirname, '..', 'uploads/'));
   },
   filename: function (req, file, cb) {

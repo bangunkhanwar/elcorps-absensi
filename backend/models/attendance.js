@@ -82,6 +82,7 @@ class Attendance {
         a.*, 
         u.nama, u.nik, u.jabatan, u.departemen, u.divisi,
         uk.nama_unit,
+        s.nama_shift
         uk.timezone,
         s.nama_shift
       FROM absensi a 
@@ -91,6 +92,8 @@ class Attendance {
       WHERE a.tanggal_absen BETWEEN $1 AND $2 
       ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
     `;
+    
+    console.log('🔍 Executing SQL query...');
     
     try {
       const result = await pool.query(query, [queryStartDate, queryEndDate]);

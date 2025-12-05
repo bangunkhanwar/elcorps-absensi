@@ -7,7 +7,6 @@ const pool = require('./config/database');
 
 const app = express();
 
-
 // Import routes
 const authRoutes = require('./routes/auth');
 const attendanceRoutes = require('./routes/attendance');
@@ -24,6 +23,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/shifts', shiftRoutes); 
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/leave', express.static(path.join(__dirname, 'uploads/leave')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Basic routes
@@ -69,4 +72,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📊 Attendance: http://localhost:${PORT}/api/attendance`);
   console.log(`📝 Leave: http://localhost:${PORT}/api/leave`);
   console.log(`🕒 Shifts: http://localhost:${PORT}/api/shifts`);
+  console.log(`📁 Uploads: http://localhost:${PORT}/uploads/leave`);
 });
+
