@@ -155,7 +155,7 @@ class User {
     const query = `
       SELECT 
         u.*, 
-        uk.nama_unit, uk.latitude, uk.longitude, uk.radius_meter,
+        uk.nama_unit, uk.latitude, uk.longitude, uk.radius_meter, uk.timezone,
         s.nama_shift, s.jam_masuk, s.jam_keluar, s.toleransi_telat_minutes
       FROM users u
       LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id

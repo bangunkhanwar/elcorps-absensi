@@ -1,4 +1,3 @@
-
 const express = require('express');
 const Attendance = require('../models/attendance');
 const User = require('../models/user');
@@ -26,59 +25,62 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c; // Distance in meters
 } 
 
-// Helper function: Calculate attendance status with timezone
-async function calculateStatusWithTimezone(waktuMasukUTC, unitKerjaId, shiftId) {
-  if (!waktuMasukUTC) return 'Tidak Hadir';
-  
-  // Get unit_kerja timezone
-  const unitQuery = 'SELECT timezone FROM unit_kerja WHERE id = $1';
-  const unitResult = await pool.query(unitQuery, [unitKerjaId]);
-  const timezone = unitResult.rows[0]?.timezone || 'Asia/Jakarta';
-  
-  // Get shift info
-  const shiftQuery = 'SELECT jam_masuk, toleransi_telat_minutes FROM shifts WHERE id = $1';
-  const shiftResult = await pool.query(shiftQuery, [shiftId]);
-  const { jam_masuk: jamMasukShift, toleransi_telat_minutes: toleransi } = shiftResult.rows[0];
-  
-  // Convert waktuMasukUTC to unit_kerja timezone
-  const convertQuery = `
-    SELECT TO_CHAR(
-      ($1::time AT TIME ZONE 'UTC' AT TIME ZONE $2), 
-      'HH24:MI'
-    ) as local_time
-  `;
-  const convertResult = await pool.query(convertQuery, [waktuMasukUTC, timezone]);
-  const localTime = convertResult.rows[0].local_time;
-  
-  const [masukHour, masukMinute] = localTime.split(':').map(Number);
-  const [shiftHour, shiftMinute] = jamMasukShift.split(':').map(Number);
-  
-  const masukTotalMinutes = masukHour * 60 + masukMinute;
+// Helper function: Calculate attendance status
+function calculateStatus(currentTime, shiftTime, tolerance) {
+  const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+  const [shiftHour, shiftMinute] = shiftTime.split(':').map(Number);
+
+  const currentTotalMinutes = currentHour * 60 + currentMinute;
   const shiftTotalMinutes = shiftHour * 60 + shiftMinute;
-  const batasTelat = shiftTotalMinutes + toleransi;
-  
-  if (masukTotalMinutes <= batasTelat) {
+  const batasTelat = shiftTotalMinutes + tolerance;
+
+  if (currentTotalMinutes <= batasTelat) {
     return 'Tepat Waktu';
   } else {
     return 'Terlambat';
   }
 }
 
-// Update pada checkin endpoint:
-const status = await calculateStatusWithTimezone(
-  currentTime, 
-  user.unit_kerja_id, 
-  user.shift_id
-);
-
-// Helper function: Get current UTC time
-function getCurrentUTCTime() {
-  return new Date().toISOString().split('T')[1].split('.')[0]; // HH:MM:SS format
+// Helper function: Get current time in specific timezone (SERVER TIME)
+function getCurrentTimeInTimezone(timezone) {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone || 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const parts = formatter.formatToParts(now);
+  const hour = parts.find(p => p.type === 'hour').value;
+  const minute = parts.find(p => p.type === 'minute').value;
+  const second = parts.find(p => p.type === 'second').value;
+  
+  return `${hour}:${minute}:${second}`;
 }
 
-// Helper function: Get current UTC date
-function getCurrentUTCDate() {
-  return new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+// Helper function: Get current date in specific timezone (SERVER DATE)
+function getCurrentDateInTimezone(timezone) {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone || 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const parts = formatter.formatToParts(now);
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  
+  return `${year}-${month}-${day}`;
+}
+
+// Helper function: Get current Jakarta date (for backward compatibility)
+function getCurrentJakartaDate() {
+  return getCurrentDateInTimezone('Asia/Jakarta');
 }
 
 // CHECK-IN
@@ -100,7 +102,18 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       body: req.body
     });
 
-    const today = getCurrentUTCDate();
+    // Dapatkan user data terlebih dahulu untuk mendapatkan timezone
+    const user = await User.findByIdWithUnitAndShift(req.user.id);
+    
+    if (!user) {
+      console.log('❌ User not found');
+      removeUploadedFile();
+      return res.status(404).json({ error: 'User tidak ditemukan' });
+    }
+
+    // Gunakan waktu sesuai timezone unit kerja
+    const timezone = user.timezone || 'Asia/Jakarta';
+    const today = getCurrentDateInTimezone(timezone);
     
     const existingAttendance = await Attendance.findByUserAndDate(req.user.id, today);
     if (existingAttendance) {
@@ -109,7 +122,6 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       return res.status(400).json({ error: 'Anda sudah check-in hari ini' });
     }
 
-    const user = await User.findByIdWithUnitAndShift(req.user.id);
     console.log('📍 User data from database:', {
       id: user.id,
       nama: user.nama,
@@ -120,14 +132,9 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       radius_meter: user.radius_meter,
       shift: user.nama_shift,
       jam_masuk: user.jam_masuk,
-      toleransi: user.toleransi_telat_minutes
+      toleransi: user.toleransi_telat_minutes,
+      timezone: timezone
     });
-
-    if (!user) {
-      console.log('❌ User not found');
-      removeUploadedFile();
-      return res.status(404).json({ error: 'User tidak ditemukan' });
-    }
 
     if (!user.latitude || !user.longitude) {
       console.log('❌ Unit kerja missing coordinates:', {
@@ -199,10 +206,12 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       });
     }
 
-    const currentTime = getCurrentUTCTime();
+    // AMBIL WAKTU SESUAI TIMEZONE UNIT KERJA
+    const currentTime = getCurrentTimeInTimezone(timezone);
     const status = calculateStatus(currentTime, user.jam_masuk, user.toleransi_telat_minutes);
 
     console.log('⏰ Attendance status calculation:', {
+      timezone: timezone,
       current_time: currentTime,
       shift_time: user.jam_masuk,
       toleransi: user.toleransi_telat_minutes,
@@ -212,7 +221,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     const attendanceData = {
       user_id: req.user.id,
       tanggal_absen: today,
-      waktu_masuk: currentTime, // UTC time
+      waktu_masuk: currentTime,
       foto_masuk: req.file ? req.file.filename : '',
       status: status,
       user_latitude: lat,
@@ -244,7 +253,6 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     
   } catch (error) {
     console.error('❌ Check-in error:', error);
-    // Rollback file jika upload ada
     if (req.file && req.file.path) {
       try {
         fs.unlinkSync(req.file.path);
@@ -265,7 +273,9 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       body: req.body
     });
 
-    const today = getCurrentUTCDate();
+    const user = await User.findByIdWithUnitAndShift(req.user.id);
+    const timezone = user.timezone || 'Asia/Jakarta';
+    const today = getCurrentDateInTimezone(timezone);
     
     const attendance = await Attendance.findByUserAndDate(req.user.id, today);
     if (!attendance) {
@@ -276,8 +286,6 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       return res.status(400).json({ error: 'Anda sudah check-out hari ini' });
     }
 
-    // DAPATKAN USER TERBARU untuk validasi unit kerja
-    const user = await User.findByIdWithUnitAndShift(req.user.id);
     console.log('📍 Current user data for check-out:', {
       id: user.id,
       nama: user.nama,
@@ -285,14 +293,13 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       stored_unit_id: attendance.unit_kerja_id
     });
 
-    // VALIDASI: Pastikan user masih di unit kerja yang sama dengan saat clock in
     if (user.unit_kerja_id !== attendance.unit_kerja_id) {
       console.log('❌ Unit kerja changed:', {
         clock_in_unit: attendance.unit_kerja_id,
         current_unit: user.unit_kerja_id
       });
       return res.status(400).json({ 
-        error: `Unit kerja Anda telah diubah dari ${attendance.unit_kerja_id} menjadi ${user.unit_kerja_id}. Silakan hubungi HR.` 
+        error: `Unit kerja Anda telah diubah. Silakan hubungi HR.` 
       });
     }
 
@@ -327,7 +334,6 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
 
     console.log('📍 Check-out coordinates:', { lat, lng });
 
-    // VALIDASI LOKASI untuk check-out
     const distance = calculateDistance(
       lat, lng,
       parseFloat(user.latitude), parseFloat(user.longitude)
@@ -349,7 +355,8 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       });
     }
 
-    const currentTime = getCurrentUTCTime();
+    // AMBIL WAKTU SESUAI TIMEZONE UNIT KERJA
+    const currentTime = getCurrentTimeInTimezone(timezone);
     const updatedAttendance = await Attendance.updateCheckOut(
       attendance.id,
       currentTime,
@@ -374,37 +381,16 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
 });
 
 // GET HISTORY
-// backend/routes/attendance.js
-
-// ... endpoint lainnya ...
-
-// Endpoint Get History (Update Bagian Ini)
 router.get('/history', auth, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const user_id = req.user.id;
 
-    // Perubahan Query SQL:
-    // Kita tambahkan JOIN ke tabel unit_kerja untuk mengambil 'nama_unit'
-    // Lalu kita alias-kan menjadi 'location' agar sesuai dengan frontend (item.location)
-    const query = `
-      SELECT 
-        a.*, 
-        COALESCE(u.nama_unit, 'Lokasi Tidak Terdeteksi') AS location,
-        s.nama_shift
-      FROM absensi a
-      LEFT JOIN unit_kerja u ON a.unit_kerja_id = u.id
-      LEFT JOIN shifts s ON a.shift_id = s.id
-      WHERE a.user_id = $1 
-      AND a.tanggal_absen BETWEEN $2 AND $3
-      ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
-    `;
-
-    const result = await pool.query(query, [user_id, startDate, endDate]);
-
+    const attendance = await Attendance.getUserAttendance(user_id, startDate, endDate);
+    
     res.json({
       message: 'Data history berhasil diambil',
-      data: result.rows
+      data: attendance
     });
 
   } catch (error) {
@@ -412,34 +398,14 @@ router.get('/history', auth, async (req, res) => {
     res.status(500).json({ error: 'Terjadi kesalahan pada server' });
   }
 });
-// router.get('/history', auth, async (req, res) => {
-//   try {
-//     const { startDate, endDate } = req.query;
-    
-//     const defaultStartDate = new Date();
-//     defaultStartDate.setDate(1);
-//     const defaultEndDate = new Date();
-
-//     const start = startDate || defaultStartDate.toISOString().split('T')[0];
-//     const end = endDate || defaultEndDate.toISOString().split('T')[0];
-
-//     const attendance = await Attendance.getUserAttendance(req.user.id, start, end);
-    
-//     res.json({
-//       message: 'Riwayat absensi',
-//       period: { start, end },
-//       data: attendance
-//     });
-//   } catch (error) {
-//     console.error('History error:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// });
 
 // GET TODAY
 router.get('/today', auth, async (req, res) => {
   try {
-    const today = getCurrentJakartaDate();
+    const user = await User.findByIdWithUnitAndShift(req.user.id);
+    const timezone = user?.timezone || 'Asia/Jakarta';
+    const today = getCurrentDateInTimezone(timezone);
+    
     const attendance = await Attendance.findByUserAndDate(req.user.id, today);
     
     res.json({
@@ -475,43 +441,44 @@ router.get('/today-all', auth, async (req, res) => {
 });
 
 // GET ALL ATTENDANCE (Untuk HR)
-  router.get('/all', auth, async (req, res) => {
-    try {
-      if (req.user.role !== 'hr') {
-        return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
-      }
-
-      const { startDate, endDate } = req.query;
-      console.log('🔍 Fetching all attendance for period:', { startDate, endDate });
-      
-      const queryStartDate = startDate || new Date().toISOString().split('T')[0];
-      const queryEndDate = endDate || new Date().toISOString().split('T')[0];
-      
-      console.log('📅 Using date range:', queryStartDate, 'to', queryEndDate);
-      
-      const attendance = await Attendance.getAllAttendance(queryStartDate, queryEndDate);
-      
-      console.log('✅ Raw data from database:');
-      attendance.forEach((att, index) => {
-        console.log(`${index + 1}. ${att.nama}:`, {
-          masuk: att.waktu_masuk,
-          keluar: att.waktu_keluar,
-          tanggal: att.tanggal_absen
-        });
-      });
-      
-      res.json({
-        message: 'Data semua absensi',
-        period: { startDate: queryStartDate, endDate: queryEndDate },
-        attendances: attendance
-      });
-    } catch (error) {
-      console.error('❌ All attendance error:', error);
-      res.status(500).json({ 
-        error: 'Internal server error: ' + error.message
-      });
+router.get('/all', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'hr') {
+      return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
     }
-  });
+
+    const { startDate, endDate } = req.query;
+    console.log('🔍 Fetching all attendance for period:', { startDate, endDate });
+    
+    const queryStartDate = startDate || new Date().toISOString().split('T')[0];
+    const queryEndDate = endDate || new Date().toISOString().split('T')[0];
+    
+    console.log('📅 Using date range:', queryStartDate, 'to', queryEndDate);
+    
+    const attendance = await Attendance.getAllAttendance(queryStartDate, queryEndDate);
+    
+    console.log('✅ Raw data from database:');
+    attendance.forEach((att, index) => {
+      console.log(`${index + 1}. ${att.nama}:`, {
+        masuk: att.waktu_masuk,
+        keluar: att.waktu_keluar,
+        tanggal: att.tanggal_absen,
+        timezone: att.timezone
+      });
+    });
+    
+    res.json({
+      message: 'Data semua absensi',
+      period: { startDate: queryStartDate, endDate: queryEndDate },
+      attendances: attendance
+    });
+  } catch (error) {
+    console.error('❌ All attendance error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error: ' + error.message
+    });
+  }
+});
 
 // GET USER ATTENDANCE BY ID
 router.get('/user/:userId', auth, async (req, res) => {

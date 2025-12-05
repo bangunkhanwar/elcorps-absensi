@@ -69,29 +69,21 @@ class Attendance {
     return result.rows;
   }
 
-  // GET ALL ATTENDANCE - DENGAN TIMEZONE DINAMIS
+  // GET ALL ATTENDANCE - PERBAIKAN: HAPUS TO_CHAR yang error
   static async getAllAttendance(startDate, endDate) {
     console.log('📅 Executing getAllAttendance with:', { startDate, endDate });
     
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
     
+    // QUERY SEDERHANA TANPA KONVERSI TIMEZONE YANG ERROR
     const query = `
       SELECT 
         a.*, 
         u.nama, u.nik, u.jabatan, u.departemen, u.divisi,
         uk.nama_unit,
         uk.timezone,
-        s.nama_shift,
-        -- Konversi waktu ke timezone unit_kerja
-        TO_CHAR(
-          (a.waktu_masuk AT TIME ZONE 'UTC' AT TIME ZONE COALESCE(uk.timezone, 'Asia/Jakarta')), 
-          'HH24:MI'
-        ) as waktu_masuk_jakarta,
-        TO_CHAR(
-          (a.waktu_keluar AT TIME ZONE 'UTC' AT TIME ZONE COALESCE(uk.timezone, 'Asia/Jakarta')), 
-          'HH24:MI'
-        ) as waktu_keluar_jakarta
+        s.nama_shift
       FROM absensi a 
       LEFT JOIN users u ON a.user_id = u.id 
       LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
@@ -102,23 +94,7 @@ class Attendance {
     
     try {
       const result = await pool.query(query, [queryStartDate, queryEndDate]);
-      console.log('✅ Query dengan timezone, row count:', result.rows.length);
-      
-      // Log sample untuk debugging timezone
-      if (result.rows.length > 0) {
-        console.log('🌍 Sample timezone data:');
-        result.rows.slice(0, 3).forEach((row, index) => {
-          console.log(`Record ${index + 1}:`, {
-            nama: row.nama,
-            unit: row.nama_unit,
-            timezone: row.timezone,
-            waktu_masuk_original: row.waktu_masuk,
-            waktu_masuk_converted: row.waktu_masuk_jakarta,
-            waktu_keluar_converted: row.waktu_keluar_jakarta
-          });
-        });
-      }
-      
+      console.log('✅ Query berhasil, row count:', result.rows.length);
       return result.rows;
     } catch (error) {
       console.error('❌ Database query error:', error);

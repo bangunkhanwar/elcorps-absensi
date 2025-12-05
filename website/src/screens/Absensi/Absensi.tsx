@@ -29,7 +29,11 @@ const Absensi: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'data' | 'pengajuan'>(() => {
     return (sessionStorage.getItem('absensiActiveTab') as 'data' | 'pengajuan') || 'data'
   })
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const savedDate = sessionStorage.getItem('absensiSelectedDate');
+    return savedDate || new Date().toISOString().split('T')[0];
+  });
+  
   const [searchData, setSearchData] = useState('')
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([])
   const [loading, setLoading] = useState(false)
@@ -46,6 +50,10 @@ const Absensi: React.FC = () => {
   useEffect(() => {
     fetchAttendanceData()
   }, [selectedDate])
+
+  useEffect(() => {
+    sessionStorage.setItem('absensiSelectedDate', selectedDate);
+  }, [selectedDate]);
 
   const formatTimeFromString = (timeString: string): string => {
     if (!timeString) return '-';
@@ -233,6 +241,7 @@ const Absensi: React.FC = () => {
   }
 
   const handleViewDetail = (attendance: AttendanceData) => {
+    sessionStorage.setItem('absensiSelectedDate', selectedDate);
     navigate('/attendance/detail', { state: { attendance } })
   }
 
