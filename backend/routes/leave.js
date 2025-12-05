@@ -1,6 +1,7 @@
 const express = require('express');
 const Leave = require('../models/leave');
 const { auth } = require('../middleware/auth');
+<<<<<<< HEAD
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -79,13 +80,23 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
 });
 
 // Apply for leave (with optional file upload)
+=======
+
+const router = express.Router();
+
+// Apply for leave
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 router.post('/apply', auth, async (req, res) => {
   try {
     const { start_date, end_date, jenis_izin, keterangan, lampiran } = req.body;
 
     console.log('📱 DATA DARI MOBILE:', {
+<<<<<<< HEAD
       start_date, end_date, jenis_izin, keterangan,
       lampiran: lampiran ? 'File attached' : 'No file'
+=======
+      start_date, end_date, jenis_izin, keterangan, lampiran
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     });
 
     const leaveData = {

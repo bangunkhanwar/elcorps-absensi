@@ -8,9 +8,15 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
+<<<<<<< HEAD
       "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#25a298"
+=======
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     },
     "plugins": [
       [

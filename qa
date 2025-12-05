@@ -1,0 +1,14 @@
+* [33mf86a20b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m fix feature upload leave file for website & add modalloading for upload clockin and clockout
+* [33m45071e7[m[33m ([m[1;31morigin/copilot/fix-clockout-error[m[33m)[m Improve timezone handling in getCurrentJakartaDate function
+* [33m07fc6bd[m Fix clock out error: add missing imports, helper functions, and loading indicators
+* [33m8414b6f[m Initial plan
+*   [33m4902f58[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge branch 'main' of https://github.com/bangunkhanwar/elcorps-absensi
+[32m|[m[33m\[m  
+[32m|[m * [33m1bbbe47[m fix layout header for home, attendance, and leave
+[32m|[m *   [33m138ea05[m fix layout header for home, attendance, and leave
+[32m|[m [34m|[m[35m\[m  
+[32m|[m * [35m|[m [33md3d521b[m fix layout header for home, attendance, and leave
+* [35m|[m [35m|[m [33m468ade1[m UTC timezone sync shift management
+[35m|[m [35m|[m[35m/[m  
+[35m|[m[35m/[m[35m|[m   
+* [35m|[m [33m8593eb3[m update fungsi export excel halaman Absensi website

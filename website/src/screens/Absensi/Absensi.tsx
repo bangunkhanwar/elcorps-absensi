@@ -50,6 +50,7 @@ const Absensi: React.FC = () => {
   const formatTimeFromString = (timeString: string): string => {
     if (!timeString) return '-';
     
+<<<<<<< HEAD
     console.log('🕒 Raw time string from backend:', timeString);
     
     if (!timeString || timeString === 'null' || timeString === 'undefined') {
@@ -57,6 +58,9 @@ const Absensi: React.FC = () => {
     }
 
     // Data dari backend sudah dalam format Jakarta time, langsung format saja
+=======
+    // Backend sudah kirim waktu dalam zona waktu unit kerja
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     if (timeString.includes(':')) {
       const timeParts = timeString.split(':');
       
@@ -64,10 +68,14 @@ const Absensi: React.FC = () => {
         const hours = timeParts[0].padStart(2, '0');
         const minutes = timeParts[1].padStart(2, '0');
         
+<<<<<<< HEAD
         const formattedTime = `${hours}:${minutes}`;
         console.log('✅ Formatted time:', formattedTime, 'from:', timeString);
         
         return formattedTime;
+=======
+        return `${hours}:${minutes}`;
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
       }
     }
     

@@ -20,7 +20,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+<<<<<<< HEAD
     "@types/file-saver": "^2.0.7",
+=======
+>>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
