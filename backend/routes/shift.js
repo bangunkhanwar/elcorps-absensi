@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/database'); // Gunakan pool langsung
+const pool = require('../config/database');
 const { auth } = require('../middleware/auth');
 
 // Get all shifts for a unit

@@ -80,17 +80,15 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
 
 // Apply for leave (with optional file upload)
 
-const router = express.Router();
 
-// Apply for leave
 router.post('/apply', auth, async (req, res) => {
   try {
     const { start_date, end_date, jenis_izin, keterangan, lampiran } = req.body;
 
     console.log('📱 DATA DARI MOBILE:', {
-      start_date, end_date, jenis_izin, keterangan,
+      start_date, end_date, jenis_izin, keterangan, lampiran,
       lampiran: lampiran ? 'File attached' : 'No file'
-      start_date, end_date, jenis_izin, keterangan, lampiran
+      
     });
 
     const leaveData = {

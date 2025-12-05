@@ -200,7 +200,6 @@ class User {
     return result.rows;
   }
 
-  // NEW METHODS FOR SHIFT MANAGEMENT
 
   // Mengambil user berdasarkan unit_kerja_id
   static async getByUnit(unitId) {

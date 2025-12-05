@@ -419,62 +419,93 @@ router.get('/today', auth, async (req, res) => {
   }
 }); 
 
-// GET ALL ATTENDANCE TODAY (Untuk HR)
+// GET ALL ATTENDANCE TODAY (Untuk HR dan Leader)
 router.get('/today-all', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'hr') {
-      return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
+    // Periksa akses website
+    if (req.user.role !== 'hr' && !req.user.website_access) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Anda tidak memiliki akses website' 
+      });
     }
 
-    const today = getCurrentJakartaDate();
-    const attendance = await Attendance.getTodayAttendance();
+    // Untuk leader, hanya ambil data unit kerjanya
+    let unitId = null;
+    if (req.user.role !== 'hr' && req.user.website_access) {
+      unitId = req.user.unit_kerja_id;
+      console.log('👔 Leader access - filtering by unit:', unitId);
+    }
+    
+    const attendance = await Attendance.getTodayAttendance(unitId);
     
     res.json({
+      success: true,
       message: 'Data absensi hari ini',
-      date: today,
+      date: new Date().toISOString().split('T')[0],
       attendances: attendance
     });
   } catch (error) {
     console.error('Today-all error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' 
+    });
   }
 });
 
-// GET ALL ATTENDANCE (Untuk HR)
+// GET ALL ATTENDANCE (Untuk HR dan Leader dengan website access)
 router.get('/all', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'hr') {
-      return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
+    // Periksa apakah user memiliki akses website
+    // HR selalu punya akses, Leader hanya jika website_access = true
+    if (req.user.role !== 'hr' && !req.user.website_access) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Anda tidak memiliki akses website' 
+      });
     }
 
-    const { startDate, endDate } = req.query;
-    console.log('🔍 Fetching all attendance for period:', { startDate, endDate });
+    const { startDate, endDate, unitId } = req.query;
+    console.log('🔍 Fetching all attendance for period:', { 
+      startDate, 
+      endDate, 
+      unitId,
+      userRole: req.user.role,
+      userUnitId: req.user.unit_kerja_id
+    });
     
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
     
     console.log('📅 Using date range:', queryStartDate, 'to', queryEndDate);
     
-    const attendance = await Attendance.getAllAttendance(queryStartDate, queryEndDate);
+    // Untuk leader (non-HR) dengan website_access, hanya bisa lihat unit kerjanya sendiri
+    let filteredUnitId = unitId;
+    if (req.user.role !== 'hr' && req.user.website_access) {
+      console.log('👔 Leader access detected, restricting to unit:', req.user.unit_kerja_id);
+      filteredUnitId = req.user.unit_kerja_id || unitId;
+    }
     
-    console.log('✅ Raw data from database:');
-    attendance.forEach((att, index) => {
-      console.log(`${index + 1}. ${att.nama}:`, {
-        masuk: att.waktu_masuk,
-        keluar: att.waktu_keluar,
-        tanggal: att.tanggal_absen,
-        timezone: att.timezone
-      });
-    });
+    // Panggil dengan unitId jika ada
+    const attendance = await Attendance.getAllAttendance(
+      queryStartDate, 
+      queryEndDate, 
+      filteredUnitId || null
+    );
+    
+    console.log(`✅ Successfully retrieved ${attendance.length} attendance records`);
     
     res.json({
+      success: true,
       message: 'Data semua absensi',
       period: { startDate: queryStartDate, endDate: queryEndDate },
       attendances: attendance
     });
   } catch (error) {
-    console.error('❌ All attendance error:', error);
+    console.error('❌ All attendance error:', error.message);
     res.status(500).json({ 
+      success: false,
       error: 'Internal server error: ' + error.message
     });
   }
