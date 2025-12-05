@@ -3,7 +3,6 @@ const path = require('path');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-<<<<<<< HEAD
     cb(null, path.join(__dirname, '..', 'uploads/attendance/'));
   },
   filename: function (req, file, cb) {
@@ -15,13 +14,11 @@ const storage = multer.diskStorage({
       prefix = 'clockout-';
     }
     cb(null, prefix + uniqueSuffix + '-' + file.originalname);
-=======
     cb(null, path.join(__dirname, '..', 'uploads/'));
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + '-' + file.originalname);
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
   }
 });
 
