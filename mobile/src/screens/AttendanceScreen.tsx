@@ -55,20 +55,25 @@ export default function AttendanceScreen({ navigation }: any) {
   const fetchAttendanceHistory = async (userId: number) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.185';
-      
+      let serverIP = await AsyncStorage.getItem('server_ip');
+      if (!serverIP) {
+        serverIP = Platform.OS === 'android' ? '10.1.10.236' : 'localhost';
+      }
       console.log('Fetching attendance from server:', serverIP);
 
-      const response = await fetch(
-        `http://${serverIP}:5000/api/attendance/user/${userId}?month=${selectedMonth + 1}&year=${selectedYear}`,
-        {
+      const url = `http://${serverIP}:5000/api/attendance/user/${userId}?month=${selectedMonth + 1}&year=${selectedYear}`;
+      let response;
+      try {
+        response = await fetch(url, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-        }
-      );
+        });
+      } catch (networkError) {
+        throw new Error('Tidak dapat terhubung ke server. Pastikan backend berjalan dan IP benar.');
+      }
 
       console.log('Response status:', response.status);
 

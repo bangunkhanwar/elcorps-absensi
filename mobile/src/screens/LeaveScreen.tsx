@@ -6,6 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { StyleSheet } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function LeaveScreen({ navigation }: any) {
   const [leaveType, setLeaveType] = useState('');
@@ -14,6 +15,7 @@ export default function LeaveScreen({ navigation }: any) {
   const [description, setDescription] = useState('');
   const [attachment, setAttachment] = useState<string | null>(null);
   const [showLeaveTypeModal, setShowLeaveTypeModal] = useState(false);
+  const [showAttachmentModal, setShowAttachmentModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState('');
   const [tempDate, setTempDate] = useState(new Date());
   const [user, setUser] = useState<any>(null);
@@ -53,6 +55,74 @@ export default function LeaveScreen({ navigation }: any) {
   const formatDateForAPI = (date: Date | null) => {
     if (!date) return '';
     return date.toISOString().split('T')[0];
+  };
+
+  // Fungsi upload foto dari galeri
+  const handlePickImage = async () => {
+    setShowAttachmentModal(false);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Izin Ditolak', 'Akses galeri diperlukan untuk memilih file.');
+        return;
+      }
+      const mediaTypeImages = ImagePicker.MediaTypeOptions?.Images ?? 'photo';
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: mediaTypeImages,
+        allowsEditing: false,
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets[0].uri) {
+        setAttachment(result.assets[0].uri);
+        Alert.alert('Sukses', 'Foto berhasil dipilih dari galeri');
+      }
+    } catch (error) {
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+        ? (error as { message?: string }).message
+        : String(error);
+      Alert.alert('Error', 'Gagal memilih file: ' + errorMessage);
+    }
+  };
+
+  // Fungsi ambil foto dari kamera
+  const handleTakePhoto = async () => {
+    setShowAttachmentModal(false);
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Izin Ditolak', 'Akses kamera diperlukan untuk mengambil foto.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets && result.assets[0].uri) {
+        setAttachment(result.assets[0].uri);
+        Alert.alert('Sukses', 'Foto berhasil diambil dari kamera');
+      }
+    } catch (error) {
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+        ? (error as { message?: string }).message
+        : String(error);
+      Alert.alert('Error', 'Gagal mengambil foto: ' + errorMessage);
+    }
+  };
+
+  // Fungsi upload dokumen PDF
+  const handlePickPDF = async () => {
+    setShowAttachmentModal(false);
+    try {
+      // Untuk PDF, gunakan DocumentPicker jika tersedia
+      const DocumentPicker = require('expo-document-picker');
+      let result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf' });
+      if (result.type === 'success') {
+        setAttachment(result.uri);
+        Alert.alert('Sukses', 'Dokumen PDF berhasil dipilih');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'expo-document-picker belum terinstall. Jalankan: npx expo install expo-document-picker');
+    }
   };
 
   const handleDateSelect = (field: string) => {
@@ -110,7 +180,7 @@ export default function LeaveScreen({ navigation }: any) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const serverIP = await AsyncStorage.getItem('server_ip') || '10.1.10.219';
+      const serverIP = await AsyncStorage.getItem('server_ip') || '10.1.10.236';
 
       console.log('🔍 Token:', token ? 'exists' : 'missing');
       console.log('🔍 Server IP:', serverIP);
@@ -179,19 +249,15 @@ export default function LeaveScreen({ navigation }: any) {
       )}
       <SafeAreaView style={styles.safeArea}
         edges={
-<<<<<<< HEAD
           Platform.OS === 'ios'
-=======
-          Platform.OS === 'ios' 
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
             ? ['left', 'right', 'bottom'] // iOS: hanya kiri, kanan, bawah
             : ['top', 'left', 'right', 'bottom'] // Android: semua sisi
-        }>
+        }
+      >
         {/* Header */}
         <StatusBar backgroundColor="#25a298" barStyle="light-content" />
 
         <View className="bg-primary py-4 px-4 rounded-b-3xl shadow-lg">
-<<<<<<< HEAD
           <View className="flex-row items-center justify-between">
             {/* Left: Back button + title */}
             <View className="flex-row items-center flex-1">
@@ -220,21 +286,6 @@ export default function LeaveScreen({ navigation }: any) {
                 color="white"
               />
             </TouchableOpacity>
-=======
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center mr-4"
-            >
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-            <View className="flex-1">
-              <Text className="text-2xl font-bold text-white">Pengajuan Izin</Text>
-              <Text className="text-white/80 text-sm mt-1">
-                {user?.nama || 'Loading...'}
-              </Text>
-            </View>
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
           </View>
         </View>
 
@@ -358,9 +409,7 @@ export default function LeaveScreen({ navigation }: any) {
               ) : (
                 <TouchableOpacity
                   className="border-2 border-dashed border-gray-300 rounded-xl p-6 items-center justify-center"
-                  onPress={() => {
-                    setAttachment('https://via.placeholder.com/300x200');
-                  }}
+                  onPress={() => setShowAttachmentModal(true)}
                 >
                   <Ionicons name="cloud-upload" size={48} color="#9CA3AF" />
                   <Text className="text-gray-500 text-center mt-3 font-semibold">
@@ -494,6 +543,41 @@ export default function LeaveScreen({ navigation }: any) {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal Menu Lampiran */}
+        <Modal
+          visible={showAttachmentModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowAttachmentModal(false)}
+        >
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+            <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 24, width: 300, alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Pilih Lampiran</Text>
+              <TouchableOpacity style={{ marginVertical: 8, width: '100%' }} onPress={handlePickImage}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="image-outline" size={24} color="#6366F1" />
+                  <Text style={{ marginLeft: 12, fontSize: 16 }}>Upload Foto dari Galeri</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ marginVertical: 8, width: '100%' }} onPress={handleTakePhoto}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="camera-outline" size={24} color="#10B981" />
+                  <Text style={{ marginLeft: 12, fontSize: 16 }}>Ambil Foto dari Kamera</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ marginVertical: 8, width: '100%' }} onPress={handlePickPDF}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="document-outline" size={24} color="#F59E0B" />
+                  <Text style={{ marginLeft: 12, fontSize: 16 }}>Upload Dokumen PDF</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ marginTop: 24 }} onPress={() => setShowAttachmentModal(false)}>
+                <Text style={{ color: '#EF4444', fontWeight: 'bold', fontSize: 16 }}>Batal</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>

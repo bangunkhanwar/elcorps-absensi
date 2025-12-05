@@ -88,7 +88,6 @@ router.post('/apply', auth, async (req, res) => {
     console.log('📱 DATA DARI MOBILE:', {
       start_date, end_date, jenis_izin, keterangan, lampiran,
       lampiran: lampiran ? 'File attached' : 'No file'
-      
     });
 
     const leaveData = {

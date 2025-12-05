@@ -25,6 +25,7 @@ interface Employee {
   jam_masuk: string
   jam_keluar: string
   nama_unit: string
+  timezone?: string
 }
 
 interface ShiftCalendarProps {
@@ -235,6 +236,17 @@ const ShiftCalendar: React.FC<ShiftCalendarProps> = ({
                       <div className="text-sm font-medium text-slate-900">{employee.nama}</div>
                       <div className="text-xs text-slate-500">{employee.nik} • {employee.jabatan}</div>
                       <div className="text-xs text-slate-400">{employee.nama_unit}</div>
+                      <div className="text-xs text-slate-400">
+                        {employee.nama_unit}
+                        {employee.timezone && (
+                          <span className="ml-1 text-xs text-slate-500">
+                            ({employee.timezone === 'Asia/Jakarta' ? 'WIB' : 
+                              employee.timezone === 'Asia/Makassar' ? 'WITA' : 
+                              employee.timezone === 'Asia/Jayapura' ? 'WIT' : 
+                              employee.timezone})
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {weekDates.map((date, index) => (
                       <td key={index} className="px-4 py-4 text-center">

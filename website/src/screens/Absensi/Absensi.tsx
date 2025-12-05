@@ -65,6 +65,7 @@ const Absensi: React.FC = () => {
     }
 
     // Data dari backend sudah dalam format Jakarta time, langsung format saja
+    // Backend sudah kirim waktu dalam zona waktu unit kerja
     if (timeString.includes(':')) {
       const timeParts = timeString.split(':');
       
@@ -76,6 +77,7 @@ const Absensi: React.FC = () => {
         console.log('✅ Formatted time:', formattedTime, 'from:', timeString);
         
         return formattedTime;
+        return `${hours}:${minutes}`;
       }
     }
     

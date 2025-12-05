@@ -6,19 +6,23 @@ const storage = multer.diskStorage({
     cb(null, path.join(__dirname, '..', 'uploads/attendance/'));
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     let prefix = '';
     if (file.fieldname === 'foto_masuk') {
       prefix = 'clockin-';
     } else if (file.fieldname === 'foto_keluar') {
       prefix = 'clockout-';
     }
-    cb(null, prefix + uniqueSuffix + '-' + file.originalname);
-    cb(null, path.join(__dirname, '..', 'uploads/'));
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+    // Ambil nama dan tanggal absen dari request
+    const nama = (req.user && req.user.nama) ? req.user.nama.replace(/\s+/g, '_').toLowerCase() : 'user';
+    // Tanggal absen dari body atau gunakan hari ini
+    let tanggal = req.body && req.body.tanggal_absen ? req.body.tanggal_absen : '';
+    if (!tanggal) {
+      const now = new Date();
+      tanggal = now.toISOString().split('T')[0];
+    }
+    // Format nama file
+    const filename = `${prefix}${nama}-${tanggal}${path.extname(file.originalname)}`;
+    cb(null, filename);
   }
 });
 
