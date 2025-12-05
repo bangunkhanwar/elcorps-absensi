@@ -51,7 +51,6 @@ class User {
 <<<<<<< HEAD
 =======
         uk.timezone,
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         s.nama_shift
       FROM users u
       LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id
@@ -215,7 +214,6 @@ class User {
                uk.nama_unit
 =======
                uk.nama_unit, uk.timezone
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
         FROM users u
         LEFT JOIN shifts s ON u.shift_id = s.id
         LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id

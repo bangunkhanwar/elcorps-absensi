@@ -32,9 +32,6 @@ app.use('/api/shifts', shiftRoutes);
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads/leave', express.static(path.join(__dirname, 'uploads/leave')));
-=======
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 
 // Basic routes
 app.get('/', (req, res) => {
@@ -79,8 +76,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📊 Attendance: http://localhost:${PORT}/api/attendance`);
   console.log(`📝 Leave: http://localhost:${PORT}/api/leave`);
   console.log(`🕒 Shifts: http://localhost:${PORT}/api/shifts`);
-<<<<<<< HEAD
   console.log(`📁 Uploads: http://localhost:${PORT}/uploads/leave`);
-=======
->>>>>>> 4902f588f8444b0dcd79c17ff2b22b2db382eefb
 });
