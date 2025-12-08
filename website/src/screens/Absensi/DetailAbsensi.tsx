@@ -61,12 +61,24 @@ const DetailAbsensi: React.FC = () => {
       const response = await leaveAPI.getAllLeaves()
       const leaves = response?.data?.leaves || []
       
-      const leave = leaves.find((l: any) => 
-        l.nik === nik && 
-        l.status === 'approved' &&
-        new Date(tanggal) >= new Date(l.start_date) &&
-        new Date(tanggal) <= new Date(l.end_date)
-      )
+      const tgl = new Date(tanggal);
+      tgl.setHours(0, 0, 0, 0);
+
+      const leave = leaves.find((l: any) => {
+        const mulai = new Date(l.start_date);
+        const selesai = new Date(l.end_date);
+
+        mulai.setHours(0, 0, 0, 0);
+        selesai.setHours(0, 0, 0, 0);
+
+        return (
+          l.nik === nik &&
+          ["pending", "approved", "rejected"].includes(l.status) &&
+          tgl >= mulai &&
+          tgl <= selesai
+        );
+      });
+
 
       if (leave) {
         setLeaveData({
@@ -240,7 +252,7 @@ const DetailAbsensi: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-2">Foto Masuk</label>
                     <img
-                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/${attendance.foto_masuk}`}
+                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_masuk}`}
                       alt="Foto masuk"
                       className="w-32 h-32 object-cover rounded-lg border border-slate-200"
                     />
@@ -256,7 +268,7 @@ const DetailAbsensi: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-2">Foto Keluar</label>
                     <img
-                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/${attendance.foto_keluar}`}
+                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_keluar}`}
                       alt="Foto keluar"
                       className="w-32 h-32 object-cover rounded-lg border border-slate-200"
                     />
