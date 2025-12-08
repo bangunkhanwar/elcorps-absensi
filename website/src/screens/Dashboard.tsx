@@ -596,46 +596,12 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Summary Bar */}
-                <div className="bg-gradient-to-r from-[#25a298] to-[#1f8a80] rounded-lg p-4 mb-6 text-white">
-                  <div className="flex flex-wrap items-center justify-between">
-                    <div className="mb-2 sm:mb-0">
-                      <h3 className="text-sm font-bold">Ringkasan Performa</h3>
-                      <p className="text-xs opacity-90">
-                        {user?.role === 'hr' ? 'Seluruh sistem' : `Unit ${user?.nama_unit}`}
-                      </p>
-                    </div>
-                    <div className="flex space-x-6">
-                      <div className="text-center">
-                        <p className="text-xs opacity-90">Kehadiran</p>
-                        <p className="text-lg font-bold">
-                          {stats.totalKaryawan > 0 
-                            ? Math.round((stats.hadirHariIni / stats.totalKaryawan) * 100) 
-                            : 0}%
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs opacity-90">Ketepatan</p>
-                        <p className="text-lg font-bold">
-                          {stats.hadirHariIni > 0 
-                            ? Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100) 
-                            : 0}%
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs opacity-90">Alpha</p>
-                        <p className="text-lg font-bold">
-                          {stats.totalKaryawan > 0 
-                            ? Math.round((stats.alpha / stats.totalKaryawan) * 100) 
-                            : 0}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </>
             )}
 
+            <hr className='mb-6'/>
+            
+            
             {/* Quick Actions Grid */}
             <div className="mb-6">
               {quickActions.length > 0 ? (
@@ -672,6 +638,7 @@ const Dashboard: React.FC = () => {
             </div>
           </>
         )}
+        
 
         {/* Bottom Info */}
         <div className="text-center pt-4 border-t border-slate-200">
