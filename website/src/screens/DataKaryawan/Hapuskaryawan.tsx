@@ -9,7 +9,7 @@ interface Employee {
   jabatan: string
   departemen: string
   divisi: string
-  unit_kerja: string
+  nama_unit: string
   role: string
 }
 
@@ -87,7 +87,7 @@ const HapusKaryawan: React.FC<Props> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium text-gray-500">Unit:</span>
-                    <span className="font-semibold text-gray-900">{selectedEmployee.unit_kerja}</span>
+                    <span className="font-semibold text-gray-900">{selectedEmployee.nama_unit}</span>
                   </div>
                 </div>
               </div>

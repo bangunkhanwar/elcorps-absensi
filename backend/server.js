@@ -74,4 +74,3 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🕒 Shifts: http://localhost:${PORT}/api/shifts`);
   console.log(`📁 Uploads: http://localhost:${PORT}/uploads/leave`);
 });
-

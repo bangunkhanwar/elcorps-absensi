@@ -115,5 +115,14 @@ export const reportsAPI = {
       responseType: 'blob'
     })
 }
+// Dashboard services
+export const dashboardAPI = {
+  getStats: () => api.get('/dashboard/stats'),
+  getPendingApprovals: () => api.get('/dashboard/pending-approvals'),
+  getRecentActivity: () => api.get('/dashboard/recent-activity'),
+  getTopLateEmployees: () => api.get('/dashboard/top-late'),
+  getAttendanceTrend: (days = 7) => api.get(`/dashboard/attendance-trend?days=${days}`),
+};
+
 
 export default api;

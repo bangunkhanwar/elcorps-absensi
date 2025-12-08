@@ -12,7 +12,7 @@ interface AttendanceData {
   unit_kerja: string
   jamMasuk: string
   jamPulang: string
-  status: 'tepat_waktu' | 'telat' | 'izin'
+  status: 'tepat_waktu' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk'
   nik: string
   jabatan: string
   departemen: string

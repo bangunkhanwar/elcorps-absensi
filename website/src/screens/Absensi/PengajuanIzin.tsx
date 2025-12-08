@@ -19,7 +19,15 @@ interface LeaveRequest {
 }
 
 const PengajuanIzin: React.FC = () => {
-  const [selectedLeaveDate, setSelectedLeaveDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [selectedLeaveDate, setSelectedLeaveDate] = useState<string>(() => {
+    return sessionStorage.getItem("selectedLeaveDatePengajuan") 
+      || new Date().toISOString().split("T")[0];
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("selectedLeaveDatePengajuan", selectedLeaveDate);
+  }, [selectedLeaveDate]);
+
   const [searchPengajuan, setSearchPengajuan] = useState('')
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
   const [currentPengajuanPage, setCurrentPengajuanPage] = useState(() => {

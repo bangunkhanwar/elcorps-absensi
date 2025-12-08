@@ -40,7 +40,6 @@ const Login: React.FC = () => {
         navigate('/dashboard')
       }, 1000)
     } catch (error: any) {
-      console.error('❌ Login error:', error)
       setMessage(error.response?.data?.error || 'Login gagal')
       setIsLoading(false)
     }

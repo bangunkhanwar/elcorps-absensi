@@ -81,7 +81,6 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
 // Apply for leave (with optional file upload)
 
 
-// Apply for leave
 router.post('/apply', auth, async (req, res) => {
   try {
     const { start_date, end_date, jenis_izin, keterangan, lampiran } = req.body;
@@ -126,8 +125,8 @@ router.get('/my-leaves', auth, async (req, res) => {
 // Get all leaves (HR only)
 router.get('/all', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'hr') {
-      return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
+    if (req.user.role !== 'hr' && req.user.website_access !== true) {
+      return res.status(403).json({ error: 'Akses ditolak' });
     }
 
     console.log('Fetching all leaves...');
@@ -150,8 +149,8 @@ router.get('/all', auth, async (req, res) => {
 // Get pending leaves (HR only)
 router.get('/pending', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'hr') {
-      return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
+    if (req.user.role !== 'hr' && req.user.website_access !== true) {
+      return res.status(403).json({ error: 'Akses ditolak' });
     }
 
     const leaves = await Leave.getPendingLeaves();
