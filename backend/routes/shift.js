@@ -97,8 +97,8 @@ router.post('/', auth, async (req, res) => {
       nama_shift, 
       jam_masuk, 
       jam_keluar, 
-      toleransi_telat_minutes, // biarkan undefined, gunakan COALESCE
-      is_default               // biarkan undefined, gunakan COALESCE
+      toleransi_telat_minutes, // undefined, menggunakan COALESCE
+      is_default               // undefined, menggunakan COALESCE
     ];
     
     console.log('📝 Executing INSERT query with values:', values);
@@ -196,7 +196,7 @@ router.put('/:id', auth, async (req, res) => {
       RETURNING *
     `;
     const values = [
-      kode_shift || old_kode_shift,  // Gunakan kode_shift baru atau tetap kode_shift lama
+      kode_shift || old_kode_shift,  // kode_shift baru atau kode_shift lama
       nama_shift, 
       jam_masuk, 
       jam_keluar, 

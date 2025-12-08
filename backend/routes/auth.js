@@ -227,8 +227,8 @@ router.get('/me', auth, async (req, res) => {
 // Get all users (HR only)
 router.get('/users', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'hr') {
-      return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
+    if (req.user.role !== 'hr' && req.user.website_access !== true) {
+      return res.status(403).json({ error: 'Akses ditolak' });
     }
 
     const users = await User.getAll();
@@ -280,12 +280,12 @@ router.put('/users/:id', auth, async (req, res) => {
     // Hapus website_access dan website_privileges dari body karena sudah dihandle otomatis
     const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role } = req.body;
     
-    // Gunakan model User.updateUser yang sudah otomatis mengatur website_access
+    //  model User.updateUser yang sudah otomatis mengatur website_access
     const updateData = {
       nama,
       nik,
       email,
-      password, // akan dihash otomatis di model jika ada
+      password, // akan dihash otomatis di model 
       jabatan,
       departemen,
       divisi,
@@ -391,7 +391,6 @@ router.get('/unit/:unitId/employees', auth, async (req, res) => {
     const query = `
       SELECT u.id, u.nama, u.nik, u.email, u.jabatan, u.departemen, u.divisi, 
              u.unit_kerja_id, u.shift_id, s.nama_shift, s.jam_masuk, s.jam_keluar,
-             uk.nama_unit
              uk.nama_unit, uk.timezone
       FROM users u
       LEFT JOIN shifts s ON u.shift_id = s.id
