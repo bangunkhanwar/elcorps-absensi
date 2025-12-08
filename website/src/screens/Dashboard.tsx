@@ -431,7 +431,7 @@ const Dashboard: React.FC = () => {
         ) : (
           <>
             {/* Compact Stats Grid - 2 Rows */}
-            {(user?.role === 'hr' || user?.website_access) && (
+            {user?.role === 'hr' && (
               <>
                 {/* Row 1: 5 Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
