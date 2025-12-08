@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal, Image, Platform, Alert, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal, Image, Platform, Alert, StatusBar, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 
 export default function LeaveScreen({ navigation }: any) {
   const [leaveType, setLeaveType] = useState('');
@@ -73,14 +74,49 @@ export default function LeaveScreen({ navigation }: any) {
         quality: 0.7,
       });
       if (!result.canceled && result.assets && result.assets[0].uri) {
-        setAttachment(result.assets[0].uri);
-        Alert.alert('Sukses', 'Foto berhasil dipilih dari galeri');
+        // Upload ke backend
+        const fileUri = result.assets[0].uri;
+        const fileName = fileUri.split('/').pop() || 'attachment.jpg';
+        const formData = new FormData();
+        formData.append('file', {
+          uri: fileUri,
+          name: fileName,
+          type: 'image/jpeg',
+        });
+        let serverIP = await AsyncStorage.getItem('manual_server_ip');
+        if (!serverIP) serverIP = '192.168.100.9';
+        const token = await AsyncStorage.getItem('token');
+        // Use HTTPS for non-local IPs
+        const isLocalIP = (ip: string) => {
+          return (
+            ip === 'localhost' ||
+            ip === '127.0.0.1' ||
+            ip.startsWith('192.168.') ||
+            ip.startsWith('10.') ||
+            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(ip)
+          );
+        };
+        const protocol = isLocalIP(serverIP) ? 'http' : 'https';
+        const uploadRes = await fetch(`${protocol}://${serverIP}:5000/api/leave/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        const uploadJson = await uploadRes.json();
+        if (uploadRes.ok && uploadJson.fileUrl) {
+          setAttachment(uploadJson.fileUrl);
+          Alert.alert('Sukses', 'Foto berhasil diupload');
+        } else {
+          throw new Error(uploadJson.error || 'Upload gagal');
+        }
       }
     } catch (error) {
       const errorMessage = typeof error === 'object' && error !== null && 'message' in error
         ? (error as { message?: string }).message
         : String(error);
-      Alert.alert('Error', 'Gagal memilih file: ' + errorMessage);
+      Alert.alert('Error', 'Gagal upload file: ' + errorMessage);
     }
   };
 
@@ -98,14 +134,38 @@ export default function LeaveScreen({ navigation }: any) {
         quality: 0.7,
       });
       if (!result.canceled && result.assets && result.assets[0].uri) {
-        setAttachment(result.assets[0].uri);
-        Alert.alert('Sukses', 'Foto berhasil diambil dari kamera');
+        // Upload ke backend
+        const fileUri = result.assets[0].uri;
+        const fileName = fileUri.split('/').pop();
+        const formData = new FormData();
+        formData.append('file', {
+          uri: fileUri,
+          name: fileName,
+          type: 'image/jpeg',
+        });
+        let serverIP = await AsyncStorage.getItem('manual_server_ip');
+        if (!serverIP) serverIP = '192.168.100.9';
+        const token = await AsyncStorage.getItem('token');
+        const uploadRes = await fetch(`http://${serverIP}:5000/api/leave/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        const uploadJson = await uploadRes.json();
+        if (uploadRes.ok && uploadJson.fileUrl) {
+          setAttachment(uploadJson.fileUrl);
+          Alert.alert('Sukses', 'Foto berhasil diupload');
+        } else {
+          throw new Error(uploadJson.error || 'Upload gagal');
+        }
       }
     } catch (error) {
       const errorMessage = typeof error === 'object' && error !== null && 'message' in error
         ? (error as { message?: string }).message
         : String(error);
-      Alert.alert('Error', 'Gagal mengambil foto: ' + errorMessage);
+      Alert.alert('Error', 'Gagal upload file: ' + errorMessage);
     }
   };
 
@@ -113,15 +173,37 @@ export default function LeaveScreen({ navigation }: any) {
   const handlePickPDF = async () => {
     setShowAttachmentModal(false);
     try {
-      // Untuk PDF, gunakan DocumentPicker jika tersedia
-      const DocumentPicker = require('expo-document-picker');
       let result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf' });
-      if (result.type === 'success') {
-        setAttachment(result.uri);
-        Alert.alert('Sukses', 'Dokumen PDF berhasil dipilih');
+      if (!result.canceled && result.assets && result.assets[0].uri) {
+        // Upload ke backend
+        const fileUri = result.assets[0].uri;
+        const fileName = result.assets[0].name || fileUri.split('/').pop();
+        const formData = new FormData();
+        formData.append('file', {
+          uri: fileUri,
+          name: fileName,
+          type: 'application/pdf',
+        });
+        let serverIP = await AsyncStorage.getItem('manual_server_ip');
+        if (!serverIP) serverIP = '192.168.100.9';
+        const token = await AsyncStorage.getItem('token');
+        const uploadRes = await fetch(`http://${serverIP}:5000/api/leave/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        const uploadJson = await uploadRes.json();
+        if (uploadRes.ok && uploadJson.fileUrl) {
+          setAttachment(uploadJson.fileUrl);
+          Alert.alert('Sukses', 'PDF berhasil diupload');
+        } else {
+          throw new Error(uploadJson.error || 'Upload gagal');
+        }
       }
     } catch (err) {
-      Alert.alert('Error', 'expo-document-picker belum terinstall. Jalankan: npx expo install expo-document-picker');
+      Alert.alert('Error', 'Gagal upload PDF: ' + (err?.message || String(err)));
     }
   };
 
@@ -180,7 +262,11 @@ export default function LeaveScreen({ navigation }: any) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const serverIP = await AsyncStorage.getItem('server_ip') || '10.1.10.236';
+      // Gunakan manual_server_ip jika ada, fallback ke default
+      let serverIP = await AsyncStorage.getItem('manual_server_ip');
+      if (!serverIP) {
+        serverIP = '192.168.100.9'; // default dari api.js
+      }
 
       console.log('🔍 Token:', token ? 'exists' : 'missing');
       console.log('🔍 Server IP:', serverIP);
@@ -391,20 +477,42 @@ export default function LeaveScreen({ navigation }: any) {
                 <View className="border-2 border-green-500 rounded-xl p-4">
                   <View className="flex-row items-center justify-between mb-3">
                     <View className="flex-row items-center">
-                      <Ionicons name="document-attach" size={24} color="#10B981" />
+                      <Ionicons name={attachment.endsWith('.pdf') ? 'document-outline' : 'document-attach'} size={24} color="#10B981" />
                       <Text className="text-green-700 font-semibold ml-2">
-                        File Terlampir
+                        {attachment.endsWith('.pdf') ? 'PDF Terlampir' : 'File Terlampir'}
                       </Text>
                     </View>
                     <TouchableOpacity onPress={() => setAttachment(null)}>
                       <Ionicons name="close-circle" size={24} color="#EF4444" />
                     </TouchableOpacity>
                   </View>
-                  <Image
-                    source={{ uri: attachment }}
-                    className="w-full h-40 rounded-lg"
-                    resizeMode="cover"
-                  />
+                  {attachment.endsWith('.pdf') ? (
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#F3F4F6', borderRadius: 8, padding: 16, alignItems: 'center' }}
+                      onPress={() => {
+                        // Buka PDF di browser atau aplikasi PDF
+                        if (Platform.OS === 'web') {
+                          window.open(attachment, '_blank');
+                        } else {
+                          Linking.openURL(attachment);
+                        }
+                      }}
+                    >
+                      <Ionicons name="document-outline" size={48} color="#6366F1" />
+                      <Text style={{ marginTop: 8, color: '#6366F1', fontWeight: 'bold' }}>
+                        Lihat PDF
+                      </Text>
+                      <Text style={{ marginTop: 4, color: '#333', fontSize: 12 }} numberOfLines={1}>
+                        {attachment.split('/').pop()}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Image
+                      source={{ uri: attachment }}
+                      className="w-full h-40 rounded-lg"
+                      resizeMode="cover"
+                    />
+                  )}
                 </View>
               ) : (
                 <TouchableOpacity
