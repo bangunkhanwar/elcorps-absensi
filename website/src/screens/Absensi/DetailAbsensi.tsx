@@ -240,7 +240,7 @@ const DetailAbsensi: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-2">Foto Masuk</label>
                     <img
-                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/${attendance.foto_masuk}`}
+                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_masuk}`}
                       alt="Foto masuk"
                       className="w-32 h-32 object-cover rounded-lg border border-slate-200"
                     />

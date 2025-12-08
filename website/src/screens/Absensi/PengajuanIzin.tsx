@@ -561,12 +561,21 @@ const PengajuanIzin: React.FC = () => {
                         </div>
                         
                         <div className="w-full max-w-xs">
-                          <img 
-                            src={selectedRequest.lampiran} 
-                            alt="Lampiran" 
-                            className="w-full h-auto rounded-lg border-2 border-purple-300 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                            onClick={() => window.open(selectedRequest.lampiran, '_blank')}
-                          />
+                          {selectedRequest.lampiran &&
+                            (selectedRequest.lampiran.endsWith('.pdf') ? (
+                              <iframe
+                                src={selectedRequest.lampiran}
+                                title="Lampiran PDF"
+                                className="w-full h-64 rounded-lg border-2 border-purple-300 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                              />
+                            ) : (
+                              <img
+                                src={selectedRequest.lampiran}
+                                alt="Lampiran"
+                                className="w-full h-auto rounded-lg border-2 border-purple-300 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                                onClick={() => window.open(selectedRequest.lampiran, '_blank')}
+                              />
+                            ))}
                         </div>
                         
                         <button

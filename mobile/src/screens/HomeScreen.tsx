@@ -34,6 +34,20 @@ const styles = StyleSheet.create({
   },
 });
 
+// Fungsi untuk menghitung jarak antara dua koordinat (meter)
+function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export default function HomeScreen({ navigation }: any) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockInStatus, setClockInStatus] = useState('Belum Clock In');
@@ -45,8 +59,9 @@ export default function HomeScreen({ navigation }: any) {
   const [clockInPhoto, setClockInPhoto] = useState<string | null>(null);
   const [clockOutPhoto, setClockOutPhoto] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: string, longitude: string } | null>(null);
-  const [locationStatus, setLocationStatus] = useState<'waiting' | 'granted' | 'denied' | 'gps_off' | 'error'>('waiting');
+  const [locationStatus, setLocationStatus] = useState<'waiting' | 'granted' | 'denied' | 'gps_off' | 'error' | 'out_of_radius'>('waiting');
   const [showLoading, setShowLoading] = useState(false);
+  const [showGPSModal, setShowGPSModal] = useState(false);
 
   const route = useRoute<HomeScreenRouteProp>();
 
@@ -57,25 +72,53 @@ export default function HomeScreen({ navigation }: any) {
     }
   }, [route.params, navigation]);
 
+
+  // Load user data & attendance on mount
   useEffect(() => {
     loadUserData();
     checkTodayAttendance();
-    getCurrentLocation();
 
+    // Timer jam
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
+
+  // Cek lokasi hanya setelah user sudah dimuat
+  useEffect(() => {
+    if (user) {
+      setLocationStatus('waiting'); // Mulai deteksi lokasi
+      getCurrentLocation();
+    }
+  }, [user]);
+
+  // Polling lokasi jika belum granted
+  useEffect(() => {
+    let locationPolling: NodeJS.Timeout | null = null;
+    if (locationStatus !== 'granted' && user) {
+      locationPolling = setInterval(async () => {
+        const location = await getCurrentLocation();
+        if (location) {
+          setLocationStatus('granted');
+          if (locationPolling) clearInterval(locationPolling);
+        }
+      }, 10000); // polling setiap 10 detik
+    }
+    return () => {
+      if (locationPolling) clearInterval(locationPolling);
+    };
+  }, [locationStatus, user]);
 
   const getCurrentLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
+        setLocationStatus('denied');
         return null;
       }
 
+      setLocationStatus('waiting'); // Mulai proses deteksi
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -86,8 +129,36 @@ export default function HomeScreen({ navigation }: any) {
       };
 
       setCurrentLocation(locationData);
+
+      // --- CEK RADIUS ---
+      const absensiLat = user?.latitude ? parseFloat(user.latitude) : -6.2;
+      const absensiLon = user?.longitude ? parseFloat(user.longitude) : 106.8;
+      const absensiRadius = user?.radius ? Number(user.radius) : 100; // meter
+      const distance = getDistanceFromLatLonInMeters(
+        parseFloat(locationData.latitude),
+        parseFloat(locationData.longitude),
+        absensiLat,
+        absensiLon
+      );
+      if (distance > absensiRadius) {
+        setLocationStatus('out_of_radius');
+      } else {
+        setLocationStatus('granted');
+      }
+      // --- END CEK RADIUS ---
+
       return locationData;
-    } catch (error) {
+    } catch (error: any) {
+      if (
+        error &&
+        error.message &&
+        error.message.includes('Location request failed due to unsatisfied device settings')
+      ) {
+        setLocationStatus('gps_off');
+        setShowGPSModal(true);
+        return null;
+      }
+      setLocationStatus('error');
       console.error('Error getting location:', error);
       return null;
     }
@@ -167,7 +238,6 @@ export default function HomeScreen({ navigation }: any) {
 
     setShowLoading(true);
     try {
-      // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
@@ -240,7 +310,6 @@ export default function HomeScreen({ navigation }: any) {
 
     setShowLoading(true);
     try {
-      // ...existing code...
       // Dapatkan lokasi
       const location = await getCurrentLocation();
       if (!location) {
@@ -320,8 +389,34 @@ export default function HomeScreen({ navigation }: any) {
     return `${hours} . ${minutes} . ${seconds}`;
   };
 
- return (
+  return (
     <>
+      {/* Modal GPS Reminder */}
+      <Modal
+        visible={showGPSModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGPSModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'white', padding: 24, borderRadius: 16, alignItems: 'center', width: 320 }}>
+            <Ionicons name="location" size={48} color="#25a298" style={{ marginBottom: 16 }} />
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' }}>
+              GPS Belum Aktif
+            </Text>
+            <Text style={{ fontSize: 16, color: '#333', marginBottom: 16, textAlign: 'center' }}>
+              Untuk absensi, silakan aktifkan GPS pada perangkat Anda dan coba lagi.
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#25a298', borderRadius: 8, paddingVertical: 12, paddingHorizontal: 32 }}
+              onPress={() => setShowGPSModal(false)}
+            >
+              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Tutup</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal Loading Indicator */}
       <Modal
         visible={showLoading}
@@ -346,14 +441,14 @@ export default function HomeScreen({ navigation }: any) {
       {Platform.OS === 'android' && (
         <RNStatusBar backgroundColor="#25a298" barStyle="light-content" />
       )}
-      
+
       <SafeAreaView style={styles.safeArea}
         edges={
           Platform.OS === 'ios'
             ? ['left', 'right', 'bottom'] // iOS: hanya kiri, kanan, bawah
             : ['top', 'left', 'right', 'bottom'] // Android: semua sisi
         }>
-        
+
         <View className='flex-1 bg-white'>
           <View className="flex-row items-center justify-between px-6 bg-primary rounded-b-3xl shadow-lg">
             <Image
@@ -374,7 +469,7 @@ export default function HomeScreen({ navigation }: any) {
               />
             </TouchableOpacity>
           </View>
-          
+
           <View className="flex-1 bg-white p-6 content-center">
             {/* Header dengan informasi karyawan */}
             <View className="mb-6">
@@ -384,7 +479,7 @@ export default function HomeScreen({ navigation }: any) {
                 <Text className="text-gray-600">{user?.nik || '52510.3138'}</Text>
                 <Text className="text-gray-600">{user?.jabatan || 'Staff Of Programmer'}</Text>
               </View>
-              
+
               {/* Garis pemisah setelah Staff Of Programmer */}
               <View className="border-t border-gray-200 pt-4 mb-4">
                 <Text className="text-lg font-semibold mb-2 text-primary">Informasi Karyawan</Text>
@@ -415,9 +510,11 @@ export default function HomeScreen({ navigation }: any) {
                         ? '📍 Izin lokasi ditolak - Buka pengaturan untuk mengaktifkan'
                         : locationStatus === 'gps_off'
                           ? '📍 GPS tidak aktif - Silakan aktifkan GPS'
-                          : locationStatus === 'error'
-                            ? '📍 Error deteksi lokasi - Coba lagi'
-                            : '📍 Mendeteksi lokasi...'
+                          : locationStatus === 'out_of_radius'
+                            ? '📍 Lokasi di luar radius absensi'
+                            : locationStatus === 'error'
+                              ? '📍 Error deteksi lokasi - Coba lagi'
+                              : '📍 Mendeteksi lokasi...'
                     }
                   </Text>
                 </View>
@@ -430,9 +527,13 @@ export default function HomeScreen({ navigation }: any) {
                 {/* Container untuk tombol dengan spacing yang konsisten */}
                 <View className="space-y-3">
                   <TouchableOpacity
-                    className={`rounded-lg py-4 ${clockInStatus === 'Belum Clock In' ? 'bg-primary' : 'bg-gray-400'}`}
-                    onPress={() => clockInStatus === 'Belum Clock In' && setShowClockInModal(true)}
-                    disabled={clockInStatus !== 'Belum Clock In'}
+                    className={`rounded-lg py-4 ${clockInStatus === 'Belum Clock In' && locationStatus !== 'out_of_radius' ? 'bg-primary' : 'bg-gray-400'}`}
+                    onPress={() => {
+                      if (clockInStatus === 'Belum Clock In' && locationStatus !== 'out_of_radius') {
+                        setShowClockInModal(true);
+                      }
+                    }}
+                    disabled={clockInStatus !== 'Belum Clock In' || locationStatus === 'out_of_radius'}
                   >
                     <Text className="text-white text-center font-semibold text-lg">
                       Clock In
@@ -728,4 +829,5 @@ export default function HomeScreen({ navigation }: any) {
         </SafeAreaView>
       </Modal>
     </>
-)};
+  )
+}
