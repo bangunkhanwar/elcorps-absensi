@@ -10,7 +10,6 @@ import Ionicons from '@expo/vector-icons/build/Ionicons';
 import Constants from 'expo-constants';
 import { StyleSheet } from 'react-native';
 
-
 // Define route params type
 type RootStackParamList = {
   Home: { showMenuModal?: boolean };
@@ -21,16 +20,16 @@ type HomeScreenRouteProp = RouteProp<RootStackParamList, 'Home'>;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white', // Background utama putih
+    backgroundColor: 'white',
   },
   iosStatusBar: {
-    backgroundColor: '#25a298', // Warna primary (hijau) untuk status bar iOS
+    backgroundColor: '#25a298',
     height: Platform.OS === 'ios' ? Constants.statusBarHeight : 0,
     width: '100%',
   },
   safeArea: {
     flex: 1,
-    backgroundColor: 'white', // Background putih untuk konten di bawah status bar
+    backgroundColor: 'white',
   },
 });
 
@@ -62,6 +61,12 @@ export default function HomeScreen({ navigation }: any) {
   const [locationStatus, setLocationStatus] = useState<'waiting' | 'granted' | 'denied' | 'gps_off' | 'error' | 'out_of_radius'>('waiting');
   const [showLoading, setShowLoading] = useState(false);
   const [showGPSModal, setShowGPSModal] = useState(false);
+  const [unitKerjaData, setUnitKerjaData] = useState<{
+    latitude: number;
+    longitude: number;
+    radius_meter: number;
+    nama_unit: string;
+  } | null>(null);
 
   const route = useRoute<HomeScreenRouteProp>();
 
@@ -71,7 +76,6 @@ export default function HomeScreen({ navigation }: any) {
       navigation.setParams({ showMenuModal: false });
     }
   }, [route.params, navigation]);
-
 
   // Load user data & attendance on mount
   useEffect(() => {
@@ -88,7 +92,7 @@ export default function HomeScreen({ navigation }: any) {
   // Cek lokasi hanya setelah user sudah dimuat
   useEffect(() => {
     if (user) {
-      setLocationStatus('waiting'); // Mulai deteksi lokasi
+      setLocationStatus('waiting');
       getCurrentLocation();
     }
   }, [user]);
@@ -96,15 +100,15 @@ export default function HomeScreen({ navigation }: any) {
   // Polling lokasi jika belum granted
   useEffect(() => {
     let locationPolling: NodeJS.Timeout | null = null;
-    if (locationStatus !== 'granted' && user) {
+    
+    // Hanya polling jika status bukan 'granted' atau 'out_of_radius' dan user sudah ada
+    if ((locationStatus === 'waiting' || locationStatus === 'error') && user) {
       locationPolling = setInterval(async () => {
-        const location = await getCurrentLocation();
-        if (location) {
-          setLocationStatus('granted');
-          if (locationPolling) clearInterval(locationPolling);
-        }
-      }, 10000); // polling setiap 10 detik
+        console.log('🔄 Polling lokasi...');
+        await getCurrentLocation();
+      }, 10000);
     }
+    
     return () => {
       if (locationPolling) clearInterval(locationPolling);
     };
@@ -118,7 +122,7 @@ export default function HomeScreen({ navigation }: any) {
         return null;
       }
 
-      setLocationStatus('waiting'); // Mulai proses deteksi
+      setLocationStatus('waiting');
       let location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -130,22 +134,40 @@ export default function HomeScreen({ navigation }: any) {
 
       setCurrentLocation(locationData);
 
-      // --- CEK RADIUS ---
-      const absensiLat = user?.latitude ? parseFloat(user.latitude) : -6.2;
-      const absensiLon = user?.longitude ? parseFloat(user.longitude) : 106.8;
-      const absensiRadius = user?.radius ? Number(user.radius) : 100; // meter
+      // --- CEK RADIUS berdasarkan data unit kerja yang benar ---
+      // Gunakan data unitKerjaData dari state, bukan dari user
+      if (!unitKerjaData) {
+        console.log('⚠️ Data unit kerja belum tersedia');
+        setLocationStatus('error');
+        return locationData;
+      }
+
       const distance = getDistanceFromLatLonInMeters(
         parseFloat(locationData.latitude),
         parseFloat(locationData.longitude),
-        absensiLat,
-        absensiLon
+        unitKerjaData.latitude,
+        unitKerjaData.longitude
       );
-      if (distance > absensiRadius) {
+
+      console.log('📍 Distance calculation:', {
+        userLocation: locationData,
+        unitLocation: { 
+          latitude: unitKerjaData.latitude, 
+          longitude: unitKerjaData.longitude,
+          nama_unit: unitKerjaData.nama_unit
+        },
+        distance: Math.round(distance),
+        allowedRadius: unitKerjaData.radius_meter,
+        unitName: unitKerjaData.nama_unit
+      });
+
+      if (distance > unitKerjaData.radius_meter) {
+        console.log('❌ Diluar radius:', Math.round(distance), '>', unitKerjaData.radius_meter);
         setLocationStatus('out_of_radius');
       } else {
+        console.log('✅ Dalam radius:', Math.round(distance), '<=', unitKerjaData.radius_meter);
         setLocationStatus('granted');
       }
-      // --- END CEK RADIUS ---
 
       return locationData;
     } catch (error: any) {
@@ -168,7 +190,16 @@ export default function HomeScreen({ navigation }: any) {
     try {
       const userData = await AsyncStorage.getItem('user');
       if (userData) {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        
+        // Log untuk debugging
+        console.log('👤 User loaded from AsyncStorage:', {
+          id: parsedUser.id,
+          nama: parsedUser.nama,
+          unit_kerja_id: parsedUser.unit_kerja_id,
+          unit_kerja: parsedUser.unit_kerja
+        });
       }
     } catch (error) {
       console.log('Error loading user data:', error);
@@ -178,6 +209,52 @@ export default function HomeScreen({ navigation }: any) {
   const checkTodayAttendance = async () => {
     try {
       const response = await attendanceAPI.getToday();
+      
+      console.log('📅 Today attendance response:', response.data);
+      
+      // PERBAIKAN: Ambil data unit kerja dari response API
+      if (response.data.unit_kerja) {
+        const unitData = {
+          latitude: parseFloat(response.data.unit_kerja.latitude),
+          longitude: parseFloat(response.data.unit_kerja.longitude),
+          radius_meter: response.data.unit_kerja.radius_meter,
+          nama_unit: response.data.unit_kerja.nama_unit
+        };
+        
+        setUnitKerjaData(unitData);
+        
+        console.log('🏢 Unit kerja data set:', unitData);
+        
+        // Update user dengan data unit kerja yang benar
+        setUser(prev => ({
+          ...prev,
+          latitude: response.data.unit_kerja.latitude,
+          longitude: response.data.unit_kerja.longitude,
+          radius_meter: response.data.unit_kerja.radius_meter,
+          unit_kerja: response.data.unit_kerja.nama_unit
+        }));
+        
+        // Simpan ke AsyncStorage untuk konsistensi
+        try {
+          const userData = await AsyncStorage.getItem('user');
+          if (userData) {
+            const parsedUser = JSON.parse(userData);
+            const updatedUser = {
+              ...parsedUser,
+              latitude: response.data.unit_kerja.latitude,
+              longitude: response.data.unit_kerja.longitude,
+              radius_meter: response.data.unit_kerja.radius_meter,
+              unit_kerja: response.data.unit_kerja.nama_unit
+            };
+            await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+          }
+        } catch (storageError) {
+          console.log('Error updating user in storage:', storageError);
+        }
+      } else {
+        console.log('⚠️ Tidak ada data unit_kerja dalam response');
+      }
+      
       if (response.data.data) {
         setTodayAttendance(response.data.data);
         if (!response.data.data.waktu_keluar) {
@@ -185,9 +262,12 @@ export default function HomeScreen({ navigation }: any) {
         } else {
           setClockInStatus('Sudah Clock Out');
         }
+      } else {
+        setClockInStatus('Belum Clock In');
       }
     } catch (error: any) {
       console.log('Error checking attendance:', error.response?.data?.error || error.message);
+      setClockInStatus('Belum Clock In');
     }
   };
 
@@ -228,6 +308,22 @@ export default function HomeScreen({ navigation }: any) {
       Alert.alert('Error', 'Gagal membuka kamera. Pastikan izin kamera sudah diberikan.');
       console.log('Camera error:', error);
     }
+  };
+
+  // Fungsi untuk menangani klik tombol Clock In
+  const handleClockInButton = () => {
+    if (clockInStatus !== 'Belum Clock In') return;
+    
+    if (locationStatus === 'out_of_radius') {
+      Alert.alert(
+        'Lokasi di Luar Radius',
+        'Anda berada di luar radius unit kerja. Silakan datang ke lokasi yang ditentukan untuk melakukan Clock In.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return;
+    }
+    
+    setShowClockInModal(true);
   };
 
   const handleClockIn = async () => {
@@ -273,7 +369,13 @@ export default function HomeScreen({ navigation }: any) {
 
       let errorMessage = 'Clock in gagal';
 
-      if (error.response?.data?.error) {
+      if (error.isTimeout) {
+        errorMessage = error.message;
+      } else if (error.isNetworkError) {
+        errorMessage = error.message;
+      } else if (error.isBadRequest) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
         // Error dari backend
         const backendError = error.response.data.error;
 
@@ -290,10 +392,8 @@ export default function HomeScreen({ navigation }: any) {
         } else {
           errorMessage = backendError;
         }
-      } else if (error.message.includes('timeout')) {
-        errorMessage = 'Koneksi timeout. Periksa koneksi internet Anda.';
-      } else if (error.message.includes('Network Error')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       Alert.alert('Error', errorMessage);
@@ -344,7 +444,13 @@ export default function HomeScreen({ navigation }: any) {
 
       let errorMessage = 'Clock out gagal';
 
-      if (error.response?.data?.error) {
+      if (error.isTimeout) {
+        errorMessage = error.message;
+      } else if (error.isNetworkError) {
+        errorMessage = error.message;
+      } else if (error.isBadRequest) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.error) {
         const backendError = error.response.data.error;
 
         if (backendError.includes('belum check-in')) {
@@ -354,10 +460,8 @@ export default function HomeScreen({ navigation }: any) {
         } else {
           errorMessage = backendError;
         }
-      } else if (error.message.includes('timeout')) {
-        errorMessage = 'Koneksi timeout. Periksa koneksi internet Anda.';
-      } else if (error.message.includes('Network Error')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       Alert.alert('Error', errorMessage);
@@ -445,8 +549,8 @@ export default function HomeScreen({ navigation }: any) {
       <SafeAreaView style={styles.safeArea}
         edges={
           Platform.OS === 'ios'
-            ? ['left', 'right', 'bottom'] // iOS: hanya kiri, kanan, bawah
-            : ['top', 'left', 'right', 'bottom'] // Android: semua sisi
+            ? ['left', 'right', 'bottom']
+            : ['top', 'left', 'right', 'bottom']
         }>
 
         <View className='flex-1 bg-white'>
@@ -511,7 +615,7 @@ export default function HomeScreen({ navigation }: any) {
                         : locationStatus === 'gps_off'
                           ? '📍 GPS tidak aktif - Silakan aktifkan GPS'
                           : locationStatus === 'out_of_radius'
-                            ? '📍 Lokasi di luar radius absensi'
+                            ? '📍 Lokasi di luar radius' // REVISI: tanpa nama unit kerja
                             : locationStatus === 'error'
                               ? '📍 Error deteksi lokasi - Coba lagi'
                               : '📍 Mendeteksi lokasi...'
@@ -526,14 +630,11 @@ export default function HomeScreen({ navigation }: any) {
 
                 {/* Container untuk tombol dengan spacing yang konsisten */}
                 <View className="space-y-3">
+                  {/* REVISI: Tombol Clock In selalu aktif (warna primary) */}
                   <TouchableOpacity
-                    className={`rounded-lg py-4 ${clockInStatus === 'Belum Clock In' && locationStatus !== 'out_of_radius' ? 'bg-primary' : 'bg-gray-400'}`}
-                    onPress={() => {
-                      if (clockInStatus === 'Belum Clock In' && locationStatus !== 'out_of_radius') {
-                        setShowClockInModal(true);
-                      }
-                    }}
-                    disabled={clockInStatus !== 'Belum Clock In' || locationStatus === 'out_of_radius'}
+                    className={`rounded-lg py-4 ${clockInStatus === 'Belum Clock In' ? 'bg-primary' : 'bg-gray-400'}`}
+                    onPress={handleClockInButton}
+                    disabled={clockInStatus !== 'Belum Clock In'}
                   >
                     <Text className="text-white text-center font-semibold text-lg">
                       Clock In

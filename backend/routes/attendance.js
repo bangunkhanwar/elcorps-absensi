@@ -399,25 +399,39 @@ router.get('/history', auth, async (req, res) => {
   }
 });
 
-// GET TODAY
+// GET TODAY - Perbaikan untuk include unit kerja data
 router.get('/today', auth, async (req, res) => {
   try {
     const user = await User.findByIdWithUnitAndShift(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User tidak ditemukan' });
+    }
+    
     const timezone = user?.timezone || 'Asia/Jakarta';
     const today = getCurrentDateInTimezone(timezone);
     
     const attendance = await Attendance.findByUserAndDate(req.user.id, today);
     
+    // Siapkan data unit kerja untuk response
+    const unitKerjaData = {
+      latitude: user.latitude,
+      longitude: user.longitude,
+      radius_meter: user.radius_meter,
+      nama_unit: user.nama_unit,
+      timezone: user.timezone
+    };
+    
     res.json({
       message: 'Status absensi hari ini',
       date: today,
-      data: attendance || null
+      data: attendance || null,
+      unit_kerja: unitKerjaData
     });
   } catch (error) {
     console.error('Today error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
-}); 
+});
 
 // GET ALL ATTENDANCE TODAY (Untuk HR dan Leader)
 router.get('/today-all', auth, async (req, res) => {

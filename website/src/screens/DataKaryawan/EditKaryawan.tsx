@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { shiftAPI } from '../../services/api'
 
 interface EmployeeForm {
   email: string
@@ -11,17 +10,6 @@ interface EmployeeForm {
   divisi: string
   unit_kerja: string
   role: string
-  shift_id: number | null
-}
-
-interface Shift {
-  id: number
-  kode_shift: string
-  nama_shift: string
-  jam_masuk: string
-  jam_keluar: string
-  is_default: boolean
-  unit_kerja_id: number
 }
 
 interface Props {
@@ -30,7 +18,7 @@ interface Props {
   selectedEmployee: any
   formData: EmployeeForm
   setFormData: (data: EmployeeForm) => void
-  handleEdit: (e: React.FormEvent, shift_id: number | null) => void
+  handleEdit: (e: React.FormEvent) => void  // Menghapus parameter shift_id
   message: string
   unitKerjaList: any[]
 }
@@ -46,94 +34,7 @@ const EditKaryawan: React.FC<Props> = ({
   unitKerjaList
 }) => {
   const [showPassword, setShowPassword] = useState(false)
-  const [shifts, setShifts] = useState<Shift[]>([])
-  const [loadingShifts, setLoadingShifts] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
-
-  // Inisialisasi form data dengan data dari selectedEmployee
-  useEffect(() => {
-    if (selectedEmployee && showEditModal) {
-      // Pastikan formData sudah di-set dengan nilai yang benar
-      console.log('Selected employee unit kerja:', selectedEmployee.nama_unit)
-    }
-  }, [selectedEmployee, showEditModal])
-
-  // Fetch shifts ketika modal dibuka atau selectedEmployee berubah
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!showEditModal || !selectedEmployee) return
-
-      try {
-        setLoadingShifts(true)
-        
-        if (unitKerjaList && unitKerjaList.length > 0) {
-          const employeeUnit = unitKerjaList.find((unit: any) => unit.nama_unit === selectedEmployee.unit_kerja)
-          const unitId = employeeUnit ? employeeUnit.id : (unitKerjaList[0]?.id || null)
-          
-          if (unitId) {
-            const shiftsResponse = await shiftAPI.getShiftsByUnit(unitId)
-            const shiftsData = shiftsResponse.data || []
-            setShifts(shiftsData)
-
-            if (!selectedEmployee.shift_id) {
-              const defaultShift = shiftsData.find((shift: Shift) => shift.is_default) || shiftsData[0]
-              if (defaultShift) {
-                setFormData({
-                  ...formData,
-                  shift_id: defaultShift.id
-                })
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching shifts:', error)
-      } finally {
-        setLoadingShifts(false)
-      }
-    }
-
-    fetchData()
-  }, [showEditModal, selectedEmployee, unitKerjaList])
-
-  // Update shift ketika unit berubah
-  useEffect(() => {
-    const updateShiftForUnit = async () => {
-      if (!formData.unit_kerja) return
-
-      try {
-        setLoadingShifts(true)
-        const selectedUnit = unitKerjaList.find(unit => unit.nama_unit === formData.unit_kerja)
-        if (!selectedUnit) {
-          console.log('Unit kerja tidak ditemukan:', formData.unit_kerja)
-          return
-        }
-
-        const shiftsResponse = await shiftAPI.getShiftsByUnit(selectedUnit.id)
-        const unitShifts = shiftsResponse.data || []
-        setShifts(unitShifts)
-        
-        // Jika shift_id belum ada atau tidak valid, set ke default
-        if (!formData.shift_id || !unitShifts.some(shift => shift.id === formData.shift_id)) {
-          const defaultShift = unitShifts.find((shift: Shift) => shift.is_default) || unitShifts[0]
-          if (defaultShift) {
-            setFormData({
-              ...formData,
-              shift_id: defaultShift.id
-            })
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching shifts for unit:', error)
-      } finally {
-        setLoadingShifts(false)
-      }
-    }
-
-    if (formData.unit_kerja && unitKerjaList && unitKerjaList.length > 0) {
-      updateShiftForUnit()
-    }
-  }, [formData.unit_kerja, unitKerjaList])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -152,7 +53,7 @@ const EditKaryawan: React.FC<Props> = ({
     setSubmitLoading(true)
     
     try {
-      await handleEdit(e, formData.shift_id)
+      await handleEdit(e)  // Menghapus parameter shift_id
     } finally {
       setSubmitLoading(false)
     }
@@ -167,8 +68,6 @@ const EditKaryawan: React.FC<Props> = ({
   const [searchDivisi, setSearchDivisi] = useState("")
   const [openUnit, setOpenUnit] = useState(false)
   const [searchUnit, setSearchUnit] = useState("")
-  const [openShift, setOpenShift] = useState(false)
-  const [searchShift, setSearchShift] = useState("")
 
   const jabatanOptions = ["Director", "Store Leader", "Staff", "Leader Area", "Content Creator", "Sales Assistant", "IT Support", "Accounting",
     "Corporate Secretary", "Merchandise Control", "Office Audit", "Standard Operating Procedure", "People Development",]
@@ -180,20 +79,18 @@ const EditKaryawan: React.FC<Props> = ({
   const filteredDepartemen = departemenOptions.filter(opt => opt.toLowerCase().includes(searchDepartemen.toLowerCase())).sort()
   const filteredDivisi = divisiOptions.filter(opt => opt.toLowerCase().includes(searchDivisi.toLowerCase())).sort()
   const filteredUnits = unitOptions.filter(opt => opt.toLowerCase().includes(searchUnit.toLowerCase())).sort()
-  const filteredShifts = shifts.filter(shift => shift.nama_shift.toLowerCase().includes(searchShift.toLowerCase())).sort()
 
   // refs for click-outside
   const jabatanRef = useRef<HTMLDivElement>(null)
   const departemenRef = useRef<HTMLDivElement>(null)
   const divisiRef = useRef<HTMLDivElement>(null)
   const unitRef = useRef<HTMLDivElement>(null)
-  const shiftRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node
-      const refs = [jabatanRef, departemenRef, divisiRef, unitRef, shiftRef]
-      const states = [setOpenJabatan, setOpenDepartemen, setOpenDivisi, setOpenUnit, setOpenShift]
+      const refs = [jabatanRef, departemenRef, divisiRef, unitRef]
+      const states = [setOpenJabatan, setOpenDepartemen, setOpenDivisi, setOpenUnit]
       
       refs.forEach((ref, index) => {
         if (ref.current && !ref.current.contains(target)) {
@@ -530,70 +427,6 @@ const EditKaryawan: React.FC<Props> = ({
                       )}
                     </div>
                   </div>
-
-                  {/* Shift Selection */}
-                  <div ref={shiftRef}>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Shift</label>
-                    <div className="relative">
-                      <div
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 bg-white cursor-pointer pl-10 flex justify-between items-center"
-                        onClick={() => {
-                          if (formData.unit_kerja && shifts.length > 0) {
-                            setOpenShift(!openShift)
-                            setSearchShift('')
-                          }
-                        }}
-                      >
-                        <span>
-                          {formData.shift_id 
-                            ? shifts.find(s => s.id === formData.shift_id)?.nama_shift || 'Pilih Shift'
-                            : loadingShifts ? 'Memuat shift...' : (formData.unit_kerja ? 'Pilih Shift' : 'Pilih Unit Kerja terlebih dahulu')
-                          }
-                        </span>
-                        <span className="text-gray-400">▼</span>
-                      </div>
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">⏰</div>
-
-                      {openShift && formData.unit_kerja && shifts.length > 0 && (
-                        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow">
-                          <input
-                            type="text"
-                            className="w-full px-3 py-2 text-xs border-b border-gray-300 focus:outline-none rounded-t-lg"
-                            placeholder="Cari shift..."
-                            value={searchShift}
-                            onChange={(e) => setSearchShift(e.target.value)}
-                            autoFocus
-                          />
-                          <div className="max-h-48 overflow-y-auto text-xs">
-                            {filteredShifts.length > 0 ? filteredShifts.map((shift) => (
-                              <div
-                                key={shift.id}
-                                className={`px-3 py-2 hover:bg-green-100 cursor-pointer ${
-                                  shift.is_default ? 'bg-blue-50 border-l-4 border-blue-500' : ''
-                                }`}
-                                onClick={() => {
-                                  setFormData({ ...formData, shift_id: shift.id })
-                                  setOpenShift(false)
-                                  setSearchShift('')
-                                }}
-                              >
-                                <div className="font-medium">{shift.nama_shift}</div>
-                                <div className="text-xs text-slate-500">
-                                  {shift.jam_masuk} - {shift.jam_keluar}
-                                  {shift.is_default && <span className="ml-2 text-blue-600">(Default)</span>}
-                                </div>
-                              </div>
-                            )) : <div className="px-3 py-2 text-gray-400">Tidak ada shift tersedia</div>}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {formData.shift_id && (
-                      <p className="text-xs text-green-600 mt-1">
-                        Shift terpilih: {shifts.find(s => s.id === formData.shift_id)?.nama_shift}
-                      </p>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
@@ -617,11 +450,11 @@ const EditKaryawan: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!formData.shift_id || loadingShifts || !formData.unit_kerja || submitLoading}
+                disabled={!formData.unit_kerja || submitLoading}
                 className="px-4 py-2 text-xs bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>💾</span>
-                <span>{submitLoading ? 'Mengupdate...' : (loadingShifts ? 'Memuat...' : 'Update')}</span>
+                <span>{submitLoading ? 'Mengupdate...' : 'Update'}</span>
               </button>
             </div>
           </div>

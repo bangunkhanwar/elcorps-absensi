@@ -144,7 +144,7 @@ export default function LeaveScreen({ navigation }: any) {
           type: 'image/jpeg',
         });
         let serverIP = await AsyncStorage.getItem('manual_server_ip');
-        if (!serverIP) serverIP = '192.168.100.9';
+        if (!serverIP) serverIP = '10.2.200.150';
         const token = await AsyncStorage.getItem('token');
         const uploadRes = await fetch(`http://${serverIP}:5000/api/leave/upload`, {
           method: 'POST',
@@ -265,7 +265,7 @@ export default function LeaveScreen({ navigation }: any) {
       // Gunakan manual_server_ip jika ada, fallback ke default
       let serverIP = await AsyncStorage.getItem('manual_server_ip');
       if (!serverIP) {
-        serverIP = '192.168.100.9'; // default dari api.js
+        serverIP = '10.2.200.150'; // default dari api.js
       }
 
       console.log('🔍 Token:', token ? 'exists' : 'missing');
