@@ -27,7 +27,7 @@ const TambahKaryawan: React.FC<Props> = ({
   setShowModal,
   formData,
   setFormData,
-  handleSubmit,
+  handleSubmit:_,
   message,
   unitKerjaList
 }) => {

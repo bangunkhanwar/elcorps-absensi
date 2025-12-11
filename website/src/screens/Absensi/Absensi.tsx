@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { attendanceAPI, leaveAPI } from '../../services/api'
 import PengajuanIzin from './PengajuanIzin'
 import * as XLSX from 'xlsx'
-import { saveAs } from 'file-saver'
 
 interface AttendanceData {
   id: number
@@ -392,7 +391,15 @@ const Absensi: React.FC = () => {
       year: 'numeric'
     }).replace(/\//g, '-')
     
-    saveAs(blob, `absensi_${formattedDate}.xlsx`)
+    // Download dengan metode browser native
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `absensi_${formattedDate}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
   }
 
   return (

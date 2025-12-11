@@ -15,7 +15,13 @@ const Settings: React.FC = () => {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [leaders, setLeaders] = useState<any[]>([])
+  interface Leader {
+    id: number;
+    nama: string;
+    jabatan?: string;
+    unit_kerja?: string;
+  }
+  const [leaders, setLeaders] = useState<Leader[]>([])
   const [openLeaderList, setOpenLeaderList] = useState(false);
   const [searchLeader, setSearchLeader] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -145,39 +151,6 @@ const Settings: React.FC = () => {
     }
   }
 
-  const loadStoreLeadersFallback = async () => {
-    try {
-      // Fallback untuk kompatibilitas - load store leaders dari endpoint lama
-      const leadersResponse = await authAPI.getStoreLeaders()
-      const storeLeadersData = leadersResponse.data.storeLeaders || []
-      setLeaders(storeLeadersData)
-      
-      if (storeLeadersData.length > 0) {
-        const allPrivileges = new Set()
-        const sampleLeaders = storeLeadersData.slice(0, Math.min(3, storeLeadersData.length))
-        
-        for (const leader of sampleLeaders) {
-          try {
-            const privilegesResponse = await authAPI.getLeaderPrivileges(leader.id)
-            const leaderPrivileges = privilegesResponse.data.website_privileges || []
-            leaderPrivileges.forEach((priv: string) => allPrivileges.add(priv))
-          } catch (error) {
-            console.error(`Error loading privileges for leader ${leader.id}:`, error)
-          }
-        }
-        
-        const commonPrivileges = Array.from(allPrivileges)
-        const updatedPrivileges = privileges.map(priv => ({
-          ...priv,
-          enabled: commonPrivileges.includes(priv.id)
-        }))
-        setPrivileges(updatedPrivileges)
-      }
-    } catch (error) {
-      console.error('Error in fallback loading:', error)
-      setLeaders([])
-    }
-  }
 
   const handleTogglePrivilege = (id: string) => {
     const updatedPrivileges = privileges.map(priv =>
@@ -253,7 +226,7 @@ const Settings: React.FC = () => {
     }
     acc[jabatan].push(leader)
     return acc
-  }, {} as Record<string, any[]>)
+  }, {} as Record<string, Leader[]>)
 
   if (!user || user.role !== 'hr') {
     return null

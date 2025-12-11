@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../../services/api'
 import TambahKaryawan from './TambahKaryawan'
 import EditKaryawan from './EditKaryawan'
+// @ts-ignore
 import HapusKaryawan from './HapusKaryawan'
 
 interface EmployeeForm {
@@ -15,7 +16,7 @@ interface EmployeeForm {
   divisi: string
   unit_kerja: string
   role: string
-  shift_id: number | null
+  shift_id?: number | null
 }
 
 interface Employee {
@@ -169,11 +170,6 @@ const DataKaryawan: React.FC = () => {
     try {
       setMessage('')
       
-      if (!formData.shift_id) {
-        setMessage('Harap pilih shift terlebih dahulu')
-        return
-      }
-
       if (!formData.unit_kerja) {
         setMessage('Harap pilih unit kerja terlebih dahulu')
         return
@@ -210,7 +206,6 @@ const DataKaryawan: React.FC = () => {
         divisi: '',
         unit_kerja: '',
         role: 'karyawan',
-        shift_id: null
       })
 
       fetchEmployees()
@@ -243,7 +238,7 @@ const DataKaryawan: React.FC = () => {
     setShowDeleteModal(true)
   }
 
-  const handleEditSubmit = async (e: React.FormEvent, shift_id: number | null) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedEmployee) return
     
@@ -259,7 +254,6 @@ const DataKaryawan: React.FC = () => {
         divisi: formData.divisi,
         unit_kerja_id: selectedUnit ? selectedUnit.id : null,
         role: formData.role,
-        shift_id: shift_id
       }
 
       if (formData.password) {
