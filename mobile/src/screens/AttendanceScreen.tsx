@@ -57,7 +57,7 @@ export default function AttendanceScreen({ navigation }: any) {
       const token = await AsyncStorage.getItem('token');
       let serverIP = await AsyncStorage.getItem('server_ip');
       if (!serverIP) {
-        serverIP = Platform.OS === 'ios' ? '10.2.200.150' : 'localhost';
+        serverIP = Platform.OS === 'ios' ? '172.20.10.3' : 'localhost';
       }
       console.log('Fetching attendance from server:', serverIP);
 

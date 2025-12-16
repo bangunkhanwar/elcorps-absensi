@@ -226,7 +226,7 @@ export default function HomeScreen({ navigation }: any) {
         console.log('🏢 Unit kerja data set:', unitData);
         
         // Update user dengan data unit kerja yang benar
-        setUser(prev => ({
+        setUser((prev: any) => ({
           ...prev,
           latitude: response.data.unit_kerja.latitude,
           longitude: response.data.unit_kerja.longitude,
@@ -673,7 +673,7 @@ export default function HomeScreen({ navigation }: any) {
         visible={showMenu}
         onRequestClose={() => setShowMenu(false)}
       >
-        <SafeAreaView className="flex-1 justify-center items-center bg-black/70">
+        <SafeAreaView className="flex-1 justify-center items-center bg-black/60">
           <View className="bg-white rounded-2xl p-8 w-80 shadow-2xl">
             {/* Header Modal */}
             <View className="items-center mb-6">

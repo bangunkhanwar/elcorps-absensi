@@ -58,7 +58,7 @@ export default function AttendanceScreen({ navigation }: any) {
     const fetchAttendanceHistory = async (userId: number) => {
         try {
             const token = await AsyncStorage.getItem('token');
-            const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.150';
+            const serverIP = await AsyncStorage.getItem('server_ip') || '10.2.200.239';
 
             console.log('Fetching leave history from server:', serverIP);
 
