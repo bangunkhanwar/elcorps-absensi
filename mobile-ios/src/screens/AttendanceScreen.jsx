@@ -127,7 +127,7 @@ const AttendanceScreen = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="sticky top-0 z-40">
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 py-4 px-4 rounded-b-3xl shadow-lg">
+        <div className="bg-primary py-4 px-4 rounded-b-3xl shadow-lg">
           <div className="flex items-center">
             <button
               onClick={() => navigate(-1)}
@@ -151,7 +151,7 @@ const AttendanceScreen = () => {
           <h2 className="text-lg font-semibold text-gray-800">Filter Data</h2>
           <button
             onClick={() => setShowFilterModal(true)}
-            className="flex items-center bg-emerald-600 rounded-lg px-4 py-2 text-white font-semibold hover:bg-emerald-700 transition"
+            className="flex items-center bg-primary rounded-lg px-4 py-2 text-white font-semibold hover:bg-primary-dark transition"
           >
             <Filter size={16} className="mr-2" />
             Filter
@@ -166,7 +166,7 @@ const AttendanceScreen = () => {
                 key={option.value}
                 onClick={() => setSelectedFilter(option.value)}
                 className={`px-4 py-2 rounded-full whitespace-nowrap transition ${selectedFilter === option.value
-                  ? 'bg-emerald-600 text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
               >
@@ -269,7 +269,7 @@ const AttendanceScreen = () => {
                       key={month}
                       onClick={() => setSelectedMonth(index)}
                       className={`px-4 py-3 rounded-lg whitespace-nowrap transition ${selectedMonth === index
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
@@ -290,7 +290,7 @@ const AttendanceScreen = () => {
                       key={year}
                       onClick={() => setSelectedYear(year)}
                       className={`px-4 py-3 rounded-lg whitespace-nowrap transition ${selectedYear === year
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-primary text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                     >
@@ -310,7 +310,7 @@ const AttendanceScreen = () => {
                     key={option.value}
                     onClick={() => setSelectedFilter(option.value)}
                     className={`px-4 py-3 rounded-lg transition ${selectedFilter === option.value
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                   >
@@ -333,7 +333,7 @@ const AttendanceScreen = () => {
                 Reset
               </button>
               <button
-                className="flex-1 bg-emerald-600 rounded-xl py-4 text-white font-semibold hover:bg-emerald-700 transition"
+                className="flex-1 bg-primary rounded-xl py-4 text-white font-semibold hover:bg-emerald-700 transition"
                 onClick={() => setShowFilterModal(false)}
               >
                 Terapkan

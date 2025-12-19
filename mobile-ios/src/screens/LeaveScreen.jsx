@@ -150,7 +150,7 @@ const LeaveScreen = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="sticky top-0 z-40">
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 py-4 px-4 rounded-b-3xl shadow-lg">
+        <div className="bg-primary py-4 px-4 rounded-b-3xl shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center flex-1">
               <button
@@ -332,7 +332,7 @@ const LeaveScreen = () => {
             onClick={handleSubmit}
             disabled={!isFormValid || loading}
             className={`flex-1 rounded-xl py-4 font-semibold text-lg transition ${isFormValid && !loading ? 
-              'bg-emerald-600 hover:bg-emerald-700 text-white' : 
+              'bg-primary hover:bg-primary-dark text-white' : 
               'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
           >
             {loading ? 'Mengirim...' : 'Ajukan Izin'}
