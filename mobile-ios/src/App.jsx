@@ -73,7 +73,7 @@ function App() {
           </div>
         } />
         
-        <Route path="/server-settings" element={<Navigate to="/settings" replace />} />
+        <Route path="/server-settings" element={<SettingScreen />} />
         
         {/* Fallback Route */}
         <Route path="*" element={<Navigate to="/" replace />} />

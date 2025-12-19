@@ -233,7 +233,7 @@ const LoginScreen = () => {
           <div className="mt-8 space-y-4 text-center">
             <div className="flex justify-center space-x-6">
               <Link 
-                to="/settings" 
+                to="/server-settings" 
                 className="font-medium hover:underline"
                 style={{ color: '#25a298' }}
               >
