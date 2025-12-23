@@ -594,9 +594,9 @@ export default function HomeScreen({ navigation }: any) {
                     <Text className="text-gray-600">Lokasi Kerja:</Text>
                   </View>
                   <View className="items-end">
-                    <Text className="text-gray-800 font-medium">{user?.departemen || 'ICT'}</Text>
-                    <Text className="text-gray-800 font-medium">{user?.divisi || 'Strategic Support'}</Text>
-                    <Text className="text-gray-800 font-medium">{user?.unit_kerja || 'Head Office'}</Text>
+                    <Text className="text-gray-800 font-medium">{user?.departemen || '-'}</Text>
+                    <Text className="text-gray-800 font-medium">{user?.divisi || '-'}</Text>
+                    <Text className="text-gray-800 font-medium">{user?.unit_kerja || '-' }</Text>
                   </View>
                 </View>
               </View>
@@ -782,7 +782,7 @@ export default function HomeScreen({ navigation }: any) {
             <View className="space-y-3 mb-6">
               <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
                 <Text className="text-gray-600 font-medium">Lokasi Kerja:</Text>
-                <Text className="text-gray-800 font-semibold">{user?.unit_kerja || 'Head Office'}</Text>
+                <Text className="text-gray-800 font-semibold">{user?.unit_kerja || '-'}</Text>
               </View>
 
               <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
@@ -867,7 +867,7 @@ export default function HomeScreen({ navigation }: any) {
             <View className="space-y-3 mb-6">
               <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">
                 <Text className="text-gray-600 font-medium">Lokasi Kerja:</Text>
-                <Text className="text-gray-800 font-semibold">{user?.unit_kerja || 'Head Office'}</Text>
+                <Text className="text-gray-800 font-semibold">{user?.unit_kerja || '-'}</Text>
               </View>
 
               <View className="flex-row justify-between items-center bg-gray-50 rounded-lg p-3">

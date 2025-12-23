@@ -37,16 +37,12 @@ const upload = multer({
       'image/png',
       'image/jpg',
       'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
     
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('File type not allowed. Only images, PDF, Word, and Excel files are allowed.'));
+      cb(new Error('File type not allowed. Only images and PDF files are allowed.'));
     }
   }
 });

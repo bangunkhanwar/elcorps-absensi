@@ -35,6 +35,12 @@ interface Employee {
   nama_shift: string
 }
 
+interface MasterData {
+  jabatan: string[];
+  departemen: string[];
+  divisi: string[];
+}
+
 const DataKaryawan: React.FC = () => {
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
@@ -59,6 +65,12 @@ const DataKaryawan: React.FC = () => {
   })
   const [searchTerm, setSearchTerm] = useState('')
   const [unitKerjaList, setUnitKerjaList] = useState<any[]>([])
+
+  const [masterData, setMasterData] = useState<MasterData>({
+  jabatan: [],
+  departemen: [],
+  divisi: []
+})
   
   // Get current page from localStorage or default to 1
   const [currentPage, setCurrentPage] = useState(() => {
@@ -72,8 +84,12 @@ const DataKaryawan: React.FC = () => {
     const loadData = async () => {
       try {
         setLoading(true)
-        await fetchUnitKerja()
-        await fetchEmployees()
+        // Panggil SEMUA fetch secara paralel
+        await Promise.all([
+          fetchUnitKerja(),
+          fetchMasterData(),  
+          fetchEmployees()
+        ])
       } catch (error) {
         console.error('❌ Error loading data:', error)
         setMessage('Gagal memuat data')
@@ -101,6 +117,21 @@ const DataKaryawan: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Gagal memuat data unit kerja:', error)
       setUnitKerjaList([])
+    }
+  }
+
+  const fetchMasterData = async () => {
+    try {
+      const response = await authAPI.getMasterData()
+      setMasterData({
+        jabatan: response.data.jabatan || [],
+        departemen: response.data.departemen || [],
+        divisi: response.data.divisi || []
+      })
+    } catch (error: any) {
+      console.error('❌ Gagal memuat data master:', error)
+      // Kosongkan saja jika error
+      setMasterData({ jabatan: [], departemen: [], divisi: [] })
     }
   }
 
@@ -157,6 +188,7 @@ const DataKaryawan: React.FC = () => {
       employee.nik.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.jabatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.departemen.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.divisi.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.nama_unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.nama_shift.toLowerCase().includes(searchTerm.toLowerCase())
@@ -359,7 +391,7 @@ const DataKaryawan: React.FC = () => {
                 </div>
                 <input
                   type="text"
-                  placeholder="Cari nama, email, NIK, jabatan, shift..."
+                  placeholder="Cari nama, email, NIK, jabatan, departemen, divisi, shift..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-colors duration-200"
@@ -385,6 +417,7 @@ const DataKaryawan: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">NIK</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Jabatan</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Departemen</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Divisi</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Unit kerja</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Shift</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
@@ -405,6 +438,7 @@ const DataKaryawan: React.FC = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.nik}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.jabatan}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.departemen}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.divisi}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                             {employee.nama_unit === '-' ? (
                               <span className="text-red-500 italic">Belum diatur</span>
@@ -442,7 +476,7 @@ const DataKaryawan: React.FC = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={10} className="px-6 py-8 text-center text-sm text-slate-500">
+                        <td colSpan={11} className="px-6 py-8 text-center text-sm text-slate-500">
                           {searchTerm ? 'Tidak ada data yang sesuai dengan pencarian' : 'Tidak ada data karyawan'}
                         </td>
                       </tr>
@@ -452,41 +486,65 @@ const DataKaryawan: React.FC = () => {
               </div>
 
               <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                <p className="text-sm text-slate-600">
-                  Menampilkan {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
-                </p>
-                {totalPages > 1 && (
-                  <div className="flex space-x-2">
-                    <button 
-                      onClick={prevPage}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Sebelumnya
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <button
-                        key={page}
-                        onClick={() => paginate(page)}
-                        className={`px-3 py-1 rounded-lg transition-colors duration-200 ${
-                          currentPage === page
-                            ? 'bg-[#25a298] text-white'
-                            : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                    <button 
-                      onClick={nextPage}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Selanjutnya
-                    </button>
-                  </div>
-                )}
-              </div>
+  <p className="text-sm text-slate-600">
+    Menampilkan {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
+  </p>
+  {totalPages > 1 && (
+    <div className="flex items-center space-x-2">
+      <button 
+        onClick={prevPage}
+        disabled={currentPage === 1}
+        className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
+      >
+        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Prev
+      </button>
+      
+      <div className="flex items-center space-x-1">
+        {/* Tampilkan 5 halaman: current-2, current-1, current, current+1, current+2 */}
+        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+          let pageNum;
+          if (totalPages <= 5) {
+            pageNum = i + 1;
+          } else if (currentPage <= 3) {
+            pageNum = i + 1; // 1, 2, 3, 4, 5
+          } else if (currentPage >= totalPages - 2) {
+            pageNum = totalPages - 4 + i; // last-4, last-3, last-2, last-1, last
+          } else {
+            pageNum = currentPage - 2 + i; // current-2, current-1, current, current+1, current+2
+          }
+          
+          return (
+            <button
+              key={pageNum}
+              onClick={() => paginate(pageNum)}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors duration-200 ${
+                currentPage === pageNum
+                  ? 'bg-[#25a298] text-white'
+                  : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {pageNum}
+            </button>
+          );
+        })}
+      </div>
+      
+      <button 
+        onClick={nextPage}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
+      >
+        Next
+        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  )}
+</div>
             </>
           )}
         </div>
@@ -500,6 +558,9 @@ const DataKaryawan: React.FC = () => {
         handleSubmit={handleSubmit}
         message={message}
         unitKerjaList={unitKerjaList}
+        jabatanOptions={masterData.jabatan}
+        departemenOptions={masterData.departemen}
+        divisiOptions={masterData.divisi}
       />
 
       <EditKaryawan
@@ -511,6 +572,9 @@ const DataKaryawan: React.FC = () => {
         handleEdit={handleEditSubmit}
         message={message}
         unitKerjaList={unitKerjaList}
+        jabatanOptions={masterData.jabatan}
+        departemenOptions={masterData.departemen}
+        divisiOptions={masterData.divisi}
       />
 
       <HapusKaryawan

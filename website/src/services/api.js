@@ -54,6 +54,7 @@ export const authAPI = {
   // Tambahkan fungsi baru untuk update massal shift
   updateAllEmployeesShift: (unitId, shiftId) => 
     api.put(`/auth/unit/${unitId}/update-all-shifts`, { shift_id: shiftId }),
+  getMasterData: () => api.get('/auth/master-data'),
 };
 
 // Attendance services

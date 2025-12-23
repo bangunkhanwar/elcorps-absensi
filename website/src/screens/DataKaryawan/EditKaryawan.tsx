@@ -21,6 +21,9 @@ interface Props {
   handleEdit: (e: React.FormEvent) => void  // Menghapus parameter shift_id
   message: string
   unitKerjaList: any[]
+  jabatanOptions: string[]
+  departemenOptions: string[]
+  divisiOptions: string[]
 }
 
 const EditKaryawan: React.FC<Props> = ({
@@ -31,7 +34,10 @@ const EditKaryawan: React.FC<Props> = ({
   setFormData,
   handleEdit,
   message,
-  unitKerjaList
+  unitKerjaList,
+  jabatanOptions,
+  departemenOptions,
+  divisiOptions
 }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
@@ -69,10 +75,7 @@ const EditKaryawan: React.FC<Props> = ({
   const [openUnit, setOpenUnit] = useState(false)
   const [searchUnit, setSearchUnit] = useState("")
 
-  const jabatanOptions = ["Director", "Store Leader", "Staff", "Leader Area", "Content Creator", "Sales Assistant", "IT Support", "Accounting",
-    "Corporate Secretary", "Merchandise Control", "Office Audit", "Standard Operating Procedure", "People Development",]
-  const departemenOptions = ["HR & GA", "Finance & Accounting", "IT & Technology", "Operations", "Sales Assistant"]
-  const divisiOptions = ["Strategi Support", "HR & GA", "Sales Marketing"]
+  
   const unitOptions = unitKerjaList ? unitKerjaList.map(unit => unit.nama_unit) : []
 
   const filteredJabatan = jabatanOptions.filter(opt => opt.toLowerCase().includes(searchJabatan.toLowerCase())).sort()

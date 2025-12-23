@@ -99,7 +99,7 @@ const SettingScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-b-3xl shadow-lg">
+      <div className="bg-primary rounded-b-3xl shadow-lg">
         <div className="px-6 pt-6 pb-4">
           <div className="flex items-center">
             <button
@@ -145,7 +145,7 @@ const SettingScreen = () => {
               <button
                 onClick={handleTestConnection}
                 disabled={loading}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition disabled:opacity-50 flex items-center space-x-2"
+                className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition disabled:opacity-50 flex items-center space-x-2"
               >
                 {loading ? (
                   <>
@@ -185,11 +185,8 @@ const SettingScreen = () => {
                 value={ipAddress}
                 onChange={(e) => setIpAddress(e.target.value)}
                 placeholder="192.168.1.100"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 bg-gray-50 focus:ring-2 focus:ring-primary outline-none transition"
               />
-              <p className="text-gray-400 text-sm mt-2">
-                Masukkan tanpa http:// atau nomor port
-              </p>
             </div>
 
             <div className="flex space-x-3">
@@ -198,7 +195,7 @@ const SettingScreen = () => {
                 disabled={loading || !ipAddress}
                 className={`flex-1 py-3 rounded-xl font-semibold transition flex items-center justify-center space-x-2 ${
                   ipAddress && !loading
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white'
+                    ? 'bg-primary hover:bg-primary-dark text-white'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
@@ -264,61 +261,6 @@ const SettingScreen = () => {
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Troubleshooting */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
-          <div className="flex items-center mb-4">
-            <Wrench className="text-amber-600 mr-3" size={24} />
-            <h3 className="text-amber-800 font-bold text-lg">Pemecahan Masalah</h3>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-start">
-              <div className="w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-                !
-              </div>
-              <p className="text-amber-800 text-sm">
-                Jika login gagal, periksa apakah alamat IP sudah benar
-              </p>
-            </div>
-
-            <div className="flex items-start">
-              <div className="w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-                !
-              </div>
-              <p className="text-amber-800 text-sm">
-                Pastikan server backend berjalan di port 5000
-              </p>
-            </div>
-
-            <div className="flex items-start">
-              <div className="w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-                !
-              </div>
-              <p className="text-amber-800 text-sm">
-                Restart aplikasi setelah mengubah alamat IP
-              </p>
-            </div>
-
-            <div className="flex items-start">
-              <div className="w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-                !
-              </div>
-              <p className="text-amber-800 text-sm">
-                Periksa pengaturan firewall di komputer Anda
-              </p>
-            </div>
-
-            <div className="flex items-start">
-              <div className="w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-                !
-              </div>
-              <p className="text-amber-800 text-sm">
-                Untuk PWA, pastikan backend mendukung CORS
-              </p>
             </div>
           </div>
         </div>

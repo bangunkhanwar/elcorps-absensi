@@ -651,4 +651,40 @@ router.get('/unit/:unitId/store-employees', auth, async (req, res) => {
   }
 });
 
+// GET /api/auth/master-data - Ambil data master (jabatan, departemen, divisi) dari database
+router.get('/master-data', auth, async (req, res) => {
+  try {
+    // Hanya HR yang bisa akses
+    if (req.user.role !== 'hr') {
+      return res.status(403).json({ error: 'Hanya HR yang dapat mengakses' });
+    }
+
+    // Ambil nilai UNIK dari database untuk setiap field
+    const jabatanQuery = await pool.query(
+      "SELECT DISTINCT jabatan FROM users WHERE jabatan IS NOT NULL AND jabatan != '' AND jabatan != '-' ORDER BY jabatan"
+    );
+    
+    const departemenQuery = await pool.query(
+      "SELECT DISTINCT departemen FROM users WHERE departemen IS NOT NULL AND departemen != '' AND departemen != '-' ORDER BY departemen"
+    );
+    
+    const divisiQuery = await pool.query(
+      "SELECT DISTINCT divisi FROM users WHERE divisi IS NOT NULL AND divisi != '' AND divisi != '-' ORDER BY divisi"
+    );
+
+    res.json({
+      success: true,
+      jabatan: jabatanQuery.rows.map(row => row.jabatan),
+      departemen: departemenQuery.rows.map(row => row.departemen),
+      divisi: divisiQuery.rows.map(row => row.divisi)
+    });
+  } catch (error) {
+    console.error('❌ Error fetching master data:', error);
+    res.status(500).json({ 
+      error: 'Gagal mengambil data master',
+      details: error.message 
+    });
+  }
+});
+
 module.exports = router;

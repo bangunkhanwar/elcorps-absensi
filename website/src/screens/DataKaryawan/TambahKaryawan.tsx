@@ -20,6 +20,10 @@ interface Props {
   handleSubmit: (e: React.FormEvent) => void
   message: string
   unitKerjaList: any[]
+  // TAMBAH PROPS BARU DI INTERFACE
+  jabatanOptions: string[]
+  departemenOptions: string[]
+  divisiOptions: string[]
 }
 
 const TambahKaryawan: React.FC<Props> = ({
@@ -29,7 +33,11 @@ const TambahKaryawan: React.FC<Props> = ({
   setFormData,
   handleSubmit:_,
   message,
-  unitKerjaList
+  unitKerjaList,
+  // PROPS BARU - PERBAIKI TYPO
+  jabatanOptions = [],
+  departemenOptions = [],
+  divisiOptions = []  // ← PERBAIKI: dari "dvisiOption" menjadi "divisiOptions"
 }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [submitLoading, setSubmitLoading] = useState(false)
@@ -81,7 +89,6 @@ const TambahKaryawan: React.FC<Props> = ({
         divisi: formData.divisi,
         role: formData.role,
         unit_kerja_id: selectedUnit.id
-        // shift_id dihapus
       }
 
       console.log('Data yang dikirim:', payload)
@@ -110,7 +117,6 @@ const TambahKaryawan: React.FC<Props> = ({
           divisi: '',
           unit_kerja: '',
           role: 'karyawan'
-          // shift_id dihapus
         })
         setShowModal(false)
         window.location.reload()
@@ -137,12 +143,10 @@ const TambahKaryawan: React.FC<Props> = ({
   const [openUnit, setOpenUnit] = useState(false)
   const [searchUnit, setSearchUnit] = useState("")
 
-  const jabatanOptions = ["Director", "Store Leader", "Staff", "Leader Area", "Content Creator", "Sales Assistant", "IT Support", "Accounting",
-    "Corporate Secretary", "Merchandise Control", "Office Audit", "Standard Operating Procedure", "People Development",]
-  const departemenOptions = ["HR & GA", "Finance & Accounting", "IT & Technology", "Operations", "Sales Assistant"]
-  const divisiOptions = ["Strategi Support", "HR & GA", "Sales Marketing"]
+  
   const unitOptions = unitKerjaList ? unitKerjaList.map(unit => unit.nama_unit) : []
 
+  // SEKARANG SEMUA DATA DARI PROPS - TIDAK ADA HARCODE
   const filteredJabatan = jabatanOptions.filter(opt => opt.toLowerCase().includes(searchJabatan.toLowerCase())).sort()
   const filteredDepartemen = departemenOptions.filter(opt => opt.toLowerCase().includes(searchDepartemen.toLowerCase())).sort()
   const filteredDivisi = divisiOptions.filter(opt => opt.toLowerCase().includes(searchDivisi.toLowerCase())).sort()
