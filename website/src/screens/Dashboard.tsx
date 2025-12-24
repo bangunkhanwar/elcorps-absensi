@@ -25,6 +25,17 @@ interface QuickAction {
   path: string
 }
 
+// Data karyawan untuk setiap kategori
+interface EmployeeData {
+  id: number
+  nama: string
+  nik: string
+  departemen: string
+  divisi: string
+  unit_kerja: string
+  [key: string]: any
+}
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -42,6 +53,27 @@ const Dashboard: React.FC = () => {
   })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  
+  // Data detail untuk masing-masing kategori
+  const [detailData, setDetailData] = useState<{
+    alpha: EmployeeData[]
+    tepatWaktu: EmployeeData[]
+    telatMasuk: EmployeeData[]
+    pulangCepat: EmployeeData[]
+    hadirHariIni: EmployeeData[]
+    absensiTidakLengkap: EmployeeData[]
+    totalIzin: EmployeeData[]
+    pendingIzin: EmployeeData[]
+  }>({
+    alpha: [],
+    tepatWaktu: [],
+    telatMasuk: [],
+    pulangCepat: [],
+    hadirHariIni: [],
+    absensiTidakLengkap: [],
+    totalIzin: [],
+    pendingIzin: []
+  })
 
   // All possible menu configurations
   const getAllPossibleMenus = (): QuickAction[] => [
@@ -116,6 +148,61 @@ const Dashboard: React.FC = () => {
     return []
   }
 
+  // Fungsi untuk mengirim data ke halaman Attendance dengan filter
+  const handleReview = (category: string, data: EmployeeData[]) => {
+    localStorage.setItem(`review_${category}`, JSON.stringify({
+      category,
+      employees: data,
+      timestamp: new Date().toISOString()
+    }))
+    
+    navigate(`/attendance?review=${category}&date=${new Date().toISOString().split('T')[0]}`)
+  }
+
+  // Fungsi untuk navigasi ke halaman Data Karyawan dengan filter role
+  const navigateToEmployees = (roleFilter?: string) => {
+    if (roleFilter) {
+      // Simpan filter role ke localStorage untuk dibaca di halaman Data Karyawan
+      localStorage.setItem('employeeRoleFilter', roleFilter)
+    }
+    navigate('/employees')
+  }
+
+  // Fungsi konversi waktu ke menit
+  const timeToMinutes = (timeStr: string) => {
+    if (!timeStr || timeStr === '-') return 0
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
+  // Fungsi untuk mendapatkan status absensi
+  const getAttendanceStatus = (attendance: any) => {
+    if (!attendance.waktu_masuk || attendance.waktu_masuk === '-') return null
+    
+    const waktuMasuk = timeToMinutes(attendance.waktu_masuk)
+    const jamSeharusnyaMasuk = timeToMinutes(attendance.jam_seharusnya_masuk || '09:00')
+    
+    if (attendance.status === 'tepat_waktu' || attendance.status === 'Tepat Waktu') {
+      return 'tepat_waktu'
+    } else if (attendance.status === 'telat' || attendance.status === 'Terlambat') {
+      return 'telat'
+    } else if (waktuMasuk <= jamSeharusnyaMasuk) {
+      return 'tepat_waktu'
+    } else {
+      return 'telat'
+    }
+  }
+
+  // Fungsi untuk mengecek apakah pulang cepat
+  const isPulangCepat = (attendance: any) => {
+    if (!attendance.waktu_keluar || attendance.waktu_keluar === '-' || !attendance.jam_seharusnya_keluar) {
+      return false
+    }
+    const waktuKeluar = timeToMinutes(attendance.waktu_keluar)
+    const jamSeharusnyaKeluar = timeToMinutes(attendance.jam_seharusnya_keluar)
+    return waktuKeluar < jamSeharusnyaKeluar
+  }
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -156,7 +243,6 @@ const Dashboard: React.FC = () => {
             attendanceData = attendanceResponse.data?.attendances || []
           } catch (error) {
             console.log('⚠️ Using fallback attendance data')
-            // Fallback ke data hari ini jika error
             const fallbackResponse = await attendanceAPI.getTodayAll()
             attendanceData = fallbackResponse.data?.attendances || []
           }
@@ -169,119 +255,167 @@ const Dashboard: React.FC = () => {
             )
           }
           
-          // Fungsi konversi waktu ke menit
-          const timeToMinutes = (timeStr: string) => {
-            if (!timeStr || timeStr === '-') return 0
-            const [hours, minutes] = timeStr.split(':').map(Number)
-            return hours * 60 + minutes
+          // 3. Data izin hari ini
+          let leavesData = []
+          try {
+            const leavesResponse = await leaveAPI.getAllLeaves()
+            leavesData = leavesResponse.data?.leaves || []
+          } catch (error) {
+            console.log('⚠️ Error fetching leaves data:', error)
           }
+          
+          // Filter leaves untuk leader
+          let filteredLeaves = leavesData
+          if (userData.role !== 'hr' && userData.website_access) {
+            filteredLeaves = leavesData.filter((leave: any) => 
+              leave.unit_kerja_id === userData.unit_kerja_id
+            )
+          }
+          
+          // Mapping user data untuk referensi
+          const usersMap = new Map()
+          filteredUsers.forEach((u: any) => {
+            usersMap.set(u.id, u)
+          })
+          
+          // Kumpulkan data detail untuk setiap kategori
+          const alphaEmployees: EmployeeData[] = []
+          const tepatWaktuEmployees: EmployeeData[] = []
+          const telatEmployees: EmployeeData[] = []
+          const pulangCepatEmployees: EmployeeData[] = []
+          const hadirEmployees: EmployeeData[] = []
+          const tidakLengkapEmployees: EmployeeData[] = []
+          const izinEmployees: EmployeeData[] = []
+          const pendingIzinEmployees: EmployeeData[] = []
+          
+          // Data untuk karyawan yang hadir (sudah absensi)
+          const hadirUserIds = new Set()
+          
+          // Proses data absensi
+          filteredAttendance.forEach((att: any) => {
+            const userInfo = usersMap.get(att.user_id)
+            if (!userInfo) return
+            
+            const employeeData = {
+              id: userInfo.id,
+              nama: userInfo.nama,
+              nik: userInfo.nik,
+              departemen: userInfo.departemen,
+              divisi: userInfo.divisi,
+              unit_kerja: userInfo.unit_kerja,
+              waktu_masuk: att.waktu_masuk,
+              waktu_keluar: att.waktu_keluar,
+              jam_seharusnya_masuk: att.jam_seharusnya_masuk,
+              jam_seharusnya_keluar: att.jam_seharusnya_keluar,
+              status: att.status
+            }
+            
+            // Tandai user ini sudah hadir
+            hadirUserIds.add(att.user_id)
+            
+            // Cek apakah absensi lengkap
+            const isComplete = att.waktu_masuk && att.waktu_masuk !== '-' && 
+                               att.waktu_keluar && att.waktu_keluar !== '-'
+            
+            if (isComplete) {
+              hadirEmployees.push(employeeData)
+              
+              // Cek status tepat waktu atau telat
+              const status = getAttendanceStatus(att)
+              if (status === 'tepat_waktu') {
+                tepatWaktuEmployees.push(employeeData)
+              } else if (status === 'telat') {
+                telatEmployees.push(employeeData)
+              }
+              
+              // Cek pulang cepat
+              if (isPulangCepat(att)) {
+                pulangCepatEmployees.push(employeeData)
+              }
+            } else {
+              // Absensi tidak lengkap
+              tidakLengkapEmployees.push(employeeData)
+            }
+          })
+          
+          // Proses data izin
+          const todayDate = new Date(today)
+          filteredLeaves.forEach((leave: any) => {
+            const userInfo = usersMap.get(leave.user_id)
+            if (!userInfo) return
+            
+            const employeeData = {
+              id: userInfo.id,
+              nama: userInfo.nama,
+              nik: userInfo.nik,
+              departemen: userInfo.departemen,
+              divisi: userInfo.divisi,
+              unit_kerja: userInfo.unit_kerja,
+              start_date: leave.start_date,
+              end_date: leave.end_date,
+              jenis_izin: leave.jenis_izin,
+              keterangan: leave.keterangan
+            }
+            
+            // Cek apakah izin mencakup hari ini
+            const leaveStart = new Date(leave.start_date)
+            const leaveEnd = new Date(leave.end_date)
+            
+            // Normalize dates to compare only date parts
+            leaveStart.setHours(0, 0, 0, 0)
+            leaveEnd.setHours(0, 0, 0, 0)
+            todayDate.setHours(0, 0, 0, 0)
+            
+            const coversToday = todayDate >= leaveStart && todayDate <= leaveEnd
+            
+            if (coversToday) {
+              if (leave.status === 'approved') {
+                izinEmployees.push(employeeData)
+                // Tandai user ini tidak alpha karena ada izin
+                hadirUserIds.add(leave.user_id)
+              } else if (leave.status === 'pending') {
+                pendingIzinEmployees.push(employeeData)
+              }
+            }
+          })
+          
+          // Identifikasi karyawan yang ALPHA (tidak hadir dan tidak izin)
+          filteredUsers.forEach((u: any) => {
+            if (u.role !== 'karyawan') return
+            
+            if (!hadirUserIds.has(u.id)) {
+              alphaEmployees.push({
+                id: u.id,
+                nama: u.nama,
+                nik: u.nik,
+                departemen: u.departemen,
+                divisi: u.divisi,
+                unit_kerja: u.unit_kerja
+              })
+            }
+          })
           
           // Hitung statistik
-          // Hadir hari ini = yang sudah clock in DAN clock out
-          const hadirHariIni = filteredAttendance.filter((item: any) => 
-            item.waktu_masuk && item.waktu_keluar
-          ).length
+          const hadirHariIni = hadirEmployees.length
+          const tepatWaktu = tepatWaktuEmployees.length
+          const telatMasuk = telatEmployees.length
+          const pulangCepat = pulangCepatEmployees.length
+          const absensiTidakLengkap = tidakLengkapEmployees.length
+          const totalIzin = izinEmployees.length
+          const pendingIzin = pendingIzinEmployees.length
+          const alpha = alphaEmployees.length
           
-          // Tepat waktu = status tepat waktu atau waktu_masuk <= jam_seharusnya_masuk
-          const tepatWaktu = filteredAttendance.filter((item: any) => {
-            if (!item.waktu_masuk || item.waktu_masuk === '-') return false
-            
-            if (item.status === 'tepat_waktu' || item.status === 'Tepat Waktu') {
-              return true
-            }
-            
-            // Hitung manual jika status tidak tersedia
-            const waktuMasuk = timeToMinutes(item.waktu_masuk)
-            const jamSeharusnyaMasuk = timeToMinutes(item.jam_seharusnya_masuk || '09:00')
-            return waktuMasuk <= jamSeharusnyaMasuk
-          }).length
-          
-          // Telat masuk = status telat atau waktu_masuk > jam_seharusnya_masuk
-          const telatMasuk = filteredAttendance.filter((item: any) => {
-            if (!item.waktu_masuk || item.waktu_masuk === '-') return false
-            
-            if (item.status === 'telat' || item.status === 'Terlambat') {
-              return true
-            }
-            
-            // Hitung manual jika status tidak tersedia
-            const waktuMasuk = timeToMinutes(item.waktu_masuk)
-            const jamSeharusnyaMasuk = timeToMinutes(item.jam_seharusnya_masuk || '09:00')
-            return waktuMasuk > jamSeharusnyaMasuk
-          }).length
-          
-          // Pulang cepat = waktu_keluar < jam_seharusnya_keluar
-          const pulangCepat = filteredAttendance.filter((item: any) => {
-            if (!item.waktu_keluar || item.waktu_keluar === '-' || !item.jam_seharusnya_keluar) {
-              return false
-            }
-            const waktuKeluar = timeToMinutes(item.waktu_keluar)
-            const jamSeharusnyaKeluar = timeToMinutes(item.jam_seharusnya_keluar)
-            return waktuKeluar < jamSeharusnyaKeluar
-          }).length
-          
-          // Absensi tidak lengkap = hanya clock in ATAU hanya clock out
-          const absensiTidakLengkap = filteredAttendance.filter((item: any) => 
-            (item.waktu_masuk && !item.waktu_keluar) || (!item.waktu_masuk && item.waktu_keluar)
-          ).length
-          
-          // 3. Total izin hari ini (termasuk multi-day leaves)
-          let totalIzin = 0
-          try {
-            const leavesResponse = await leaveAPI.getAllLeaves()
-            const allLeaves = leavesResponse.data?.leaves || []
-            
-            // Filter untuk leader
-            let filteredLeaves = allLeaves
-            if (userData.role !== 'hr' && userData.website_access) {
-              filteredLeaves = allLeaves.filter((leave: any) => 
-                leave.unit_kerja_id === userData.unit_kerja_id
-              )
-            }
-            
-            // Hitung izin yang mencakup hari ini (status approved)
-            totalIzin = filteredLeaves.filter((leave: any) => {
-              if (leave.status !== 'approved') return false
-              
-              const leaveStart = new Date(leave.start_date)
-              const leaveEnd = new Date(leave.end_date)
-              const todayDate = new Date(today)
-              
-              // Normalize dates to compare only date parts
-              leaveStart.setHours(0, 0, 0, 0)
-              leaveEnd.setHours(0, 0, 0, 0)
-              todayDate.setHours(0, 0, 0, 0)
-              
-              return todayDate >= leaveStart && todayDate <= leaveEnd
-            }).length
-          } catch (error) {
-            console.log('⚠️ Error fetching leaves:', error)
-          }
-          
-          // 4. Pending izin (real-time)
-          let pendingIzin = 0
-          try {
-            const leavesResponse = await leaveAPI.getAllLeaves()
-            const allLeaves = leavesResponse.data?.leaves || []
-            
-            // Filter untuk leader
-            let filteredLeaves = allLeaves
-            if (userData.role !== 'hr' && userData.website_access) {
-              filteredLeaves = allLeaves.filter((leave: any) => 
-                leave.unit_kerja_id === userData.unit_kerja_id
-              )
-            }
-            
-            pendingIzin = filteredLeaves.filter((leave: any) => 
-              leave.status === 'pending'
-            ).length
-          } catch (error) {
-            console.log('⚠️ Error fetching pending leaves:', error)
-          }
-          
-          // 5. ALPHA: Tidak hadir, tidak izin, tidak ada absensi sama sekali
-          // Alpha = Total karyawan - Hadir - Izin - Pending Izin
-          const alpha = Math.max(0, totalKaryawan - hadirHariIni - totalIzin)
+          // Simpan data detail untuk masing-masing kategori
+          setDetailData({
+            alpha: alphaEmployees,
+            tepatWaktu: tepatWaktuEmployees,
+            telatMasuk: telatEmployees,
+            pulangCepat: pulangCepatEmployees,
+            hadirHariIni: hadirEmployees,
+            absensiTidakLengkap: tidakLengkapEmployees,
+            totalIzin: izinEmployees,
+            pendingIzin: pendingIzinEmployees
+          })
           
           console.log('📊 Dashboard stats calculated:', {
             totalKaryawan,
@@ -315,7 +449,6 @@ const Dashboard: React.FC = () => {
         }
       } catch (error) {
         console.error('❌ Error fetching dashboard data:', error)
-        // Set default data
         setStats({
           totalKaryawan: 0,
           totalAdmin: 0,
@@ -436,30 +569,42 @@ const Dashboard: React.FC = () => {
                 {/* Row 1: 5 Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
                   {/* Total Karyawan */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => navigateToEmployees('karyawan')}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">👥</span>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-slate-600">Karyawan</p>
                         <p className="text-xl font-bold text-slate-900">{stats.totalKaryawan}</p>
+                        <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          Lihat →
+                        </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Total Admin */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => navigateToEmployees('hr')}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">👑</span>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-slate-600">Admin HR</p>
                         <p className="text-xl font-bold text-slate-900">{stats.totalAdmin}</p>
+                        <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          Lihat →
+                        </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Hadir Hari Ini */}
                   <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
@@ -471,6 +616,14 @@ const Dashboard: React.FC = () => {
                         <p className="text-xs font-medium text-slate-600">Hadir</p>
                         <p className="text-xl font-bold text-slate-900">{stats.hadirHariIni}</p>
                         <p className="text-xs text-slate-500">Clock in & out</p>
+                        {stats.hadirHariIni > 0 && (
+                          <button 
+                            onClick={() => handleReview('hadirHariIni', detailData.hadirHariIni)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
+                          >
+                            Review →
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -485,6 +638,14 @@ const Dashboard: React.FC = () => {
                         <p className="text-xs font-medium text-slate-600">Total Izin</p>
                         <p className="text-xl font-bold text-slate-900">{stats.totalIzin}</p>
                         <p className="text-xs text-slate-500">Termasuk multi-day</p>
+                        {stats.totalIzin > 0 && (
+                          <button 
+                            onClick={() => handleReview('totalIzin', detailData.totalIzin)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
+                          >
+                            Review →
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -500,8 +661,8 @@ const Dashboard: React.FC = () => {
                         <p className="text-xl font-bold text-slate-900">{stats.pendingIzin}</p>
                         {stats.pendingIzin > 0 && (
                           <button 
-                            onClick={() => navigate('/attendance?tab=pengajuan')}
-                            className="text-xs text-[#25a298] hover:underline"
+                            onClick={() => handleReview('pendingIzin', detailData.pendingIzin)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
                           >
                             Review →
                           </button>
@@ -511,7 +672,7 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Row 2: 5 Cards (diubah dari 4 jadi 5) */}
+                {/* Row 2: 5 Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
                   {/* Tepat Waktu */}
                   <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
@@ -526,6 +687,14 @@ const Dashboard: React.FC = () => {
                           <p className="text-xs text-slate-500">
                             {Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100)}%
                           </p>
+                        )}
+                        {stats.tepatWaktu > 0 && (
+                          <button 
+                            onClick={() => handleReview('tepatWaktu', detailData.tepatWaktu)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
+                          >
+                            Review →
+                          </button>
                         )}
                       </div>
                     </div>
@@ -545,6 +714,14 @@ const Dashboard: React.FC = () => {
                             {Math.round((stats.telatMasuk / stats.hadirHariIni) * 100)}%
                           </p>
                         )}
+                        {stats.telatMasuk > 0 && (
+                          <button 
+                            onClick={() => handleReview('telatMasuk', detailData.telatMasuk)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
+                          >
+                            Review →
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -563,6 +740,14 @@ const Dashboard: React.FC = () => {
                             {Math.round((stats.pulangCepat / stats.hadirHariIni) * 100)}%
                           </p>
                         )}
+                        {stats.pulangCepat > 0 && (
+                          <button 
+                            onClick={() => handleReview('pulangCepat', detailData.pulangCepat)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
+                          >
+                            Review →
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -577,6 +762,14 @@ const Dashboard: React.FC = () => {
                         <p className="text-xs font-medium text-slate-600">Tidak Lengkap</p>
                         <p className="text-xl font-bold text-slate-900">{stats.absensiTidakLengkap}</p>
                         <p className="text-xs text-slate-500">Hanya masuk/keluar</p>
+                        {stats.absensiTidakLengkap > 0 && (
+                          <button 
+                            onClick={() => handleReview('absensiTidakLengkap', detailData.absensiTidakLengkap)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
+                          >
+                            Review →
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -591,16 +784,22 @@ const Dashboard: React.FC = () => {
                         <p className="text-xs font-medium text-slate-600">Alpha</p>
                         <p className="text-xl font-bold text-slate-900">{stats.alpha}</p>
                         <p className="text-xs text-slate-500">Tidak hadir & tidak izin</p>
+                        {stats.alpha > 0 && (
+                          <button 
+                            onClick={() => handleReview('alpha', detailData.alpha)}
+                            className="text-xs text-[#25a298] hover:underline mt-1"
+                          >
+                            Review →
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-
               </>
             )}
 
             <hr className='mb-6'/>
-            
             
             {/* Quick Actions Grid */}
             <div className="mb-6">

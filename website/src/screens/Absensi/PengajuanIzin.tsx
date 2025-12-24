@@ -549,23 +549,19 @@ const PengajuanIzin: React.FC = () => {
                   <div className="bg-white rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-100">
                       <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm">📎</span>
+                        <span className="text-white text-sm">📷</span>
                       </div>
                       <div>
                         <h2 className="text-sm font-bold text-gray-800">Lampiran</h2>
-                        <p className="text-gray-600 text-xs">Dokumen pendukung</p>
+                        <p className="text-gray-600 text-xs">Dokumen pendukung yang diupload</p>
                       </div>
                     </div>
                     
                     <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                       <div className="flex flex-col items-center space-y-3">
-                        <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-lg">📷</span>
-                        </div>
                         
                         <div className="text-center">
                           <p className="text-sm font-medium text-purple-800">File Terlampir</p>
-                          <p className="text-xs text-purple-600 mt-1">Dokumen pendukung yang diupload</p>
                         </div>
                         
                         <div className="w-full max-w-xs">
@@ -590,7 +586,6 @@ const PengajuanIzin: React.FC = () => {
                           onClick={() => window.open(selectedRequest.lampiran, '_blank')}
                           className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-medium transition-colors duration-200 flex items-center space-x-2"
                         >
-                          <span>👁️</span>
                           <span>Lihat Full Size</span>
                         </button>
                       </div>

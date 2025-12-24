@@ -486,65 +486,65 @@ const DataKaryawan: React.FC = () => {
               </div>
 
               <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-  <p className="text-sm text-slate-600">
-    Menampilkan {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
-  </p>
-  {totalPages > 1 && (
-    <div className="flex items-center space-x-2">
-      <button 
-        onClick={prevPage}
-        disabled={currentPage === 1}
-        className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
-      >
-        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Prev
-      </button>
-      
-      <div className="flex items-center space-x-1">
-        {/* Tampilkan 5 halaman: current-2, current-1, current, current+1, current+2 */}
-        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-          let pageNum;
-          if (totalPages <= 5) {
-            pageNum = i + 1;
-          } else if (currentPage <= 3) {
-            pageNum = i + 1; // 1, 2, 3, 4, 5
-          } else if (currentPage >= totalPages - 2) {
-            pageNum = totalPages - 4 + i; // last-4, last-3, last-2, last-1, last
-          } else {
-            pageNum = currentPage - 2 + i; // current-2, current-1, current, current+1, current+2
-          }
-          
-          return (
-            <button
-              key={pageNum}
-              onClick={() => paginate(pageNum)}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-colors duration-200 ${
-                currentPage === pageNum
-                  ? 'bg-[#25a298] text-white'
-                  : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {pageNum}
-            </button>
-          );
-        })}
-      </div>
-      
-      <button 
-        onClick={nextPage}
-        disabled={currentPage === totalPages}
-        className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
-      >
-        Next
-        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-    </div>
-  )}
-</div>
+                <p className="text-sm text-slate-600">
+                  Menampilkan {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
+                </p>
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      onClick={prevPage}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Prev
+                    </button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {/* Tampilkan 5 halaman: current-2, current-1, current, current+1, current+2 */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1; // 1, 2, 3, 4, 5
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i; // last-4, last-3, last-2, last-1, last
+                        } else {
+                          pageNum = currentPage - 2 + i; // current-2, current-1, current, current+1, current+2
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => paginate(pageNum)}
+                            className={`px-3 py-1.5 text-xs rounded-lg transition-colors duration-200 ${
+                              currentPage === pageNum
+                                ? 'bg-[#25a298] text-white'
+                                : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    
+                    <button 
+                      onClick={nextPage}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
+                    >
+                      Next
+                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

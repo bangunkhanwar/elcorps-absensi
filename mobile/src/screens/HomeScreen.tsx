@@ -47,6 +47,18 @@ function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number,
   return R * c;
 }
 
+function capitalizeWords(str: string | null | undefined): string {
+  if (!str) return '-';
+  
+  return str
+    .split(' ')
+    .map(word => {
+      if (word.length === 0) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
 export default function HomeScreen({ navigation }: any) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clockInStatus, setClockInStatus] = useState('Belum Clock In');
@@ -579,9 +591,9 @@ export default function HomeScreen({ navigation }: any) {
             <View className="mb-6">
               {/* Tombol menu di pojok kanan atas */}
               <View className="mb-4">
-                <Text className="text-xl font-bold text-gray-800">{user?.nama || 'Bangun Chaerudin Anwar'}</Text>
-                <Text className="text-gray-600">{user?.nik || '52510.3138'}</Text>
-                <Text className="text-gray-600">{user?.jabatan || 'Staff Of Programmer'}</Text>
+                <Text className="text-xl font-bold text-gray-800">{capitalizeWords(user?.nama) || '-'}</Text>
+                <Text className="text-gray-600">{user?.nik || '-'}</Text>
+                <Text className="text-gray-600">{capitalizeWords(user?.jabatan) || '-'}</Text>
               </View>
 
               {/* Garis pemisah setelah Staff Of Programmer */}
@@ -594,9 +606,9 @@ export default function HomeScreen({ navigation }: any) {
                     <Text className="text-gray-600">Lokasi Kerja:</Text>
                   </View>
                   <View className="items-end">
-                    <Text className="text-gray-800 font-medium">{user?.departemen || '-'}</Text>
-                    <Text className="text-gray-800 font-medium">{user?.divisi || '-'}</Text>
-                    <Text className="text-gray-800 font-medium">{user?.unit_kerja || '-' }</Text>
+                    <Text className="text-gray-800 font-medium">{capitalizeWords(user?.departemen) || '-'}</Text>
+                    <Text className="text-gray-800 font-medium">{capitalizeWords(user?.divisi) || '-'}</Text>
+                    <Text className="text-gray-800 font-medium">{capitalizeWords(user?.unit_kerja) || '-' }</Text>
                   </View>
                 </View>
               </View>
