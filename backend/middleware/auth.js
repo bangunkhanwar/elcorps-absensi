@@ -14,7 +14,7 @@ const auth = async (req, res, next) => {
     
     if (!user) {
       return res.status(401).json({ error: 'Token is not valid.' });
-    }
+    } 
 
     req.user = user;
     next();

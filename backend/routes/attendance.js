@@ -27,8 +27,18 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Helper function: Calculate attendance status
 function calculateStatus(currentTime, shiftTime, tolerance) {
+  if (!currentTime || typeof currentTime !== 'string' || !currentTime.includes(':')) {
+    return 'Invalid current time';
+  }
+  if (!shiftTime || typeof shiftTime !== 'string' || !shiftTime.includes(':')) {
+    return 'Invalid shift time';
+  }
   const [currentHour, currentMinute] = currentTime.split(':').map(Number);
   const [shiftHour, shiftMinute] = shiftTime.split(':').map(Number);
+
+  if (isNaN(currentHour) || isNaN(currentMinute) || isNaN(shiftHour) || isNaN(shiftMinute)) {
+    return 'Invalid time format';
+  }
 
   const currentTotalMinutes = currentHour * 60 + currentMinute;
   const shiftTotalMinutes = shiftHour * 60 + shiftMinute;

@@ -33,7 +33,7 @@ const Absensi: React.FC = () => {
     const savedDate = sessionStorage.getItem('absensiSelectedDate');
     return savedDate || new Date().toISOString().split('T')[0];
   });
-  
+
   const [searchData, setSearchData] = useState('')
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([])
   const [loading, setLoading] = useState(false)
@@ -53,11 +53,11 @@ const Absensi: React.FC = () => {
     const queryParams = new URLSearchParams(location.search)
     const reviewParam = queryParams.get('review')
     const dateParam = queryParams.get('date')
-    
+
     if (reviewParam) {
       setReviewMode(true)
       setReviewCategory(reviewParam)
-      
+
       const categoryTitles: { [key: string]: string } = {
         'alpha': 'Karyawan Alpha (Tidak Hadir & Tidak Izin)',
         'tepatWaktu': 'Karyawan Tepat Waktu',
@@ -68,9 +68,9 @@ const Absensi: React.FC = () => {
         'totalIzin': 'Karyawan Izin Hari Ini',
         'pendingIzin': 'Pengajuan Izin Pending'
       }
-      
+
       setReviewTitle(categoryTitles[reviewParam] || `Review: ${reviewParam}`)
-      
+
       const storedData = localStorage.getItem(`review_${reviewParam}`)
       if (storedData) {
         try {
@@ -80,7 +80,7 @@ const Absensi: React.FC = () => {
           console.error('Error parsing review data:', error)
         }
       }
-      
+
       if (dateParam) {
         setSelectedDate(dateParam)
         sessionStorage.setItem('absensiSelectedDate', dateParam)
@@ -112,33 +112,33 @@ const Absensi: React.FC = () => {
     if (!timeString || timeString === 'null' || timeString === 'undefined') {
       return '-';
     }
-    
+
     if (timeString === '00:00:00' || timeString === '00:00') {
       return '-';
     }
 
     if (timeString.includes(':')) {
       const timeParts = timeString.split(':');
-      
+
       if (timeParts.length >= 2) {
         const hours = timeParts[0].padStart(2, '0');
         const minutes = timeParts[1].padStart(2, '0');
-        
+
         if (hours === '00' && minutes === '00') {
           return '-';
         }
-        
+
         return `${hours}:${minutes}`;
       }
     }
-    
+
     return timeString;
   };
 
   const fetchAttendanceData = async () => {
     try {
       setLoading(true)
-      
+
       const response = await attendanceAPI.getAll(selectedDate, selectedDate)
       const attendances = response?.data?.attendances || []
 
@@ -146,17 +146,17 @@ const Absensi: React.FC = () => {
       try {
         const leaveResponse = await leaveAPI.getAllLeaves()
         const allLeaves = leaveResponse?.data?.leaves || []
-        
+
         approvedLeaves = allLeaves.filter((leave: any) => {
           const isApproved = leave.status === 'approved'
           const selected = new Date(selectedDate)
           const start = new Date(leave.start_date)
           const end = new Date(leave.end_date)
-          
+
           selected.setHours(0, 0, 0, 0)
           start.setHours(0, 0, 0, 0)
           end.setHours(0, 0, 0, 0)
-          
+
           return isApproved && selected >= start && selected <= end
         })
       } catch (leaveError) {
@@ -166,7 +166,7 @@ const Absensi: React.FC = () => {
 
       const data = attendances.map((att: any, index: number) => {
         const userLeave = approvedLeaves.find((leave: any) => leave.nik === att.nik)
-        
+
         return {
           id: att.id,
           no: index + 1,
@@ -186,7 +186,7 @@ const Absensi: React.FC = () => {
           tanggal_absen: att.tanggal_absen || selectedDate
         }
       })
-      
+
       const leaveUsersWithoutAttendance = approvedLeaves
         .filter((leave: any) => !attendances.some((att: any) => att.nik === leave.nik))
         .map((leave: any, index: number) => ({
@@ -215,7 +215,7 @@ const Absensi: React.FC = () => {
       try {
         const fallbackResponse = await attendanceAPI.getTodayAll()
         const fallbackData = fallbackResponse?.data?.attendances || []
-        
+
         const processedData = fallbackData.map((att: any, index: number) => ({
           id: att.id,
           no: index + 1,
@@ -234,7 +234,7 @@ const Absensi: React.FC = () => {
           foto_keluar: att.foto_keluar || '',
           tanggal_absen: att.tanggal_absen || selectedDate
         }))
-        
+
         setAttendanceData(processedData)
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError)
@@ -249,7 +249,7 @@ const Absensi: React.FC = () => {
     if (attendance.status === 'izin' || attendance.status === 'Izin') {
       return 'izin';
     }
-    
+
     if (!attendance.waktu_masuk) {
       return 'izin';
     }
@@ -261,7 +261,7 @@ const Absensi: React.FC = () => {
       const timeParts = waktuMasuk.split(':');
       const hours = parseInt(timeParts[0]);
       const minutes = parseInt(timeParts[1]);
-      
+
       if (hours > 9 || (hours === 9 && minutes > 0)) {
         isLate = true;
       }
@@ -295,7 +295,7 @@ const Absensi: React.FC = () => {
   }
 
   const getReviewStatus = (item: any, category: string): 'tepat_waktu' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk' => {
-    switch(category) {
+    switch (category) {
       case 'alpha': return 'izin'
       case 'tepatWaktu': return 'tepat_waktu'
       case 'telatMasuk': return 'telat'
@@ -309,7 +309,7 @@ const Absensi: React.FC = () => {
   }
 
   const dataSource = getDataSource()
-  
+
   const filteredAttendanceData = dataSource
     .filter(item =>
       item.nama.toLowerCase().includes(searchData.toLowerCase()) ||
@@ -378,14 +378,14 @@ const Absensi: React.FC = () => {
 
   const getStats = () => {
     const dataToUse = reviewMode ? reviewData : attendanceData
-    const hadir = dataToUse.filter((item: any) => 
-      item.status === 'tepat_waktu' || item.status === 'telat' || 
+    const hadir = dataToUse.filter((item: any) =>
+      item.status === 'tepat_waktu' || item.status === 'telat' ||
       item.waktu_masuk || item.jamMasuk !== '-'
     ).length
-    const telat = dataToUse.filter((item: any) => 
+    const telat = dataToUse.filter((item: any) =>
       item.status === 'telat' || item.status === 'telat_masuk'
     ).length
-    const izin = dataToUse.filter((item: any) => 
+    const izin = dataToUse.filter((item: any) =>
       item.status === 'izin' || item.keteranganIzin
     ).length
     const total = dataToUse.length
@@ -399,22 +399,22 @@ const Absensi: React.FC = () => {
     const dataToExport = filteredAttendanceData.map(item => {
       const getWorkTimeCategory = (jamMasuk: string) => {
         if (jamMasuk === '-' || !jamMasuk) return ''
-        
+
         const [hours, minutes] = jamMasuk.split(':').map(Number)
         const totalMinutes = hours * 60 + minutes
-        
+
         if (totalMinutes <= 540) return '<09:00'
         else if (totalMinutes <= 570) return '09:01 - 09:30'
         else if (totalMinutes <= 600) return '09:31 - 10:00'
         else return '10:00'
       }
-      
+
       const calculateOvertime = (jamPulang: string) => {
         if (jamPulang === '-' || !jamPulang) return ''
-        
+
         const [hours, minutes] = jamPulang.split(':').map(Number)
         const totalMinutes = hours * 60 + minutes
-        
+
         if (totalMinutes > 1080) {
           const overtimeMinutes = totalMinutes - 1080
           const overtimeHours = Math.floor(overtimeMinutes / 60)
@@ -423,31 +423,31 @@ const Absensi: React.FC = () => {
         }
         return ''
       }
-      
+
       const calculateWorkDuration = (jamMasuk: string, jamPulang: string) => {
         if (jamMasuk === '-' || !jamMasuk || jamPulang === '-' || !jamPulang) return ''
-        
+
         const parseTime = (timeStr: string) => {
           const [hours, minutes] = timeStr.split(':').map(Number)
           return hours * 60 + minutes
         }
-        
+
         const start = parseTime(jamMasuk)
         const end = parseTime(jamPulang)
-        
+
         if (end <= start) return ''
-        
+
         const durationMinutes = end - start
         const hours = Math.floor(durationMinutes / 60)
         const minutes = durationMinutes % 60
-        
+
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`
       }
-      
+
       const workTimeCategory = getWorkTimeCategory(item.jamMasuk)
       const overtime = calculateOvertime(item.jamPulang)
       const workDuration = calculateWorkDuration(item.jamMasuk, item.jamPulang)
-      
+
       return {
         "DIVISI": item.divisi || '-',
         "DEPARTEMEN": item.departemen || '-',
@@ -461,26 +461,26 @@ const Absensi: React.FC = () => {
         "Keterangan": item.keteranganIzin || (item.status === 'izin' ? 'Izin' : getStatusText(item.status))
       }
     })
-    
+
     const ws = XLSX.utils.json_to_sheet(dataToExport)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, "Absensi")
-    
+
     const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([excelBuffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' 
+    const blob = new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
     })
-    
+
     const formattedDate = new Date(selectedDate).toLocaleDateString('id-ID', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     }).replace(/\//g, '-')
-    
-    const fileName = reviewMode 
+
+    const fileName = reviewMode
       ? `absensi_${reviewCategory}_${formattedDate}.xlsx`
       : `absensi_${formattedDate}.xlsx`
-    
+
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -504,7 +504,7 @@ const Absensi: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <button 
+              <button
                 onClick={() => navigate('/dashboard')}
                 className="flex items-center space-x-2 text-slate-600 hover:text-[#25a298] transition-colors duration-200"
               >
@@ -559,21 +559,19 @@ const Absensi: React.FC = () => {
           <div className="flex border-b border-slate-200">
             <button
               onClick={() => setActiveTab('data')}
-              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${
-                activeTab === 'data'
-                  ? 'text-[#25a298] border-b-2 border-[#25a298]'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${activeTab === 'data'
+                ? 'text-[#25a298] border-b-2 border-[#25a298]'
+                : 'text-slate-500 hover:text-slate-700'
+                }`}
             >
               Absensi
             </button>
             <button
               onClick={() => setActiveTab('pengajuan')}
-              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${
-                activeTab === 'pengajuan'
-                  ? 'text-[#25a298] border-b-2 border-[#25a298]'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${activeTab === 'pengajuan'
+                ? 'text-[#25a298] border-b-2 border-[#25a298]'
+                : 'text-slate-500 hover:text-slate-700'
+                }`}
             >
               Pengajuan Izin
             </button>
@@ -617,14 +615,25 @@ const Absensi: React.FC = () => {
                     <button
                       onClick={exportToExcel}
                       disabled={filteredAttendanceData.length === 0}
-                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
-                        filteredAttendanceData.length === 0
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-primary-500 text-white hover:bg-primary-600'
-                      }`}
+                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 ${filteredAttendanceData.length === 0
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-primary-500 text-white hover:bg-primary-600'
+                        }`}
                     >
                       <span>Export Excel</span>
                     </button>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Cari nama, NIK, atau unit kerja..."
+                        // value={searchPengajuan}
+                        onChange={(e) =>  (e.target.value)}
+                        className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
+                      />
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                        🔍
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -754,7 +763,7 @@ const Absensi: React.FC = () => {
                           Menampilkan {paginatedAttendanceData.length > 0 ? startDataIndex + 1 : 0}-{Math.min(startDataIndex + paginatedAttendanceData.length, filteredAttendanceData.length)} dari {filteredAttendanceData.length} absensi
                         </p>
                         <div className="flex items-center space-x-2">
-                          <button 
+                          <button
                             onClick={handlePrevPage}
                             disabled={currentDataPage === 1}
                             className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
@@ -764,7 +773,7 @@ const Absensi: React.FC = () => {
                             </svg>
                             Prev
                           </button>
-                          
+
                           <div className="flex items-center space-x-1">
                             {/* Tampilkan 5 halaman: current-2, current-1, current, current+1, current+2 */}
                             {Array.from({ length: Math.min(5, totalDataPages) }, (_, i) => {
@@ -778,24 +787,23 @@ const Absensi: React.FC = () => {
                               } else {
                                 pageNum = currentDataPage - 2 + i; // current-2, current-1, current, current+1, current+2
                               }
-                              
+
                               return (
                                 <button
                                   key={pageNum}
                                   onClick={() => handleDataPageChange(pageNum)}
-                                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors duration-200 ${
-                                    currentDataPage === pageNum
-                                      ? 'bg-[#25a298] text-white'
-                                      : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-                                  }`}
+                                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors duration-200 ${currentDataPage === pageNum
+                                    ? 'bg-[#25a298] text-white'
+                                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                                    }`}
                                 >
                                   {pageNum}
                                 </button>
                               );
                             })}
                           </div>
-                          
-                          <button 
+
+                          <button
                             onClick={handleNextPage}
                             disabled={currentDataPage === totalDataPages}
                             className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
