@@ -161,12 +161,8 @@ const Dashboard: React.FC = () => {
 
   // Fungsi untuk navigasi ke halaman Data Karyawan dengan filter role
   const navigateToEmployees = (roleFilter?: string) => {
-    if (roleFilter) {
-      // Simpan filter role ke localStorage untuk dibaca di halaman Data Karyawan
-      localStorage.setItem('employeeRoleFilter', roleFilter)
-    }
-    navigate('/employees')
-  }
+    navigate(`/employees?role=${roleFilter || ''}`);
+  };
 
   // Fungsi konversi waktu ke menit
   const timeToMinutes = (timeStr: string) => {
@@ -233,7 +229,7 @@ const Dashboard: React.FC = () => {
             )
           }
           
-          const totalKaryawan = filteredUsers.filter((u: any) => u.role === 'karyawan').length
+          const totalKaryawan = filteredUsers.length
           const totalAdmin = filteredUsers.filter((u: any) => u.role === 'hr').length
           
           // 2. Data absensi hari ini
@@ -302,7 +298,7 @@ const Dashboard: React.FC = () => {
               nik: userInfo.nik,
               departemen: userInfo.departemen,
               divisi: userInfo.divisi,
-              unit_kerja: userInfo.unit_kerja,
+              unit_kerja: userInfo.unit_kerja || userInfo.nama_unit,
               waktu_masuk: att.waktu_masuk,
               waktu_keluar: att.waktu_keluar,
               jam_seharusnya_masuk: att.jam_seharusnya_masuk,
@@ -379,9 +375,8 @@ const Dashboard: React.FC = () => {
             }
           })
           
-          // Identifikasi karyawan yang ALPHA (tidak hadir dan tidak izin)
+          // Identifikasi karyawan yang ALPHA (tidak hadir dan tidak izin) semua role
           filteredUsers.forEach((u: any) => {
-            if (u.role !== 'karyawan') return
             
             if (!hadirUserIds.has(u.id)) {
               alphaEmployees.push({
@@ -390,7 +385,8 @@ const Dashboard: React.FC = () => {
                 nik: u.nik,
                 departemen: u.departemen,
                 divisi: u.divisi,
-                unit_kerja: u.unit_kerja
+                unit_kerja: u.nama_unit,
+                role: u.role
               })
             }
           })
@@ -570,7 +566,7 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
                   {/* Total Karyawan */}
                   <button 
-                    onClick={() => navigateToEmployees('karyawan')}
+                    onClick={() => navigateToEmployees()}
                     className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
                   >
                     <div className="flex items-center space-x-3">
@@ -578,7 +574,7 @@ const Dashboard: React.FC = () => {
                         <span className="text-lg text-[#25a298]">👥</span>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-slate-600">Karyawan</p>
+                        <p className="text-xs font-medium text-slate-600">Total Karyawan</p>
                         <p className="text-xl font-bold text-slate-900">{stats.totalKaryawan}</p>
                         <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           Lihat →
@@ -587,51 +583,55 @@ const Dashboard: React.FC = () => {
                     </div>
                   </button>
 
-                  {/* Total Admin */}
+                  {user?.role === 'hr' && (
+                    <button 
+                      onClick={() => navigateToEmployees('hr')}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">👑</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Admin HR</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.totalAdmin}</p>
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Lihat →
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Hadir Hari Ini */}
                   <button 
-                    onClick={() => navigateToEmployees('hr')}
+                    onClick={() => handleReview('hadirHariIni', detailData.hadirHariIni)}
                     className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">👑</span>
+                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
+                        <span className="text-lg text-[#25a298]">✅</span>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-slate-600">Admin HR</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.totalAdmin}</p>
-                        <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          Lihat →
-                        </p>
+                        <p className="text-xs font-medium text-slate-600">Total Hadir</p>
+                        <p className="text-xl font-bold text-slate-900">{stats.hadirHariIni}</p>
+                        <p className="text-xs text-slate-500">Clock in & out</p>
+                        {stats.hadirHariIni > 0 && (
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Review →
+                          </p>
+                        )}
                       </div>
                     </div>
                   </button>
 
-                  {/* Hadir Hari Ini */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                        <span className="text-lg text-[#25a298]">✅</span>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Hadir</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.hadirHariIni}</p>
-                        <p className="text-xs text-slate-500">Clock in & out</p>
-                        {stats.hadirHariIni > 0 && (
-                          <button 
-                            onClick={() => handleReview('hadirHariIni', detailData.hadirHariIni)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
-                            Review →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Total Izin */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => handleReview('totalIzin', detailData.totalIzin)}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center group-hover:bg-yellow-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">📝</span>
                       </div>
                       <div>
@@ -639,45 +639,46 @@ const Dashboard: React.FC = () => {
                         <p className="text-xl font-bold text-slate-900">{stats.totalIzin}</p>
                         <p className="text-xs text-slate-500">Termasuk multi-day</p>
                         {stats.totalIzin > 0 && (
-                          <button 
-                            onClick={() => handleReview('totalIzin', detailData.totalIzin)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Review →
-                          </button>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
+
 
                   {/* Pending Izin */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => handleReview('pendingIzin', detailData.pendingIzin)}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">⏳</span>
                       </div>
                       <div>
                         <p className="text-xs font-medium text-slate-600">Pending</p>
                         <p className="text-xl font-bold text-slate-900">{stats.pendingIzin}</p>
                         {stats.pendingIzin > 0 && (
-                          <button 
-                            onClick={() => handleReview('pendingIzin', detailData.pendingIzin)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Review →
-                          </button>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </div>
 
                 {/* Row 2: 5 Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
                   {/* Tepat Waktu */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => handleReview('tepatWaktu', detailData.tepatWaktu)}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">⏱️</span>
                       </div>
                       <div>
@@ -689,21 +690,21 @@ const Dashboard: React.FC = () => {
                           </p>
                         )}
                         {stats.tepatWaktu > 0 && (
-                          <button 
-                            onClick={() => handleReview('tepatWaktu', detailData.tepatWaktu)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Review →
-                          </button>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Telat Masuk */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => handleReview('telatMasuk', detailData.telatMasuk)}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">⏰</span>
                       </div>
                       <div>
@@ -715,21 +716,21 @@ const Dashboard: React.FC = () => {
                           </p>
                         )}
                         {stats.telatMasuk > 0 && (
-                          <button 
-                            onClick={() => handleReview('telatMasuk', detailData.telatMasuk)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Review →
-                          </button>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Pulang Cepat */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => handleReview('pulangCepat', detailData.pulangCepat)}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">🚶‍♂️</span>
                       </div>
                       <div>
@@ -741,21 +742,21 @@ const Dashboard: React.FC = () => {
                           </p>
                         )}
                         {stats.pulangCepat > 0 && (
-                          <button 
-                            onClick={() => handleReview('pulangCepat', detailData.pulangCepat)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Review →
-                          </button>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Absensi Tidak Lengkap */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => handleReview('absensiTidakLengkap', detailData.absensiTidakLengkap)}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-gray-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">⚠️</span>
                       </div>
                       <div>
@@ -763,21 +764,21 @@ const Dashboard: React.FC = () => {
                         <p className="text-xl font-bold text-slate-900">{stats.absensiTidakLengkap}</p>
                         <p className="text-xs text-slate-500">Hanya masuk/keluar</p>
                         {stats.absensiTidakLengkap > 0 && (
-                          <button 
-                            onClick={() => handleReview('absensiTidakLengkap', detailData.absensiTidakLengkap)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Review →
-                          </button>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* ALPHA - KARYAWAN TIDAK ADA KETERANGAN */}
-                  <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+                  <button 
+                    onClick={() => handleReview('alpha', detailData.alpha)}
+                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                  >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
                         <span className="text-lg text-[#25a298]">❌</span>
                       </div>
                       <div>
@@ -785,16 +786,13 @@ const Dashboard: React.FC = () => {
                         <p className="text-xl font-bold text-slate-900">{stats.alpha}</p>
                         <p className="text-xs text-slate-500">Tidak hadir & tidak izin</p>
                         {stats.alpha > 0 && (
-                          <button 
-                            onClick={() => handleReview('alpha', detailData.alpha)}
-                            className="text-xs text-[#25a298] hover:underline mt-1"
-                          >
+                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Review →
-                          </button>
+                          </p>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </div>
               </>
             )}

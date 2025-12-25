@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { authAPI } from '../../services/api'
 import TambahKaryawan from './TambahKaryawan'
 import EditKaryawan from './EditKaryawan'
-// @ts-ignore
-import HapusKaryawan from './HapusKaryawan'
+import HapusKaryawan from './Hapuskaryawan'
 
 interface EmployeeForm {
   email: string
@@ -43,6 +42,7 @@ interface MasterData {
 
 const DataKaryawan: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation() // Tambahkan useLocation untuk membaca query params
   const [showModal, setShowModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -67,10 +67,17 @@ const DataKaryawan: React.FC = () => {
   const [unitKerjaList, setUnitKerjaList] = useState<any[]>([])
 
   const [masterData, setMasterData] = useState<MasterData>({
-  jabatan: [],
-  departemen: [],
-  divisi: []
-})
+    jabatan: [],
+    departemen: [],
+    divisi: []
+  })
+  
+  // State untuk active filter
+  const [activeFilters, setActiveFilters] = useState<{
+    role: string | null;
+  }>({
+    role: null
+  })
   
   // Get current page from localStorage or default to 1
   const [currentPage, setCurrentPage] = useState(() => {
@@ -80,11 +87,26 @@ const DataKaryawan: React.FC = () => {
   
   const itemsPerPage = 10
 
+  // Baca query parameters saat komponen mount
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search)
+    const roleParam = queryParams.get('role')
+    
+    if (roleParam) {
+      // Set active filter berdasarkan query parameter
+      setActiveFilters(prev => ({
+        ...prev,
+        role: roleParam
+      }))
+    } 
+    
+    
+  }, [location.search])
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
-        // Panggil SEMUA fetch secara paralel
         await Promise.all([
           fetchUnitKerja(),
           fetchMasterData(),  
@@ -100,9 +122,10 @@ const DataKaryawan: React.FC = () => {
     loadData()
   }, [])
 
+  // Filter employees berdasarkan searchTerm dan activeFilters
   useEffect(() => {
     filterEmployees()
-  }, [searchTerm, employees])
+  }, [searchTerm, employees, activeFilters])
 
   // Save current page to localStorage whenever it changes
   useEffect(() => {
@@ -112,7 +135,6 @@ const DataKaryawan: React.FC = () => {
   const fetchUnitKerja = async () => {
     try {
       const response = await authAPI.getAllUnitKerja()
-      console.log('📦 Unit Kerja Data:', response.data)
       setUnitKerjaList(response.data || [])
     } catch (error: any) {
       console.error('❌ Gagal memuat data unit kerja:', error)
@@ -130,7 +152,6 @@ const DataKaryawan: React.FC = () => {
       })
     } catch (error: any) {
       console.error('❌ Gagal memuat data master:', error)
-      // Kosongkan saja jika error
       setMasterData({ jabatan: [], departemen: [], divisi: [] })
     }
   }
@@ -141,10 +162,9 @@ const DataKaryawan: React.FC = () => {
       const response = await authAPI.getAllUsers()
       console.log('👥 Employees Raw Data:', response.data)
       
-      // Process employees data - gunakan nama_unit dari API
+      // Process employees data
       const employeesData = response.data.users
         .map((user: any, index: number) => {
-          // Gunakan nama_unit langsung dari API response
           let finalNamaUnit = user.nama_unit || '-'
 
           return {
@@ -177,25 +197,34 @@ const DataKaryawan: React.FC = () => {
   }
 
   const filterEmployees = () => {
-    if (!searchTerm) {
-      setFilteredEmployees(employees)
-      return
+    let filtered = [...employees]
+
+    // Terapkan filter berdasarkan activeFilters
+    if (activeFilters.role) {
+      filtered = filtered.filter(employee => 
+        employee.role === activeFilters.role
+      )
     }
 
-    const filtered = employees.filter(employee =>
-      employee.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.nik.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.jabatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.departemen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.divisi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.nama_unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.nama_shift.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    // Terapkan search term
+    if (searchTerm) {
+      filtered = filtered.filter(employee =>
+        employee.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.nik.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.jabatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.departemen.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.divisi.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.nama_unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.nama_shift.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
     setFilteredEmployees(filtered)
     setCurrentPage(1)
   }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -337,6 +366,25 @@ const DataKaryawan: React.FC = () => {
     }
   }
 
+  // Tampilkan judul berdasarkan filter
+  const getPageTitle = () => {
+    if (activeFilters.role === 'hr') {
+      return 'Data Admin HR'
+    } else if (activeFilters.role === 'karyawan') {
+      return 'Data Karyawan'
+    }
+    return 'Data Karyawan'
+  }
+
+  const getPageDescription = () => {
+    if (activeFilters.role === 'hr') {
+      return 'Kelola informasi dan akun Admin HR'
+    } else if (activeFilters.role === 'karyawan') {
+      return 'Kelola informasi dan akun karyawan'
+    }
+    return 'Kelola informasi dan akun karyawan'
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
@@ -352,8 +400,8 @@ const DataKaryawan: React.FC = () => {
               </button>
               <div className="w-px h-6 bg-slate-300"></div>
               <div>
-                <h1 className="text-2xl font-bold text-[#25a298]">Data Karyawan</h1>
-                <p className="text-sm text-slate-500">Kelola informasi dan akun karyawan</p>
+                <h1 className="text-2xl font-bold text-[#25a298]">{getPageTitle()}</h1>
+                <p className="text-sm text-slate-500">{getPageDescription()}</p>
               </div>
             </div>
             
@@ -382,20 +430,18 @@ const DataKaryawan: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h2 className="text-lg font-semibold text-slate-900">Daftar Karyawan</h2>
-              <div className="relative w-full sm:w-64">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
+              <h2 className="text-lg font-semibold text-slate-900">Daftar {activeFilters.role === 'hr' ? 'Admin HR' : 'Karyawan'}</h2>
+              <div className="relative">
                 <input
                   type="text"
-                  placeholder="Cari nama, email, NIK, jabatan, departemen, divisi, shift..."
+                  placeholder={`Cari ${activeFilters.role === 'hr' ? 'admin' : 'karyawan'}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-colors duration-200"
+                  className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
                 />
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                  🔍
+                </div>
               </div>
             </div>
           </div>
@@ -477,7 +523,12 @@ const DataKaryawan: React.FC = () => {
                     ) : (
                       <tr>
                         <td colSpan={11} className="px-6 py-8 text-center text-sm text-slate-500">
-                          {searchTerm ? 'Tidak ada data yang sesuai dengan pencarian' : 'Tidak ada data karyawan'}
+                          {searchTerm 
+                            ? 'Tidak ada data yang sesuai dengan pencarian' 
+                            : activeFilters.role === 'hr'
+                              ? 'Tidak ada data Admin HR'
+                              : 'Tidak ada data karyawan'
+                          }
                         </td>
                       </tr>
                     )}
@@ -487,7 +538,7 @@ const DataKaryawan: React.FC = () => {
 
               <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
                 <p className="text-sm text-slate-600">
-                  Menampilkan {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredEmployees.length)} dari {filteredEmployees.length} karyawan
+                  Menampilkan {currentEmployees.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredEmployees.length)} dari {filteredEmployees.length} {activeFilters.role === 'hr' ? 'admin' : 'karyawan'}
                 </p>
                 {totalPages > 1 && (
                   <div className="flex items-center space-x-2">
@@ -503,17 +554,16 @@ const DataKaryawan: React.FC = () => {
                     </button>
                     
                     <div className="flex items-center space-x-1">
-                      {/* Tampilkan 5 halaman: current-2, current-1, current, current+1, current+2 */}
                       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                         let pageNum;
                         if (totalPages <= 5) {
                           pageNum = i + 1;
                         } else if (currentPage <= 3) {
-                          pageNum = i + 1; // 1, 2, 3, 4, 5
+                          pageNum = i + 1;
                         } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i; // last-4, last-3, last-2, last-1, last
+                          pageNum = totalPages - 4 + i;
                         } else {
-                          pageNum = currentPage - 2 + i; // current-2, current-1, current, current+1, current+2
+                          pageNum = currentPage - 2 + i;
                         }
                         
                         return (

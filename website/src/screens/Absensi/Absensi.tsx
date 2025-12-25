@@ -48,6 +48,13 @@ const Absensi: React.FC = () => {
   const [reviewCategory, setReviewCategory] = useState('')
   const [reviewData, setReviewData] = useState<any[]>([])
 
+  // menentukan kategori yang hanya menampilkan data karyawan (tanpa jam masuk/pulang)
+  const isEmployeeOnlyView = reviewMode && (
+    reviewCategory === 'alpha' || 
+    reviewCategory === 'totalIzin' || 
+    reviewCategory === 'pendingIzin'
+  )
+
   // Baca query parameters saat komponen mount
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search)
@@ -294,14 +301,14 @@ const Absensi: React.FC = () => {
     return attendanceData
   }
 
-  const getReviewStatus = (item: any, category: string): 'tepat_waktu' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk' => {
+  const getReviewStatus = (item: any, category: string): 'tepat_waktu' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk' | 'alpha' | 'tidak_lengkap' => {
     switch (category) {
-      case 'alpha': return 'izin'
+      case 'alpha': return 'alpha'
       case 'tepatWaktu': return 'tepat_waktu'
       case 'telatMasuk': return 'telat'
       case 'pulangCepat': return 'pulang_cepat'
       case 'hadirHariIni': return 'tepat_waktu'
-      case 'absensiTidakLengkap': return 'telat'
+      case 'absensiTidakLengkap': return 'tidak_lengkap'
       case 'totalIzin': return 'izin'
       case 'pendingIzin': return 'izin'
       default: return item.status || 'tepat_waktu'
@@ -351,6 +358,8 @@ const Absensi: React.FC = () => {
       case 'izin': return 'bg-blue-100 text-blue-800'
       case 'pulang_cepat': return 'bg-orange-100 text-orange-800'
       case 'telat_masuk': return 'bg-red-100 text-red-800'
+      case 'alpha': return 'bg-red-100 text-red-800'
+      case 'tidak_lengkap': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -362,6 +371,8 @@ const Absensi: React.FC = () => {
       case 'izin': return 'Izin'
       case 'pulang_cepat': return 'Pulang Cepat'
       case 'telat_masuk': return 'Telat Masuk'
+      case 'alpha': return 'Alpha'
+      case 'tidak_lengkap': return 'Tidak Lengkap'
       default: return status
     }
   }
@@ -534,51 +545,38 @@ const Absensi: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {reviewMode && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <span className="text-blue-600">📋</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-blue-800">{reviewTitle}</h3>
-                  <p className="text-sm text-blue-600">
-                    {reviewData.length} karyawan • Tanggal: {formatDate(selectedDate)}
-                  </p>
-                </div>
-              </div>
-              <div className="text-sm text-blue-700">
-                Data dari Dashboard • {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
+          {!reviewMode ? (
+            <div className="flex border-b border-slate-200">
+              <button
+                onClick={() => setActiveTab('data')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${activeTab === 'data'
+                  ? 'text-[#25a298] border-b-2 border-[#25a298]'
+                  : 'text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                Absensi
+              </button>
+              <button
+                onClick={() => setActiveTab('pengajuan')}
+                className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${activeTab === 'pengajuan'
+                  ? 'text-[#25a298] border-b-2 border-[#25a298]'
+                  : 'text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                Pengajuan Izin
+              </button>
+            </div>
+          ) : (
+            <div className="border-b border-slate-200">
+              <div className="py-4 px-6 text-center font-medium text-[#25a298] border-b-2 border-[#25a298]">
+                Absensi Review
               </div>
             </div>
-          </div>
-        )}
-
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
-          <div className="flex border-b border-slate-200">
-            <button
-              onClick={() => setActiveTab('data')}
-              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${activeTab === 'data'
-                ? 'text-[#25a298] border-b-2 border-[#25a298]'
-                : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-              Absensi
-            </button>
-            <button
-              onClick={() => setActiveTab('pengajuan')}
-              className={`flex-1 py-4 px-6 text-center font-medium transition-all duration-300 ${activeTab === 'pengajuan'
-                ? 'text-[#25a298] border-b-2 border-[#25a298]'
-                : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-              Pengajuan Izin
-            </button>
-          </div>
+          )}
 
           <div className="p-6">
-            {activeTab === 'data' && (
+            {(reviewMode || activeTab === 'data') && (
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -591,49 +589,36 @@ const Absensi: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-4">
                     {!reviewMode && (
-                      <>
-                        <input
-                          type="date"
-                          value={selectedDate}
-                          onChange={(e) => setSelectedDate(e.target.value)}
-                          className="px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-                        />
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="Cari nama, NIK, atau unit kerja..."
-                            value={searchData}
-                            onChange={(e) => setSearchData(e.target.value)}
-                            className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-                          />
-                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
-                            🔍
-                          </div>
-                        </div>
-                      </>
+                      <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
+                      />
                     )}
-                    <button
-                      onClick={exportToExcel}
-                      disabled={filteredAttendanceData.length === 0}
-                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 ${filteredAttendanceData.length === 0
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-primary-500 text-white hover:bg-primary-600'
-                        }`}
-                    >
-                      <span>Export Excel</span>
-                    </button>
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="Cari nama, NIK, atau unit kerja..."
-                        // value={searchPengajuan}
-                        onChange={(e) =>  (e.target.value)}
+                        value={searchData}
+                        onChange={(e) => setSearchData(e.target.value)}
                         className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
                       />
                       <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
                         🔍
                       </div>
                     </div>
+                    <button
+                      onClick={exportToExcel}
+                      disabled={filteredAttendanceData.length === 0}
+                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
+                        filteredAttendanceData.length === 0
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-primary-500 text-white hover:bg-primary-600'
+                      }`}
+                    >
+                      <span>Export Excel</span>
+                    </button>
                   </div>
                 </div>
 
@@ -702,40 +687,73 @@ const Absensi: React.FC = () => {
                           <tr className="bg-slate-50 border-b border-slate-200">
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">No</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nama</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Unit Kerja</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Jam Masuk</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Jam Pulang</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Aksi</th>
+                            {isEmployeeOnlyView ? (
+                              <>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">NIK</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Departemen</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Divisi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Unit Kerja</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                              </>
+                            ) : (
+                              <>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Unit Kerja</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Jam Masuk</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Jam Pulang</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Aksi</th>
+                              </>
+                            )}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200">
-                          {paginatedAttendanceData.map((item, index) => (
+                          {paginatedAttendanceData.map((item: any, index: number) => (
                             <tr key={item.id} className="hover:bg-slate-50 transition-colors duration-150">
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{startDataIndex + index + 1}</td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-slate-900">{item.nama}</div>
-                                <div className="text-xs text-slate-500">{item.nik}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.unit_kerja}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.jamMasuk}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.jamPulang}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                                  {getStatusText(item.status)}
-                                </span>
-                                {reviewMode && item.keteranganIzin && (
-                                  <div className="text-xs text-gray-500 mt-1">{item.keteranganIzin}</div>
+                                {!isEmployeeOnlyView && (
+                                  <div className="text-xs text-slate-500">{item.nik}</div>
                                 )}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                <button
-                                  onClick={() => handleViewDetail(item)}
-                                  className="text-[#25a298] hover:text-[#1f8a80] transition-colors duration-200 font-medium"
-                                >
-                                  Detail
-                                </button>
-                              </td>
+                              {isEmployeeOnlyView ? (
+                                <>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.nik}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.departemen}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.divisi}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.unit_kerja}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                                      {getStatusText(item.status)}
+                                    </span>
+                                    {item.keteranganIzin && (
+                                      <div className="text-xs text-gray-500 mt-1">{item.keteranganIzin}</div>
+                                    )}
+                                  </td>
+                                </>
+                              ) : (
+                                <>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.unit_kerja}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.jamMasuk}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.jamPulang}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                                      {getStatusText(item.status)}
+                                    </span>
+                                    {reviewMode && item.keteranganIzin && (
+                                      <div className="text-xs text-gray-500 mt-1">{item.keteranganIzin}</div>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    <button
+                                      onClick={() => handleViewDetail(item)}
+                                      className="text-[#25a298] hover:text-[#1f8a80] transition-colors duration-200 font-medium"
+                                    >
+                                      Detail
+                                    </button>
+                                  </td>
+                                </>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -760,7 +778,7 @@ const Absensi: React.FC = () => {
                     {totalDataPages > 1 && (
                       <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
                         <p className="text-sm text-slate-600">
-                          Menampilkan {paginatedAttendanceData.length > 0 ? startDataIndex + 1 : 0}-{Math.min(startDataIndex + paginatedAttendanceData.length, filteredAttendanceData.length)} dari {filteredAttendanceData.length} absensi
+                          Menampilkan {paginatedAttendanceData.length > 0 ? startDataIndex + 1 : 0}-{Math.min(startDataIndex + paginatedAttendanceData.length, filteredAttendanceData.length)} dari {filteredAttendanceData.length} {isEmployeeOnlyView ? 'karyawan' : 'absensi'}
                         </p>
                         <div className="flex items-center space-x-2">
                           <button
@@ -821,7 +839,7 @@ const Absensi: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'pengajuan' && <PengajuanIzin />}
+            {!reviewMode && activeTab === 'pengajuan' && <PengajuanIzin />}
           </div>
         </div>
       </div>

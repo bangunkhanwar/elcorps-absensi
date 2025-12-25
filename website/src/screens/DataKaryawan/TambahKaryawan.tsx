@@ -513,7 +513,7 @@ const TambahKaryawan: React.FC<Props> = ({
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
             <div className="flex items-center space-x-1 text-gray-600 text-xs">
               <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-              <span>Semua data akan disimpan secara aman</span>
+              <span>Semua data akan disimpan</span>
             </div>
             <div className="flex space-x-2">
               <button
