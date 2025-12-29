@@ -1,452 +1,211 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  Modal, 
-  Alert, 
-  StatusBar as RNStatusBar, 
-  Platform,
-  StyleSheet 
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, ActivityIndicator, ImageBackground, Dimensions } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Location from 'expo-location';
+import { captureRef } from 'react-native-view-shot'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 
-export default function AttendanceScreen({ navigation }: any) {
-  const [selectedFilter, setSelectedFilter] = useState('semua');
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [user, setUser] = useState<any>(null);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+const { width } = Dimensions.get('window');
 
-  // Fetch user data and attendance history
+export default function AttendanceScreen() {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [address, setAddress] = useState("Mencari lokasi...");
+  
+  // State Foto
+  const [photo, setPhoto] = useState<any>(null); // Foto mentah dari kamera
+  const [isProcessing, setIsProcessing] = useState(false); // Loading saat proses watermark
+  
+  const [userName, setUserName] = useState("User");
+  
+  const cameraRef = useRef<any>(null);
+  const snapshotRef = useRef<View>(null); // Ref untuk mengambil gambar
+
+  // 1. Ambil Izin & Lokasi saat buka
   useEffect(() => {
-    loadUserDataAndAttendance();
-  }, [selectedMonth, selectedYear]);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadUserDataAndAttendance();
-    });
-    return unsubscribe;
-  }, [navigation]);
-
-  const loadUserDataAndAttendance = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        const userObj = JSON.parse(userData);
-        setUser(userObj);
-        await fetchAttendanceHistory(userObj.id);
+    (async () => {
+      // Izin
+      if (!permission?.granted) await requestPermission();
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setAddress("Lokasi Ditolak");
+        return;
       }
-    } catch (error) {
-      console.error('Error loading data:', error);
-      Alert.alert('Error', 'Gagal memuat data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const fetchAttendanceHistory = async (userId: number) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      let serverIP = await AsyncStorage.getItem('server_ip');
-      if (!serverIP) {
-        serverIP = Platform.OS === 'android' ? '10.2.200.142' : 'localhost';
-      }
-      console.log('Fetching attendance from server:', serverIP);
-
-      const url = `http://${serverIP}:5000/api/attendance/user/${userId}?month=${selectedMonth + 1}&year=${selectedYear}`;
-      let response;
+      // Lokasi & Reverse Geocode
       try {
-        response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+        let loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setLocation(loc);
+        
+        let reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude
         });
-      } catch (networkError) {
-        throw new Error('Tidak dapat terhubung ke server. Pastikan backend berjalan dan IP benar.');
+
+        if (reverseGeocode.length > 0) {
+          let item = reverseGeocode[0];
+          setAddress(`${item.street || item.name || ''}, ${item.city || ''}`);
+        }
+      } catch (e) {
+        setAddress("Gagal memuat GPS");
       }
 
-      console.log('Response status:', response.status);
+      const name = await AsyncStorage.getItem('userName');
+      if (name) setUserName(name);
+    })();
+  }, []);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('DEBUG DATA API:', JSON.stringify(data, null, 2));
-      setAttendanceData(data);
-    } catch (error: any) {
-      console.error('Error fetching attendance:', error);
-      Alert.alert('Error', 'Gagal mengambil data absensi: ' + error.message);
+  // 2. Ambil Foto
+  const takePicture = async () => {
+    if (cameraRef.current) {
+      const options = { quality: 0.5, base64: false, skipProcessing: true };
+      const data = await cameraRef.current.takePictureAsync(options);
+      setPhoto(data); 
+      // Kita tidak langsung upload, tapi tampilkan dulu di layar untuk di-snapshot
     }
   };
 
-  // Tambahkan fungsi calculateStatus
-  const calculateStatus = (waktuMasuk: string | null, waktuKeluar: string | null, statusFromDB: string) => {
-    if (statusFromDB === 'izin' || statusFromDB === 'Izin') return 'Izin';
-    if (!waktuMasuk) return 'Tidak Hadir';
+  // 3. Fungsi Finalisasi (Snapshot Tampilan -> Upload)
+  const processAndSubmit = async () => {
+    if (!snapshotRef.current) return;
+    
+    setIsProcessing(true);
+    try {
+      // Tunggu sebentar agar UI render sempurna
+      await new Promise(r => setTimeout(r, 500));
 
-    const jamMasuk = new Date(`2000-01-01T${waktuMasuk}`);
-    const batasTelat = new Date(`2000-01-01T09:00:00`);
+      // Ambil screenshot dari komponen 'snapshotRef'
+      const finalUri = await captureRef(snapshotRef, {
+        format: "jpg",
+        quality: 0.8,
+        result: "tmpfile" // Simpan ke file temporary
+      });
 
-    return jamMasuk <= batasTelat ? 'Tepat Waktu' : 'Terlambat';
-  };
+      console.log("FOTO FINAL SIAP UPLOAD:", finalUri);
 
-  const months = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
+      // --- DISINI KODE UPLOAD API ---
+      // const formData = new FormData();
+      // formData.append('photo', { uri: finalUri, name: 'absen.jpg', type: 'image/jpeg' } as any);
+      // await api.post('/attendance', formData);
 
-  const years = [2023, 2024, 2025, 2026, 2027];
-
-  const filterOptions = [
-    { value: 'semua', label: 'Semua' },
-    { value: 'tepat-waktu', label: 'Tepat Waktu' },
-    { value: 'terlambat', label: 'Terlambat' },
-    { value: 'tidak-hadir', label: 'Tidak Hadir/Izin' },
-  ];
-
-  // Update filteredData dengan calculateStatus
-  const filteredData = attendanceData.filter(item => {
-    const status = calculateStatus(item.waktu_masuk, item.waktu_keluar, item.status);
-
-    if (selectedFilter === 'semua') return true;
-    if (selectedFilter === 'tepat-waktu') return status === 'Tepat Waktu';
-    if (selectedFilter === 'terlambat') return status === 'Terlambat';
-    if (selectedFilter === 'tidak-hadir') return status === 'Tidak Hadir' || status === 'Izin';
-    return false;
-  });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    };
-    return date.toLocaleDateString('id-ID', options);
-  };
-
-  const formatTime = (timeString: string | null) => {
-    if (!timeString) return '-';
-    const time = new Date(`2000-01-01T${timeString}`);
-    return time.toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Update getStatusColor untuk menangani Izin
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Tepat Waktu': return 'bg-green-100 text-green-800';
-      case 'Terlambat': return 'bg-yellow-100 text-yellow-800';
-      case 'Tidak Hadir': return 'bg-red-100 text-red-800';
-      case 'Izin': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      Alert.alert("Berhasil", "Absensi Terkirim!");
+      setPhoto(null); // Reset ke kamera
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Gagal", "Gagal memproses gambar");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
+  if (!permission?.granted) {
+    return <View style={styles.center}><Text>Butuh Izin Kamera</Text></View>;
+  }
+
+  // --- RENDER ---
   return (
     <View style={styles.container}>
-      {/* Status Bar untuk iOS */}
-      {Platform.OS === 'ios' && (
-        <View style={styles.iosStatusBar} />
-      )}
-
-      {/* Status Bar untuk Android */}
-      {Platform.OS === 'android' && (
-        <RNStatusBar backgroundColor="#25a298" barStyle="light-content" />
-      )}
-
-      {/* SafeAreaView untuk konten */}
-      <SafeAreaView style={styles.safeArea}
-        edges={
-          Platform.OS === 'ios' 
-            ? ['left', 'right', 'bottom'] // iOS: hanya kiri, kanan, bawah
-            : ['top', 'left', 'right', 'bottom'] // Android: semua sisi
-        }>
-        {/* Header */}
-        <View className="bg-primary py-4 px-4 rounded-b-3xl shadow-lg">
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center mr-4"
+      
+      {photo ? (
+        // === TAMPILAN PREVIEW (FOTO SUDAH DIAMBIL) ===
+        <View style={styles.fullScreen}>
+          
+          {/* AREA INI YANG AKAN DIJADIKAN GAMBAR FINAL (FOTO + TEKS) */}
+          {/* collapsable={false} PENTING untuk Android agar View tidak hilang */}
+          <View ref={snapshotRef} collapsable={false} style={styles.snapshotContainer}>
+            <ImageBackground 
+              source={{ uri: photo.uri }} 
+              style={styles.imageBg} 
+              resizeMode="cover"
             >
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-            <View className="flex-1">
-              <Text className="text-2xl font-bold text-white">Riwayat Absensi</Text>
-              <Text className="text-white/80 text-sm mt-1">
-                {user?.nama}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Filter Section */}
-        <View className="bg-white p-4 shadow-sm">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-semibold text-gray-800">Filter Data</Text>
-            <TouchableOpacity
-              onPress={() => setShowFilterModal(true)}
-              className="flex-row items-center bg-primary rounded-lg px-4 py-2"
-            >
-              <Ionicons name="filter" size={16} color="white" />
-              <Text className="text-white ml-2 font-semibold">Filter</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Quick Filter Buttons */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-            <View className="flex-row space-x-2">
-              {filterOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  onPress={() => setSelectedFilter(option.value)}
-                  className={`px-4 py-2 rounded-full ${selectedFilter === option.value
-                    ? 'bg-primary'
-                    : 'bg-gray-200'
-                    }`}
-                >
-                  <Text className={
-                    selectedFilter === option.value
-                      ? 'text-white font-semibold'
-                      : 'text-gray-700'
-                  }>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-
-          {/* Selected Period */}
-          <View className="bg-blue-50 rounded-lg p-3">
-            <Text className="text-blue-800 text-center font-medium">
-              Periode: {months[selectedMonth]} {selectedYear}
-            </Text>
-          </View>
-        </View>
-
-        {/* Attendance List */}
-        <ScrollView className="flex-1 p-4 bg-white" contentContainerStyle={{ flexGrow: 1 }}>
-          {loading ? (
-            <View className="items-center justify-center py-12">
-              <Ionicons name="refresh" size={64} color="#9CA3AF" />
-              <Text className="text-gray-500 text-lg font-semibold mt-4">
-                Memuat data...
-              </Text>
-            </View>
-          ) : (
-            <View className="space-y-3">
-              {filteredData.map((item) => {
-                const status = calculateStatus(item.waktu_masuk, item.waktu_keluar, item.status);
-                return (
-                  <View key={item.id} className="bg-white rounded-xl p-4 shadow-sm">
-                    {/* Date Header */}
-                    <View className="flex-row justify-between items-center mb-3">
-                      <Text className="text-lg font-semibold text-gray-800">
-                        {formatDate(item.tanggal_absen)}
-                      </Text>
-                      <View className={`px-3 py-1 rounded-full ${getStatusColor(status)}`}>
-                        <Text className="font-semibold text-sm">{status}</Text>
-                      </View>
-                    </View>
-
-                    {/* Time Information */}
-                    <View className="flex-row justify-between items-center mb-2">
-                      <View className="flex-1">
-                        <Text className="text-gray-600 text-sm">Clock In</Text>
-                        <Text className="text-gray-800 font-semibold text-lg">
-                          {formatTime(item.waktu_masuk)}
-                        </Text>
-                      </View>
-                      <View className="flex-1 items-center">
-                        <Text className="text-gray-400">-</Text>
-                      </View>
-                      <View className="flex-1 items-end">
-                        <Text className="text-gray-600 text-sm">Clock Out</Text>
-                        <Text className="text-gray-800 font-semibold text-lg">
-                          {formatTime(item.waktu_keluar)}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Location */}
-                    <View className="flex-row items-center mt-2">
-                      <Ionicons name="location" size={16} color="#6B7280" />
-                      <Text className="text-gray-600 ml-2 text-sm">{item.location || 'Lokasi tidak tersedia'}</Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Empty State */}
-          {!loading && filteredData.length === 0 && (
-            <View className="items-center justify-center py-12">
-              <Ionicons name="calendar-outline" size={64} color="#9CA3AF" />
-              <Text className="text-gray-500 text-lg font-semibold mt-4">
-                Tidak ada data absensi
-              </Text>
-              <Text className="text-gray-400 text-center mt-2">
-                Tidak ada riwayat absensi untuk filter yang dipilih
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-
-      {/* Filter Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showFilterModal}
-        onRequestClose={() => setShowFilterModal(false)}
-      >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6 max-h-3/4">
-            {/* Modal Header */}
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-2xl font-bold text-gray-800">Filter Riwayat</Text>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Month Selection */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-800 mb-3">Bulan</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row space-x-2">
-                  {months.map((month, index) => (
-                    <TouchableOpacity
-                      key={month}
-                      onPress={() => setSelectedMonth(index)}
-                      className={`px-4 py-3 rounded-lg ${selectedMonth === index
-                        ? 'bg-primary'
-                        : 'bg-gray-100'
-                        }`}
-                    >
-                      <Text className={
-                        selectedMonth === index
-                          ? 'text-white font-semibold'
-                          : 'text-gray-700'
-                      }>
-                        {month}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-
-            {/* Year Selection */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-800 mb-3">Tahun</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row space-x-2">
-                  {years.map((year) => (
-                    <TouchableOpacity
-                      key={year}
-                      onPress={() => setSelectedYear(year)}
-                      className={`px-4 py-3 rounded-lg ${selectedYear === year
-                        ? 'bg-primary'
-                        : 'bg-gray-100'
-                        }`}
-                    >
-                      <Text className={
-                        selectedYear === year
-                          ? 'text-white font-semibold'
-                          : 'text-gray-700'
-                      }>
-                        {year}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-
-            {/* Status Filter */}
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-800 mb-3">Status</Text>
-              <View className="flex-row flex-wrap -mx-1">
-                {filterOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    onPress={() => setSelectedFilter(option.value)}
-                    className={`mx-1 mb-2 px-4 py-3 rounded-lg flex-1 min-w-[45%] ${selectedFilter === option.value
-                      ? 'bg-primary'
-                      : 'bg-gray-100'
-                      }`}
-                  >
-                    <Text className={
-                      selectedFilter === option.value
-                        ? 'text-white font-semibold text-center'
-                        : 'text-gray-700 text-center'
-                    }>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Overlay Hitam Transparan di Bawah */}
+              <View style={styles.watermarkContainer}>
+                <Text style={styles.wmTitle}>ELCORPS ABSENSI</Text>
+                <View style={styles.wmRow}><Text style={styles.wmLabel}>Nama</Text><Text style={styles.wmValue}>: {userName}</Text></View>
+                <View style={styles.wmRow}><Text style={styles.wmLabel}>Waktu</Text><Text style={styles.wmValue}>: {new Date().toLocaleString('id-ID')}</Text></View>
+                <View style={styles.wmRow}><Text style={styles.wmLabel}>Lokasi</Text><Text style={styles.wmValue}>: {address}</Text></View>
+                {location && <Text style={styles.wmCoords}>{location.coords.latitude}, {location.coords.longitude}</Text>}
               </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View className="flex-row space-x-3">
-              <TouchableOpacity
-                className="flex-1 bg-gray-200 rounded-xl py-4"
-                onPress={() => {
-                  setSelectedFilter('semua');
-                  setSelectedMonth(new Date().getMonth());
-                  setSelectedYear(new Date().getFullYear());
-                }}
-              >
-                <Text className="text-gray-700 text-center font-semibold">
-                  Reset
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-primary rounded-xl py-4"
-                onPress={() => setShowFilterModal(false)}
-              >
-                <Text className="text-white text-center font-semibold">
-                  Terapkan
-                </Text>
-              </TouchableOpacity>
-            </View>
+            </ImageBackground>
           </View>
+
+          {/* TOMBOL AKSI (DILUAR snapshotRef AGAR TIDAK IKUT TERFOTO) */}
+          <View style={styles.actionContainer}>
+            <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => setPhoto(null)}>
+              <Text style={styles.btnText}>Ulangi</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.btn, styles.btnSubmit]} onPress={processAndSubmit} disabled={isProcessing}>
+              {isProcessing ? <ActivityIndicator color="#fff"/> : <Text style={styles.btnText}>Kirim Absen</Text>}
+            </TouchableOpacity>
+          </View>
+
         </View>
-      </Modal>
+      ) : (
+        // === TAMPILAN KAMERA ===
+        <CameraView style={styles.camera} facing="front" ref={cameraRef}>
+          <View style={styles.cameraUi}>
+            <View style={styles.tagLocation}><Text style={styles.tagText}>{address}</Text></View>
+            <TouchableOpacity style={styles.captureBtn} onPress={takePicture}>
+              <View style={styles.captureInner} />
+            </TouchableOpacity>
+          </View>
+        </CameraView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white', // Background utama putih
+  container: { flex: 1, backgroundColor: 'black' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  fullScreen: { flex: 1 },
+  
+  // Style untuk Snapshot Area
+  snapshotContainer: { 
+    flex: 1, 
+    backgroundColor: '#000',
+    position: 'relative', // Pastikan relative
   },
-  iosStatusBar: {
-    backgroundColor: '#25a298', // Warna primary (hijau) untuk status bar iOS
-    height: Platform.OS === 'ios' ? Constants.statusBarHeight : 0,
+  imageBg: { 
+    flex: 1, 
+    width: '100%', 
+    height: '100%', 
+    justifyContent: 'flex-end' // Posisikan watermark di bawah
+  },
+  
+  // Style Watermark (Dibuat agar terbaca jelas)
+  watermarkContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Hitam agak gelap biar tulisan putih terbaca
+    padding: 15,
+    paddingBottom: 20,
     width: '100%',
   },
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'white', // Background putih untuk konten di bawah status bar
+  wmTitle: { color: '#FFD700', fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
+  wmRow: { flexDirection: 'row', marginBottom: 2 },
+  wmLabel: { color: '#ddd', width: 60, fontSize: 12 },
+  wmValue: { color: '#fff', flex: 1, fontSize: 12, fontWeight: '500' },
+  wmCoords: { color: '#aaa', fontSize: 10, marginTop: 3 },
+
+  // Style Tombol Aksi
+  actionContainer: {
+    position: 'absolute',
+    bottom: 30,
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-evenly',
+    zIndex: 10
   },
+  btn: { paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, minWidth: 120, alignItems: 'center' },
+  btnCancel: { backgroundColor: '#FF3B30' },
+  btnSubmit: { backgroundColor: '#34C759' },
+  btnText: { color: 'white', fontWeight: 'bold' },
+
+  // Style Kamera
+  camera: { flex: 1 },
+  cameraUi: { flex: 1, justifyContent: 'space-between', padding: 20 },
+  tagLocation: { alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 8, marginTop: 40 },
+  tagText: { color: 'white', fontSize: 12 },
+  captureBtn: { alignSelf: 'center', marginBottom: 20, width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' },
+  captureInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'white' },
 });
