@@ -197,30 +197,42 @@ const PengajuanIzin: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">
-            {formatDate(selectedLeaveDate)}
-          </h2>
-          <p className="text-sm text-slate-500">Kelola permohonan izin karyawan</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <input
-            type="date"
-            value={selectedLeaveDate}
-            onChange={(e) => setSelectedLeaveDate(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-          />
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Cari nama, NIK, atau unit kerja..."
-              value={searchPengajuan}
-              onChange={(e) => setSearchPengajuan(e.target.value)}
-              className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-            />
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
-              🔍
+      <div className="mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Bagian Kiri: Judul dan Deskripsi */}
+          <div className="order-2 lg:order-1">
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-900 truncate">
+              {formatDate(selectedLeaveDate)}
+            </h2>
+            <p className="text-sm text-slate-500">
+              Kelola permohonan izin karyawan
+            </p>
+          </div>
+          
+          {/* Bagian Kanan: Kontrol dan Pencarian */}
+          <div className="order-1 lg:order-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
+            {/* Input Tanggal */}
+            <div className="w-full sm:w-auto">
+              <input
+                type="date"
+                value={selectedLeaveDate}
+                onChange={(e) => setSelectedLeaveDate(e.target.value)}
+                className="px-3 sm:px-4 py-2 w-full sm:w-48 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200 text-sm sm:text-base"
+              />
+            </div>
+            
+            {/* Pencarian */}
+            <div className="relative w-full sm:w-auto">
+              <input
+                type="text"
+                placeholder="Cari nama, NIK, atau unit kerja..."
+                value={searchPengajuan}
+                onChange={(e) => setSearchPengajuan(e.target.value)}
+                className="pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 w-full sm:w-64 lg:w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200 text-sm sm:text-base"
+              />
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm sm:text-base">
+                🔍
+              </div>
             </div>
           </div>
         </div>

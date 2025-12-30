@@ -247,8 +247,8 @@ const Settings: React.FC = () => {
               </button>
               <div className="w-px h-6 bg-slate-300"></div>
               <div>
-                <h1 className="text-2xl font-bold text-[#25a298]">Pengaturan Hak Akses</h1>
-                <p className="text-sm text-slate-500">Kelola hak akses menu untuk semua Leader</p>
+                <h1 className="text-xl font-bold text-[#25a298]">Pengaturan Hak Akses</h1>
+                <p className="text-sm text-slate-500">Kelola hak akses menu untuk Leader</p>
               </div>
             </div>
           </div>

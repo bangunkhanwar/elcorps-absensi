@@ -514,30 +514,39 @@ const Absensi: React.FC = () => {
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center space-x-2 text-slate-600 hover:text-[#25a298] transition-colors duration-200"
-              >
-                <span>←</span>
-                <span>Kembali</span>
-              </button>
-              <div className="w-px h-6 bg-slate-300"></div>
-              <div>
-                <h1 className="text-2xl font-bold text-[#25a298]">
-                  {reviewMode ? `Review: ${reviewTitle}` : 'Data Absensi'}
-                </h1>
-                <p className="text-sm text-slate-500">
-                  {reviewMode ? 'Data spesifik berdasarkan kategori' : 'Kelola absensi dan pengajuan izin karyawan'}
-                </p>
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16">
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => navigate('/dashboard')}
+                      className="flex items-center space-x-2 text-slate-600 hover:text-[#25a298] transition-colors duration-200"
+                    >
+                      <span>←</span>
+                      <span>Kembali</span>
+                    </button>
+                    <div className="w-px h-6 bg-slate-300"></div>
+                    <div>
+                      <h1 className="text-2xl font-bold text-[#25a298]">
+                        {reviewMode ? `Review: ${reviewTitle}` : 'Data Absensi'}
+                      </h1>
+                      <p className="text-sm text-slate-500">
+                        {reviewMode ? 'Data berdasarkan kategori' : 'Kelola absensi dan pengajuan izin'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             {reviewMode && (
               <button
                 onClick={handleExitReview}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition-colors duration-200 border border-red-200 text-xs sm:text-sm"
+                aria-label="Keluar Review Mode"
               >
-                Keluar Review Mode
+                <span className="hidden xs:inline">Keluar</span>
+                <span className="xs:hidden">×</span>
+                <span className="hidden sm:inline"> Review Mode</span>
               </button>
             )}
           </div>
@@ -578,47 +587,62 @@ const Absensi: React.FC = () => {
           <div className="p-6">
             {(reviewMode || activeTab === 'data') && (
               <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      {formatDate(selectedDate)}
-                    </h2>
-                    <p className="text-sm text-slate-500">
-                      {reviewMode ? 'Data review dari Dashboard' : 'Rekap absensi harian'}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    {!reviewMode && (
-                      <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-                      />
-                    )}
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Cari nama, NIK, atau unit kerja..."
-                        value={searchData}
-                        onChange={(e) => setSearchData(e.target.value)}
-                        className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-                      />
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
-                        🔍
-                      </div>
+                <div className="mb-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    {/* Bagian Kiri: Judul dan Deskripsi */}
+                    <div className="order-2 lg:order-1">
+                      <h2 className="text-lg sm:text-xl font-semibold text-slate-900 truncate">
+                        {formatDate(selectedDate)}
+                      </h2>
+                      <p className="text-sm text-slate-500">
+                        {reviewMode ? 'Data review dari Dashboard' : 'Rekap absensi harian'}
+                      </p>
                     </div>
-                    <button
-                      onClick={exportToExcel}
-                      disabled={filteredAttendanceData.length === 0}
-                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
-                        filteredAttendanceData.length === 0
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-primary-500 text-white hover:bg-primary-600'
-                      }`}
-                    >
-                      <span>Export Excel</span>
-                    </button>
+                    
+                    {/* Bagian Kanan: Kontrol dan Tombol */}
+                    <div className="order-1 lg:order-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
+                      {/* Input Tanggal (jika tidak dalam mode review) */}
+                      {!reviewMode && (
+                        <div className="w-full sm:w-auto">
+                          <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="px-3 sm:px-4 py-2 w-full sm:w-48 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200 text-sm sm:text-base"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Pencarian */}
+                      <div className="relative w-full sm:w-auto">
+                        <input
+                          type="text"
+                          placeholder="Cari nama, NIK, atau unit kerja..."
+                          value={searchData}
+                          onChange={(e) => setSearchData(e.target.value)}
+                          className="pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 w-full sm:w-64 lg:w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200 text-sm sm:text-base"
+                        />
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm sm:text-base">
+                          🔍
+                        </div>
+                      </div>
+                      
+                      {/* Tombol Export Excel */}
+                      <button
+                        onClick={exportToExcel}
+                        disabled={filteredAttendanceData.length === 0}
+                        className={`px-3 sm:px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base w-full sm:w-auto ${
+                          filteredAttendanceData.length === 0
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700'
+                        }`}
+                      >
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Export Excel</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -774,63 +798,108 @@ const Absensi: React.FC = () => {
                       </div>
                     )}
 
-                    {/* PAGINATION YANG DISESUAIKAN DENGAN DATA KARYAWAN */}
+                    {/* PAGINATION */}
                     {totalDataPages > 1 && (
-                      <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-                        <p className="text-sm text-slate-600">
-                          Menampilkan {paginatedAttendanceData.length > 0 ? startDataIndex + 1 : 0}-{Math.min(startDataIndex + paginatedAttendanceData.length, filteredAttendanceData.length)} dari {filteredAttendanceData.length} {isEmployeeOnlyView ? 'karyawan' : 'absensi'}
-                        </p>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={handlePrevPage}
-                            disabled={currentDataPage === 1}
-                            className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
-                          >
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                            Prev
-                          </button>
-
-                          <div className="flex items-center space-x-1">
-                            {/* Tampilkan 5 halaman: current-2, current-1, current, current+1, current+2 */}
-                            {Array.from({ length: Math.min(5, totalDataPages) }, (_, i) => {
-                              let pageNum;
-                              if (totalDataPages <= 5) {
-                                pageNum = i + 1;
-                              } else if (currentDataPage <= 3) {
-                                pageNum = i + 1; // 1, 2, 3, 4, 5
-                              } else if (currentDataPage >= totalDataPages - 2) {
-                                pageNum = totalDataPages - 4 + i; // last-4, last-3, last-2, last-1, last
-                              } else {
-                                pageNum = currentDataPage - 2 + i; // current-2, current-1, current, current+1, current+2
-                              }
-
-                              return (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => handleDataPageChange(pageNum)}
-                                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors duration-200 ${currentDataPage === pageNum
-                                    ? 'bg-[#25a298] text-white'
-                                    : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-                                    }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              );
-                            })}
+                      <div className="px-4 sm:px-6 py-4 border-t border-slate-200">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                          {/* Info Penampilan Data */}
+                          <p className="text-xs sm:text-sm text-slate-600 text-center sm:text-left w-full sm:w-auto">
+                            Menampilkan <span className="font-medium text-[#25a298]">{paginatedAttendanceData.length > 0 ? startDataIndex + 1 : 0}</span>-<span className="font-medium text-[#25a298]">{Math.min(startDataIndex + paginatedAttendanceData.length, filteredAttendanceData.length)}</span> dari <span className="font-medium text-[#25a298]">{filteredAttendanceData.length}</span> {isEmployeeOnlyView ? 'karyawan' : 'absensi'}
+                          </p>
+                          
+                          {/* Pagination */}
+                          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-3 w-full sm:w-auto">
+                            {/* Desktop Pagination (tampil di semua layar) */}
+                            <div className="hidden sm:flex items-center space-x-1 sm:space-x-2">
+                              <button
+                                onClick={handlePrevPage}
+                                disabled={currentDataPage === 1}
+                                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]"
+                                aria-label="Halaman sebelumnya"
+                              >
+                                <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                                <span className="hidden xs:inline">Prev</span>
+                              </button>
+                              
+                              <div className="flex items-center space-x-1">
+                                {Array.from({ length: Math.min(5, totalDataPages) }, (_, i) => {
+                                  let pageNum;
+                                  if (totalDataPages <= 5) {
+                                    pageNum = i + 1;
+                                  } else if (currentDataPage <= 3) {
+                                    pageNum = i + 1;
+                                  } else if (currentDataPage >= totalDataPages - 2) {
+                                    pageNum = totalDataPages - 4 + i;
+                                  } else {
+                                    pageNum = currentDataPage - 2 + i;
+                                  }
+                                  
+                                  return (
+                                    <button
+                                      key={pageNum}
+                                      onClick={() => handleDataPageChange(pageNum)}
+                                      className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg transition-colors duration-200 font-medium ${
+                                        currentDataPage === pageNum
+                                          ? 'bg-[#25a298] text-white shadow-sm'
+                                          : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                                      }`}
+                                      aria-label={`Halaman ${pageNum}`}
+                                      aria-current={currentDataPage === pageNum ? "page" : undefined}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              
+                              <button
+                                onClick={handleNextPage}
+                                disabled={currentDataPage === totalDataPages}
+                                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]"
+                                aria-label="Halaman berikutnya"
+                              >
+                                <span className="hidden xs:inline">Next</span>
+                                <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            </div>
+                            
+                            {/* Mobile Pagination (hanya tampil di mobile) */}
+                            <div className="flex sm:hidden items-center justify-between w-full max-w-xs mx-auto">
+                              <button
+                                onClick={handlePrevPage}
+                                disabled={currentDataPage === 1}
+                                className="px-4 py-2.5 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center flex-1 justify-center mr-2"
+                                aria-label="Halaman sebelumnya"
+                              >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                                Prev
+                              </button>
+                              
+                              <div className="flex items-center space-x-2 mx-2">
+                                <span className="text-sm font-medium text-[#25a298] px-3 py-1.5 bg-slate-50 rounded-lg">
+                                  {currentDataPage} / {totalDataPages}
+                                </span>
+                              </div>
+                              
+                              <button
+                                onClick={handleNextPage}
+                                disabled={currentDataPage === totalDataPages}
+                                className="px-4 py-2.5 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center flex-1 justify-center ml-2"
+                                aria-label="Halaman berikutnya"
+                              >
+                                Next
+                                <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
-
-                          <button
-                            onClick={handleNextPage}
-                            disabled={currentDataPage === totalDataPages}
-                            className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center"
-                          >
-                            Next
-                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     )}
