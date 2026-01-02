@@ -197,30 +197,42 @@ const PengajuanIzin: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">
-            {formatDate(selectedLeaveDate)}
-          </h2>
-          <p className="text-sm text-slate-500">Kelola permohonan izin karyawan</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <input
-            type="date"
-            value={selectedLeaveDate}
-            onChange={(e) => setSelectedLeaveDate(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-          />
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Cari nama, NIK, atau unit kerja..."
-              value={searchPengajuan}
-              onChange={(e) => setSearchPengajuan(e.target.value)}
-              className="pl-10 pr-4 py-2 w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200"
-            />
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
-              🔍
+      <div className="mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Bagian Kiri: Judul dan Deskripsi */}
+          <div className="order-2 lg:order-1">
+            <h2 className="text-lg sm:text-xl font-semibold text-slate-900 truncate">
+              {formatDate(selectedLeaveDate)}
+            </h2>
+            <p className="text-sm text-slate-500">
+              Kelola permohonan izin karyawan
+            </p>
+          </div>
+          
+          {/* Bagian Kanan: Kontrol dan Pencarian */}
+          <div className="order-1 lg:order-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full lg:w-auto">
+            {/* Input Tanggal */}
+            <div className="w-full sm:w-auto">
+              <input
+                type="date"
+                value={selectedLeaveDate}
+                onChange={(e) => setSelectedLeaveDate(e.target.value)}
+                className="px-3 sm:px-4 py-2 w-full sm:w-48 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200 text-sm sm:text-base"
+              />
+            </div>
+            
+            {/* Pencarian */}
+            <div className="relative w-full sm:w-auto">
+              <input
+                type="text"
+                placeholder="Cari nama, NIK, atau unit kerja..."
+                value={searchPengajuan}
+                onChange={(e) => setSearchPengajuan(e.target.value)}
+                className="pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 w-full sm:w-64 lg:w-80 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition-all duration-200 text-sm sm:text-base"
+              />
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm sm:text-base">
+                🔍
+              </div>
             </div>
           </div>
         </div>
@@ -279,38 +291,106 @@ const PengajuanIzin: React.FC = () => {
 
         {/* Pagination Controls */}
         {totalPengajuanPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-            <p className="text-sm text-slate-600">
-              Menampilkan {paginatedLeaveRequests.length > 0 ? startPengajuanIndex + 1 : 0}-{startPengajuanIndex + paginatedLeaveRequests.length} dari {filteredLeaveRequests.length} pengajuan
-            </p>
-            <div className="flex space-x-2">
-              <button 
-                onClick={() => handlePengajuanPageChange(currentPengajuanPage - 1)}
-                disabled={currentPengajuanPage === 1}
-                className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Sebelumnya
-              </button>
-              {Array.from({ length: totalPengajuanPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => handlePengajuanPageChange(page)}
-                  className={`px-3 py-1 rounded-lg transition-colors duration-200 ${
-                    currentPengajuanPage === page
-                      ? 'bg-[#25a298] text-white'
-                      : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button 
-                onClick={() => handlePengajuanPageChange(currentPengajuanPage + 1)}
-                disabled={currentPengajuanPage === totalPengajuanPages}
-                className="px-3 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Selanjutnya
-              </button>
+          <div className="px-4 sm:px-6 py-4 border-t border-slate-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+              {/* Info Penampilan Data */}
+              <p className="text-xs sm:text-sm text-slate-600 text-center sm:text-left w-full sm:w-auto">
+                Menampilkan <span className="font-medium text-[#25a298]">{paginatedLeaveRequests.length > 0 ? startPengajuanIndex + 1 : 0}</span>-<span className="font-medium text-[#25a298]">{startPengajuanIndex + paginatedLeaveRequests.length}</span> dari <span className="font-medium text-[#25a298]">{filteredLeaveRequests.length}</span> pengajuan
+              </p>
+              
+              {/* Pagination */}
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-end gap-3 w-full sm:w-auto">
+                {/* Desktop Pagination (tampil di semua layar) */}
+                <div className="hidden sm:flex items-center space-x-1 sm:space-x-2">
+                  <button 
+                    onClick={() => handlePengajuanPageChange(currentPengajuanPage - 1)}
+                    disabled={currentPengajuanPage === 1}
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]"
+                    aria-label="Halaman sebelumnya"
+                  >
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span className="hidden xs:inline">Sebelumnya</span>
+                  </button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPengajuanPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPengajuanPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPengajuanPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPengajuanPage >= totalPengajuanPages - 2) {
+                        pageNum = totalPengajuanPages - 4 + i;
+                      } else {
+                        pageNum = currentPengajuanPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePengajuanPageChange(pageNum)}
+                          className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg transition-colors duration-200 font-medium ${
+                            currentPengajuanPage === pageNum
+                              ? 'bg-[#25a298] text-white shadow-sm'
+                              : 'border border-slate-300 text-slate-600 hover:bg-slate-50'
+                          }`}
+                          aria-label={`Halaman ${pageNum}`}
+                          aria-current={currentPengajuanPage === pageNum ? "page" : undefined}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <button 
+                    onClick={() => handlePengajuanPageChange(currentPengajuanPage + 1)}
+                    disabled={currentPengajuanPage === totalPengajuanPages}
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]"
+                    aria-label="Halaman berikutnya"
+                  >
+                    <span className="hidden xs:inline">Selanjutnya</span>
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* Mobile Pagination (hanya tampil di mobile) */}
+                <div className="flex sm:hidden items-center justify-between w-full max-w-xs mx-auto">
+                  <button 
+                    onClick={() => handlePengajuanPageChange(currentPengajuanPage - 1)}
+                    disabled={currentPengajuanPage === 1}
+                    className="px-4 py-2.5 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center flex-1 justify-center mr-2"
+                    aria-label="Halaman sebelumnya"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Prev
+                  </button>
+                  
+                  <div className="flex items-center space-x-2 mx-2">
+                    <span className="text-sm font-medium text-[#25a298] px-3 py-1.5 bg-slate-50 rounded-lg">
+                      {currentPengajuanPage} / {totalPengajuanPages}
+                    </span>
+                  </div>
+                  
+                  <button 
+                    onClick={() => handlePengajuanPageChange(currentPengajuanPage + 1)}
+                    disabled={currentPengajuanPage === totalPengajuanPages}
+                    className="px-4 py-2.5 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center flex-1 justify-center ml-2"
+                    aria-label="Halaman berikutnya"
+                  >
+                    Next
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -636,15 +716,13 @@ const PengajuanIzin: React.FC = () => {
                       onClick={() => handleRejectLeave(selectedRequest.id)}
                       className="px-4 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-1"
                     >
-                      <span>❌</span>
                       <span>Tolak</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleApproveLeave(selectedRequest.id)}
-                      className="px-4 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-1"
+                      className="px-4 py-2 text-xs bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors duration-200 flex items-center space-x-1"
                     >
-                      <span>✅</span>
                       <span>Setujui</span>
                     </button>
                   </div>
