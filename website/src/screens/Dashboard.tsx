@@ -562,237 +562,295 @@ const Dashboard: React.FC = () => {
             {/* Compact Stats Grid - 2 Rows */}
             {user?.role === 'hr' && (
               <>
-                {/* Row 1: 5 Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
-                  {/* Total Karyawan */}
-                  <button 
-                    onClick={() => navigateToEmployees()}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">👥</span>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Total Karyawan</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.totalKaryawan}</p>
-                        <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          Lihat →
-                        </p>
-                      </div>
+                {/* Mobile View - Simple List */}
+                <div className="sm:hidden space-y-3 mb-6">
+                  {/* Summary */}
+                  <div className="bg-white rounded-lg border border-slate-200 p-4">
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <button 
+                        onClick={() => navigateToEmployees()}
+                        className="text-center p-3 rounded-lg border border-slate-200 hover:border-[#25a298] transition-colors flex flex-col items-center justify-center"
+                      >
+                        <p className="text-xs text-slate-500 mb-1">Total Karyawan</p>
+                        <p className="text-lg font-bold text-slate-900">{stats.totalKaryawan}</p>
+                      </button>
+                      
+                      <button 
+                        onClick={() => navigateToEmployees('hr')}
+                        className="text-center p-3 rounded-lg border border-slate-200 hover:border-[#25a298] transition-colors flex flex-col items-center justify-center"
+                      >
+                        <p className="text-xs text-slate-500 mb-1">Admin HR</p>
+                        <p className="text-lg font-bold text-slate-900">{stats.totalAdmin}</p>
+                      </button>
                     </div>
-                  </button>
 
-                  {user?.role === 'hr' && (
+                    {/* Stats List */}
+                    <div className="space-y-2">
+                      {[
+                      { key: 'hadirHariIni' as const, label: 'Hadir Hari Ini', value: stats.hadirHariIni, description: 'Clock in & out' },
+                      { key: 'tepatWaktu' as const, label: 'Tepat Waktu', value: stats.tepatWaktu, percentage: stats.hadirHariIni > 0 ? Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100) : 0 },
+                      { key: 'telatMasuk' as const, label: 'Telat Masuk', value: stats.telatMasuk, percentage: stats.hadirHariIni > 0 ? Math.round((stats.telatMasuk / stats.hadirHariIni) * 100) : 0 },
+                      { key: 'pulangCepat' as const, label: 'Pulang Cepat', value: stats.pulangCepat, percentage: stats.hadirHariIni > 0 ? Math.round((stats.pulangCepat / stats.hadirHariIni) * 100) : 0 },
+                      { key: 'absensiTidakLengkap' as const, label: 'Tidak Lengkap', value: stats.absensiTidakLengkap, description: 'Hanya masuk/keluar' },
+                      { key: 'alpha' as const, label: 'Alpha', value: stats.alpha, description: 'Tidak hadir & tidak izin' },
+                      { key: 'totalIzin' as const, label: 'Total Izin', value: stats.totalIzin, description: 'Termasuk multi-day' },
+                      { key: 'pendingIzin' as const, label: 'Pending Izin', value: stats.pendingIzin, description: 'Perlu persetujuan' },
+                    ].map((stat) => (
+                      <button
+                        key={stat.key}
+                        onClick={() => handleReview(stat.key, detailData[stat.key])}
+                        className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-700">{stat.label}</p>
+                          {stat.description && <p className="text-xs text-slate-500 text-left">{stat.description}</p>}
+                        </div>
+                        <div className="flex flex-col items-end ml-4">
+                          <p className="text-base font-bold text-slate-900">{stat.value}</p>
+                          {stat.percentage !== undefined && (
+                            <p className="text-xs text-slate-600">{stat.percentage}%</p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desktop View - Original Grid Cards */}
+                <div className="hidden sm:block">
+                  {/* Row 1: 5 Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
+                    {/* Total Karyawan */}
                     <button 
-                      onClick={() => navigateToEmployees('hr')}
+                      onClick={() => navigateToEmployees()}
                       className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-300">
-                          <span className="text-lg text-[#25a298]">👑</span>
+                        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">👥</span>
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-slate-600">Admin HR</p>
-                          <p className="text-xl font-bold text-slate-900">{stats.totalAdmin}</p>
+                          <p className="text-xs font-medium text-slate-600">Total Karyawan</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.totalKaryawan}</p>
                           <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             Lihat →
                           </p>
                         </div>
                       </div>
                     </button>
-                  )}
 
-                  {/* Hadir Hari Ini */}
-                  <button 
-                    onClick={() => handleReview('hadirHariIni', detailData.hadirHariIni)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">✅</span>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Total Hadir</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.hadirHariIni}</p>
-                        <p className="text-xs text-slate-500">Clock in & out</p>
-                        {stats.hadirHariIni > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    {user?.role === 'hr' && (
+                      <button 
+                        onClick={() => navigateToEmployees('hr')}
+                        className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-300">
+                            <span className="text-lg text-[#25a298]">👑</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-600">Admin HR</p>
+                            <p className="text-xl font-bold text-slate-900">{stats.totalAdmin}</p>
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Lihat →
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    )}
 
-                  {/* Total Izin */}
-                  <button 
-                    onClick={() => handleReview('totalIzin', detailData.totalIzin)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center group-hover:bg-yellow-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">📝</span>
+                    {/* Hadir Hari Ini */}
+                    <button 
+                      onClick={() => handleReview('hadirHariIni', detailData.hadirHariIni)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">✅</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Total Hadir</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.hadirHariIni}</p>
+                          <p className="text-xs text-slate-500">Clock in & out</p>
+                          {stats.hadirHariIni > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Total Izin</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.totalIzin}</p>
-                        <p className="text-xs text-slate-500">Termasuk multi-day</p>
-                        {stats.totalIzin > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
+                    </button>
+
+                    {/* Total Izin */}
+                    <button 
+                      onClick={() => handleReview('totalIzin', detailData.totalIzin)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center group-hover:bg-yellow-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">📝</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Total Izin</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.totalIzin}</p>
+                          <p className="text-xs text-slate-500">Termasuk multi-day</p>
+                          {stats.totalIzin > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
 
 
-                  {/* Pending Izin */}
-                  <button 
-                    onClick={() => handleReview('pendingIzin', detailData.pendingIzin)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">⏳</span>
+                    {/* Pending Izin */}
+                    <button 
+                      onClick={() => handleReview('pendingIzin', detailData.pendingIzin)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">⏳</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Pending</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.pendingIzin}</p>
+                          {stats.pendingIzin > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Pending</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.pendingIzin}</p>
-                        {stats.pendingIzin > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                </div>
+                    </button>
+                  </div>
 
-                {/* Row 2: 5 Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-                  {/* Tepat Waktu */}
-                  <button 
-                    onClick={() => handleReview('tepatWaktu', detailData.tepatWaktu)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">⏱️</span>
+                  {/* Row 2: 5 Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                    {/* Tepat Waktu */}
+                    <button 
+                      onClick={() => handleReview('tepatWaktu', detailData.tepatWaktu)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">⏱️</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Tepat Waktu</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.tepatWaktu}</p>
+                          {stats.hadirHariIni > 0 && (
+                            <p className="text-xs text-slate-500">
+                              {Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100)}%
+                            </p>
+                          )}
+                          {stats.tepatWaktu > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Tepat Waktu</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.tepatWaktu}</p>
-                        {stats.hadirHariIni > 0 && (
-                          <p className="text-xs text-slate-500">
-                            {Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100)}%
-                          </p>
-                        )}
-                        {stats.tepatWaktu > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
 
-                  {/* Telat Masuk */}
-                  <button 
-                    onClick={() => handleReview('telatMasuk', detailData.telatMasuk)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">⏰</span>
+                    {/* Telat Masuk */}
+                    <button 
+                      onClick={() => handleReview('telatMasuk', detailData.telatMasuk)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">⏰</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Telat Masuk</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.telatMasuk}</p>
+                          {stats.hadirHariIni > 0 && (
+                            <p className="text-xs text-slate-500">
+                              {Math.round((stats.telatMasuk / stats.hadirHariIni) * 100)}%
+                            </p>
+                          )}
+                          {stats.telatMasuk > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Telat Masuk</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.telatMasuk}</p>
-                        {stats.hadirHariIni > 0 && (
-                          <p className="text-xs text-slate-500">
-                            {Math.round((stats.telatMasuk / stats.hadirHariIni) * 100)}%
-                          </p>
-                        )}
-                        {stats.telatMasuk > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
 
-                  {/* Pulang Cepat */}
-                  <button 
-                    onClick={() => handleReview('pulangCepat', detailData.pulangCepat)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">🚶‍♂️</span>
+                    {/* Pulang Cepat */}
+                    <button 
+                      onClick={() => handleReview('pulangCepat', detailData.pulangCepat)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">🚶‍♂️</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Pulang Cepat</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.pulangCepat}</p>
+                          {stats.hadirHariIni > 0 && (
+                            <p className="text-xs text-slate-500">
+                              {Math.round((stats.pulangCepat / stats.hadirHariIni) * 100)}%
+                            </p>
+                          )}
+                          {stats.pulangCepat > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Pulang Cepat</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.pulangCepat}</p>
-                        {stats.hadirHariIni > 0 && (
-                          <p className="text-xs text-slate-500">
-                            {Math.round((stats.pulangCepat / stats.hadirHariIni) * 100)}%
-                          </p>
-                        )}
-                        {stats.pulangCepat > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
 
-                  {/* Absensi Tidak Lengkap */}
-                  <button 
-                    onClick={() => handleReview('absensiTidakLengkap', detailData.absensiTidakLengkap)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-gray-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">⚠️</span>
+                    {/* Absensi Tidak Lengkap */}
+                    <button 
+                      onClick={() => handleReview('absensiTidakLengkap', detailData.absensiTidakLengkap)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-gray-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">⚠️</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Tidak Lengkap</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.absensiTidakLengkap}</p>
+                          <p className="text-xs text-slate-500">Hanya masuk/keluar</p>
+                          {stats.absensiTidakLengkap > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Tidak Lengkap</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.absensiTidakLengkap}</p>
-                        <p className="text-xs text-slate-500">Hanya masuk/keluar</p>
-                        {stats.absensiTidakLengkap > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
 
-                  {/* ALPHA - KARYAWAN TIDAK ADA KETERANGAN */}
-                  <button 
-                    onClick={() => handleReview('alpha', detailData.alpha)}
-                    className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
-                        <span className="text-lg text-[#25a298]">❌</span>
+                    {/* ALPHA - KARYAWAN TIDAK ADA KETERANGAN */}
+                    <button 
+                      onClick={() => handleReview('alpha', detailData.alpha)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
+                          <span className="text-lg text-[#25a298]">❌</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Alpha</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.alpha}</p>
+                          <p className="text-xs text-slate-500">Tidak hadir & tidak izin</p>
+                          {stats.alpha > 0 && (
+                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              Review →
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-600">Alpha</p>
-                        <p className="text-xl font-bold text-slate-900">{stats.alpha}</p>
-                        <p className="text-xs text-slate-500">Tidak hadir & tidak izin</p>
-                        {stats.alpha > 0 && (
-                          <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Review →
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -802,27 +860,49 @@ const Dashboard: React.FC = () => {
             {/* Quick Actions Grid */}
             <div className="mb-6">
               {quickActions.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                  {quickActions.map((action) => (
-                    <button
-                      key={action.id}
-                      onClick={() => handleNavigation(action.path)}
-                      className="bg-white rounded-lg p-4 border border-slate-200 hover:border-[#25a298] transition-all duration-300 group text-left"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#25a298] to-[#1f8a80] rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-                          <span className="text-lg text-white">{action.icon}</span>
-                        </div>
+                <>
+                  {/* Mobile View - Simple List */}
+                  <div className="sm:hidden space-y-2">
+                    {quickActions.map((action) => (
+                      <button
+                        key={action.id}
+                        onClick={() => handleNavigation(action.path)}
+                        className="w-full bg-white p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left flex items-center justify-between"
+                      >
                         <div>
-                          <h3 className="font-bold text-sm text-slate-900 group-hover:text-[#25a298] transition-colors duration-300">
-                            {action.title}
-                          </h3>
-                          <p className="text-xs text-slate-600">{action.description}</p>
+                          <h3 className="font-bold text-sm text-slate-900">{action.title}</h3>
+                          <p className="text-xs text-slate-600 mt-1">{action.description}</p>
                         </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                        <span className="text-slate-400 ml-4">→</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Desktop View - Grid with Icons */}
+                  <div className="hidden sm:block">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                      {quickActions.map((action) => (
+                        <button
+                          key={action.id}
+                          onClick={() => handleNavigation(action.path)}
+                          className="bg-white rounded-lg p-4 border border-slate-200 hover:border-[#25a298] transition-all duration-300 group text-left"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-[#25a298] to-[#1f8a80] rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                              <span className="text-lg text-white">{action.icon}</span>
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-sm text-slate-900 group-hover:text-[#25a298] transition-colors duration-300">
+                                {action.title}
+                              </h3>
+                              <p className="text-xs text-slate-600">{action.description}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="bg-white rounded-lg p-4 border border-slate-200 text-center">
                   <div className="w-12 h-12 mx-auto mb-2 bg-slate-100 rounded-lg flex items-center justify-center">

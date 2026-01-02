@@ -119,7 +119,6 @@ const HapusKaryawan: React.FC<Props> = ({
               onClick={handleDelete}
               className="flex-1 px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-1"
             >
-              <span>🗑️</span>
               <span>Hapus</span>
             </button>
           </div>

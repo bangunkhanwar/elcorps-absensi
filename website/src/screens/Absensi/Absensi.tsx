@@ -367,7 +367,7 @@ const Absensi: React.FC = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'tepat_waktu': return 'Tepat Waktu'
-      case 'telat': return 'Telat'
+      case 'terlambat': return 'Terlambat'
       case 'izin': return 'Izin'
       case 'pulang_cepat': return 'Pulang Cepat'
       case 'telat_masuk': return 'Telat Masuk'
