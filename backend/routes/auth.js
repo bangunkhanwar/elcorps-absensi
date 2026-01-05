@@ -5,7 +5,14 @@ const pool = require('../config/database');
 const { auth } = require('../middleware/auth');
 const User = require('../models/user');
 
+const passwordController = require('../controllers/passwordController');
+
 const router = express.Router();
+// Forgot Password
+router.post('/forgot-password', passwordController.forgotPassword);
+
+// Reset Password
+router.post('/reset-password', passwordController.resetPassword);
 
 // Register user (HR only)
 router.post('/register', auth, async (req, res) => {

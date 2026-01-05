@@ -60,11 +60,15 @@ class Attendance {
         s.jam_keluar as jam_keluar_shift,
         s.toleransi_telat_minutes
       FROM absensi a
-      JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
-      JOIN shifts s ON a.shift_id = s.id
+      LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id  -- Ubah JOIN jadi LEFT JOIN
+      LEFT JOIN shifts s ON a.shift_id = s.id             -- Ubah JOIN jadi LEFT JOIN
       WHERE a.user_id = $1 AND a.tanggal_absen BETWEEN $2 AND $3 
-      ORDER BY a.tanggal_absen DESC
+      ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC   -- Tambah sort waktu
     `;
+    
+    // Tambahkan log untuk debug
+    // console.log("Executing History Query:", {user_id, startDate, endDate});
+    
     const result = await pool.query(query, [user_id, startDate, endDate]);
     return result.rows;
   }

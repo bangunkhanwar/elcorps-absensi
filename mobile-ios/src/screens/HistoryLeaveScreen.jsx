@@ -5,7 +5,7 @@ import { leaveAPI } from '../services/api';
 
 const HistoryLeaveScreen = () => {
   const navigate = useNavigate();
-  
+
   const [selectedFilter, setSelectedFilter] = useState('semua');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -34,28 +34,64 @@ const HistoryLeaveScreen = () => {
     }
   };
 
+  // const fetchLeaveHistory = async () => {
+  //   try {
+  //     const response = await leaveAPI.getMyLeaves();
+  //     console.log("Data dari Backend:", response.data);
+
+  //     if (response.data.success) {
+  //       const allLeaves = response.data.leaves || [];
+
+  //       // Filter berdasarkan bulan dan tahun yang dipilih
+  //       const filteredData = allLeaves.filter((item) => {
+  //         const startDate = new Date(item.start_date);
+  //         const endDate = new Date(item.end_date);
+  //         const selectedMonthStart = new Date(selectedYear, selectedMonth, 1);
+  //         const selectedMonthEnd = new Date(selectedYear, selectedMonth + 1, 0);
+
+  //         return (
+  //           (startDate >= selectedMonthStart && startDate <= selectedMonthEnd) ||
+  //           (endDate >= selectedMonthStart && endDate <= selectedMonthEnd) ||
+  //           (startDate <= selectedMonthStart && endDate >= selectedMonthEnd)
+  //         );
+  //       });
+
+  //       // Sort by date (newest first)
+  //       filteredData.sort((a, b) => {
+  //         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  //       });
+
+  //       setLeaveData(filteredData);
+  //     } else {
+  //       setLeaveData([]);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching leave data:', error);
+  //     alert('Gagal mengambil data izin: ' + error.message);
+  //   }
+  // };
+
   const fetchLeaveHistory = async () => {
     try {
       const response = await leaveAPI.getMyLeaves();
-      
-      if (response.data.success) {
-        const allLeaves = response.data.leaves || [];
-        
-        // Filter berdasarkan bulan dan tahun yang dipilih
-        const filteredData = allLeaves.filter((item) => {
-          const startDate = new Date(item.start_date);
-          const endDate = new Date(item.end_date);
-          const selectedMonthStart = new Date(selectedYear, selectedMonth, 1);
-          const selectedMonthEnd = new Date(selectedYear, selectedMonth + 1, 0);
 
-          return (
-            (startDate >= selectedMonthStart && startDate <= selectedMonthEnd) ||
-            (endDate >= selectedMonthStart && endDate <= selectedMonthEnd) ||
-            (startDate <= selectedMonthStart && endDate >= selectedMonthEnd)
-          );
+      if (response.data && response.data.leaves) {
+        const allLeaves = response.data.leaves;
+
+        const filteredData = allLeaves.filter((item) => {
+          // Gunakan substr(0, 10) untuk mengambil YYYY-MM-DD saja agar tidak terpengaruh jam/timezone
+          const dateString = item.start_date.substring(0, 10);
+          const [year, month, day] = dateString.split('-').map(Number);
+
+          // month di database adalah 1-12, di JS selectedMonth adalah 0-11
+          // Jadi kita kurangi 1 untuk membandingkan
+          const dbMonth = month - 1;
+          const dbYear = year;
+
+          return dbMonth === selectedMonth && dbYear === selectedYear;
         });
 
-        // Sort by date (newest first)
+        // Sort: Terbaru berdasarkan tanggal pengajuan
         filteredData.sort((a, b) => {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
@@ -66,7 +102,6 @@ const HistoryLeaveScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching leave data:', error);
-      alert('Gagal mengambil data izin: ' + error.message);
     }
   };
 
@@ -204,7 +239,7 @@ const HistoryLeaveScreen = () => {
             {filteredData.map((item) => {
               const duration = calculateDuration(item.start_date, item.end_date);
               const isSameDay = new Date(item.start_date).toDateString() === new Date(item.end_date).toDateString();
-              
+
               return (
                 <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                   {/* Header */}
@@ -233,8 +268,8 @@ const HistoryLeaveScreen = () => {
                     <p className="text-gray-600 text-sm">Periode Izin:</p>
                     <div className="flex items-center mt-1">
                       <p className="text-gray-800 font-medium text-sm">
-                        {isSameDay ? 
-                          formatDate(item.start_date) : 
+                        {isSameDay ?
+                          formatDate(item.start_date) :
                           `${formatDate(item.start_date)} - ${formatDate(item.end_date)}`
                         }
                       </p>

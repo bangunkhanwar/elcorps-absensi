@@ -393,8 +393,32 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
 // GET HISTORY
 router.get('/history', auth, async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    // Ubah const menjadi let agar bisa diisi default
+    let { startDate, endDate } = req.query;
     const user_id = req.user.id;
+
+    // --- LOGIKA TAMBAHAN: Default Date ---
+    if (!startDate || !endDate) {
+      const now = new Date();
+      // Default: Tanggal 1 bulan ini
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      // Default: Tanggal terakhir bulan ini
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      // Helper format YYYY-MM-DD lokal (hindari pergeseran UTC)
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      if (!startDate) startDate = formatDate(firstDay);
+      if (!endDate) endDate = formatDate(lastDay);
+      
+      console.log('📅 History params missing, using defaults:', startDate, 'to', endDate);
+    }
+    // -------------------------------------
 
     const attendance = await Attendance.getUserAttendance(user_id, startDate, endDate);
     

@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Untuk PWA, gunakan localStorage (bukan AsyncStorage)
-const API_BASE_URL = 'http://localhost:5000/api';
+// const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://l26q1zp3-5000.asse.devtunnels.ms/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,6 +10,7 @@ const api = axios.create({
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
   },
 });
 

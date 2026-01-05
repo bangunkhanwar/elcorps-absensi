@@ -35,27 +35,47 @@ const AttendanceScreen = () => {
     }
   };
 
-  const fetchAttendanceHistory = async (userId) => {
+  const fetchAttendanceHistory = async () => {
     try {
-      const params = {
-        month: selectedMonth + 1,
-        year: selectedYear
+      // 1. Hitung tanggal awal dan akhir bulan yang dipilih
+      const firstDay = new Date(selectedYear, selectedMonth, 1);
+      const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
+
+      const formatYMD = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
       };
+
+      const startDate = formatYMD(firstDay);
+      const endDate = formatYMD(lastDay);
+
+      console.log(`Fetching data from ${startDate} to ${endDate}`);
       
-      const response = await attendanceAPI.getUserAttendance(userId, params);
+      // 2. PANGGIL API DENGAN OBJECT (Cocok dengan api.js Anda sekarang)
+      const response = await attendanceAPI.getHistory({ 
+        startDate: startDate, 
+        endDate: endDate 
+      });
       
-      if (response.data.success) {
-        setAttendanceData(response.data.data || []);
+      // 3. Ambil datanya
+      // Backend mengirim { message: "...", data: [...] }
+      const listAbsensi = response.data.data || [];
+
+      if (listAbsensi.length > 0) {
+        // Sortir dari yang terbaru
+        const sortedData = listAbsensi.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setAttendanceData(sortedData);
       } else {
         setAttendanceData([]);
       }
     } catch (error) {
-      console.error('Error fetching attendance:', error);
-      alert('Gagal mengambil data absensi: ' + error.message);
+      console.error('Gagal mengambil riwayat absen:', error);
+      // Optional: Handle error UI
     }
   };
-
-  // Fungsi untuk menghitung status
+  
   const calculateStatus = (waktuMasuk, waktuKeluar, statusFromDB) => {
     if (statusFromDB === 'izin' || statusFromDB === 'Izin') return 'Izin';
     if (!waktuMasuk) return 'Tidak Hadir';
