@@ -14,11 +14,11 @@ const leaveRoutes = require('./routes/leave');
 const shiftRoutes = require('./routes/shift'); 
 
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'https://l26q1zp3-5173.asse.devtunnels.ms', // Tambahkan ini
-  'https://l26q1zp3-5174.asse.devtunnels.ms'
-];
+  process.env.FRONTEND_URL_1 || 'http://localhost:5173',
+  process.env.FRONTEND_URL_2 || 'http://localhost:5174',
+  process.env.FRONTEND_URL_3 || '',
+  process.env.FRONTEND_URL_4 || ''
+].filter(Boolean);
 
 // Middleware
 // app.use(cors());

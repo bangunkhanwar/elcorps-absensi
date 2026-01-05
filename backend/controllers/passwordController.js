@@ -32,7 +32,8 @@ exports.forgotPassword = async (req, res) => {
     );
 
     // Kirim email reset password
-    const resetLink = `https://l26q1zp3-5174.asse.devtunnels.ms/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
+    const baseResetUrl = process.env.RESET_PASSWORD_URL || 'http://localhost:5174/reset-password';
+    const resetLink = `${baseResetUrl}?token=${token}&email=${encodeURIComponent(email)}`;
     await transporter.sendMail({
       from: 'yahya.d.prastyo@gmail.com',
       to: email,

@@ -20,7 +20,7 @@ const SettingScreen = () => {
     }
     
     // Get current API base URL
-    const apiBaseURL = localStorage.getItem('api_base_url') || 'http://localhost:5000/api';
+    const apiBaseURL = localStorage.getItem('api_base_url') || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     console.log('Current API Base URL:', apiBaseURL);
   }, []);
 
@@ -67,7 +67,7 @@ const SettingScreen = () => {
   const handleResetToDefault = () => {
     setIpAddress('');
     localStorage.removeItem('manual_server_ip');
-    localStorage.setItem('api_base_url', 'http://localhost:5000/api');
+    localStorage.setItem('api_base_url', import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
     setCurrentIP('');
     alert('IP server telah direset ke default (localhost)');
   };
