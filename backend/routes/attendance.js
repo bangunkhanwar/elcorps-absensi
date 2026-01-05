@@ -538,7 +538,7 @@ router.get('/today-all', auth, async (req, res) => {
   }
 });
 
-// GET ALL ATTENDANCE (Untuk HR dan Leader dengan website access)
+// GET ALL ATTENDANCE (Untuk HR dan Leader dengan website access) - PAKAI YANG LAMA
 router.get('/all', auth, async (req, res) => {
   try {
     // Periksa apakah user memiliki akses website
@@ -550,15 +550,18 @@ router.get('/all', auth, async (req, res) => {
     }
 
     const { startDate, endDate, unitId } = req.query;
-    console.log('🔍 Fetching all attendance with status calculation:', { 
+    console.log('🔍 Fetching all attendance for period:', { 
       startDate, 
       endDate, 
       unitId,
-      userRole: req.user.role
+      userRole: req.user.role,
+      userUnitId: req.user.unit_kerja_id
     });
     
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
+    
+    console.log('📅 Using date range:', queryStartDate, 'to', queryEndDate);
     
     // Untuk leader (non-HR) dengan website_access, hanya bisa lihat unit kerjanya sendiri
     let filteredUnitId = unitId;
@@ -567,82 +570,20 @@ router.get('/all', auth, async (req, res) => {
       filteredUnitId = req.user.unit_kerja_id || unitId;
     }
     
-    // 1. Ambil data absensi dengan join shift & unit kerja
-    const attendanceQuery = `
-      SELECT 
-        a.*,
-        u.nama,
-        u.nik,
-        u.jabatan,
-        u.departemen,
-        u.divisi,
-        uk.nama_unit,
-        uk.timezone,
-        s.nama_shift,
-        s.jam_masuk as jam_masuk_shift,
-        s.jam_keluar as jam_keluar_shift,
-        s.toleransi_telat_minutes,
-        CONCAT(
-          EXTRACT(HOUR FROM a.waktu_masuk)::text, 
-          ':', 
-          LPAD(EXTRACT(MINUTE FROM a.waktu_masuk)::text, 2, '0')
-        ) as waktu_masuk_formatted,
-        CONCAT(
-          EXTRACT(HOUR FROM a.waktu_keluar)::text, 
-          ':', 
-          LPAD(EXTRACT(MINUTE FROM a.waktu_keluar)::text, 2, '0')
-        ) as waktu_keluar_formatted
-      FROM absensi a
-      JOIN users u ON a.user_id = u.id
-      JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
-      JOIN shifts s ON a.shift_id = s.id
-      WHERE a.tanggal_absen BETWEEN $1 AND $2
-      ${filteredUnitId ? 'AND a.unit_kerja_id = $3' : ''}
-      ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
-    `;
+    // PAKAI MODEL LAMA YANG SUDAH BERFUNGSI
+    const attendance = await Attendance.getAllAttendance(
+      queryStartDate, 
+      queryEndDate, 
+      filteredUnitId || null
+    );
     
-    const params = [queryStartDate, queryEndDate];
-    if (filteredUnitId) params.push(filteredUnitId);
-    
-    // 2. Ambil data izin dalam periode yang sama
-    const leaveQuery = `
-      SELECT 
-        i.*,
-        u.nik,
-        u.nama
-      FROM izin i
-      JOIN users u ON i.user_id = u.id
-      WHERE i.status = 'disetujui'
-        AND (i.start_date, i.end_date) OVERLAPS ($1::date, $2::date)
-    `;
-    
-    // 3. Eksekusi kedua query secara parallel
-    const [attendanceResult, leaveResult] = await Promise.all([
-      pool.query(attendanceQuery, params),
-      pool.query(leaveQuery, [queryStartDate, queryEndDate])
-    ]);
-    
-    console.log(`✅ Retrieved ${attendanceResult.rows.length} attendance records and ${leaveResult.rows.length} approved leaves`);
-    
-    // 4. Hitung status untuk setiap record absensi
-    const attendanceWithStatus = attendanceResult.rows.map(record => {
-      const status = calculateFullAttendanceStatus(record, {
-        jam_masuk: record.jam_masuk_shift,
-        jam_keluar: record.jam_keluar_shift,
-        toleransi_telat_minutes: record.toleransi_telat_minutes || 5
-      }, leaveResult.rows);
-      
-      return {
-        ...record,
-        status // Status yang sudah dihitung dengan logika lengkap
-      };
-    });
+    console.log(`✅ Successfully retrieved ${attendance.length} attendance records`);
     
     res.json({
       success: true,
       message: 'Data semua absensi',
       period: { startDate: queryStartDate, endDate: queryEndDate },
-      attendances: attendanceWithStatus
+      attendances: attendance
     });
   } catch (error) {
     console.error('❌ All attendance error:', error.message);
