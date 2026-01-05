@@ -3,7 +3,6 @@ const Attendance = require('../models/attendance');
 const User = require('../models/user');
 const fs = require('fs');
 const path = require('path');
-
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -49,6 +48,67 @@ function calculateStatus(currentTime, shiftTime, tolerance) {
   } else {
     return 'Terlambat';
   }
+}
+
+// Helper function: Calculate FULL attendance status (masuk + pulang)
+function calculateFullAttendanceStatus(attendance, userShift, leaveRecords) {
+  const {
+    waktu_masuk,
+    waktu_keluar,
+    tanggal_absen,
+    user_id
+  } = attendance;
+
+  const {
+    jam_masuk,
+    jam_keluar,
+    toleransi_telat_minutes
+  } = userShift;
+
+  // 1. Cek apakah ada izin yang disetujui pada tanggal tersebut
+  const hasApprovedLeave = leaveRecords && leaveRecords.some(leave => 
+    leave.user_id === user_id &&
+    leave.status === 'disetujui' &&
+    new Date(tanggal_absen) >= new Date(leave.start_date) &&
+    new Date(tanggal_absen) <= new Date(leave.end_date)
+  );
+
+  if (hasApprovedLeave) return 'Izin';
+
+  // 2. Tidak ada data absensi sama sekali
+  if (!waktu_masuk && !waktu_keluar) return 'Alpha';
+
+  // 3. Hanya salah satu yang terisi
+  if (!waktu_masuk || !waktu_keluar) return 'Tidak Lengkap';
+
+  // 4. Parse waktu ke menit untuk perhitungan
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr) return 0;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const masukMenit = parseTimeToMinutes(waktu_masuk);
+  const keluarMenit = parseTimeToMinutes(waktu_keluar);
+  const jamMasukMenit = parseTimeToMinutes(jam_masuk);
+  const jamKeluarMenit = parseTimeToMinutes(jam_keluar);
+
+  // 5. Toleransi keterlambatan
+  const isLate = masukMenit > (jamMasukMenit + (toleransi_telat_minutes || 5));
+  const isEarlyOut = keluarMenit < jamKeluarMenit;
+
+  // 6. Tentukan status lengkap
+  if (!isLate && !isEarlyOut) {
+    return 'Tepat Waktu';
+  } else if (!isLate && isEarlyOut) {
+    return 'Pulang Cepat';
+  } else if (isLate && !isEarlyOut) {
+    return 'Masuk Telat';
+  } else if (isLate && isEarlyOut) {
+    return 'Masuk Telat + Pulang Cepat';
+  }
+
+  return 'Lainnya';
 }
 
 // Helper function: Get current time in specific timezone (SERVER TIME)
@@ -482,7 +542,6 @@ router.get('/today-all', auth, async (req, res) => {
 router.get('/all', auth, async (req, res) => {
   try {
     // Periksa apakah user memiliki akses website
-    // HR selalu punya akses, Leader hanya jika website_access = true
     if (req.user.role !== 'hr' && !req.user.website_access) {
       return res.status(403).json({ 
         success: false, 
@@ -491,18 +550,15 @@ router.get('/all', auth, async (req, res) => {
     }
 
     const { startDate, endDate, unitId } = req.query;
-    console.log('🔍 Fetching all attendance for period:', { 
+    console.log('🔍 Fetching all attendance with status calculation:', { 
       startDate, 
       endDate, 
       unitId,
-      userRole: req.user.role,
-      userUnitId: req.user.unit_kerja_id
+      userRole: req.user.role
     });
     
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
-    
-    console.log('📅 Using date range:', queryStartDate, 'to', queryEndDate);
     
     // Untuk leader (non-HR) dengan website_access, hanya bisa lihat unit kerjanya sendiri
     let filteredUnitId = unitId;
@@ -511,20 +567,82 @@ router.get('/all', auth, async (req, res) => {
       filteredUnitId = req.user.unit_kerja_id || unitId;
     }
     
-    // Panggil dengan unitId jika ada
-    const attendance = await Attendance.getAllAttendance(
-      queryStartDate, 
-      queryEndDate, 
-      filteredUnitId || null
-    );
+    // 1. Ambil data absensi dengan join shift & unit kerja
+    const attendanceQuery = `
+      SELECT 
+        a.*,
+        u.nama,
+        u.nik,
+        u.jabatan,
+        u.departemen,
+        u.divisi,
+        uk.nama_unit,
+        uk.timezone,
+        s.nama_shift,
+        s.jam_masuk as jam_masuk_shift,
+        s.jam_keluar as jam_keluar_shift,
+        s.toleransi_telat_minutes,
+        CONCAT(
+          EXTRACT(HOUR FROM a.waktu_masuk)::text, 
+          ':', 
+          LPAD(EXTRACT(MINUTE FROM a.waktu_masuk)::text, 2, '0')
+        ) as waktu_masuk_formatted,
+        CONCAT(
+          EXTRACT(HOUR FROM a.waktu_keluar)::text, 
+          ':', 
+          LPAD(EXTRACT(MINUTE FROM a.waktu_keluar)::text, 2, '0')
+        ) as waktu_keluar_formatted
+      FROM absensi a
+      JOIN users u ON a.user_id = u.id
+      JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
+      JOIN shifts s ON a.shift_id = s.id
+      WHERE a.tanggal_absen BETWEEN $1 AND $2
+      ${filteredUnitId ? 'AND a.unit_kerja_id = $3' : ''}
+      ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC
+    `;
     
-    console.log(`✅ Successfully retrieved ${attendance.length} attendance records`);
+    const params = [queryStartDate, queryEndDate];
+    if (filteredUnitId) params.push(filteredUnitId);
+    
+    // 2. Ambil data izin dalam periode yang sama
+    const leaveQuery = `
+      SELECT 
+        i.*,
+        u.nik,
+        u.nama
+      FROM izin i
+      JOIN users u ON i.user_id = u.id
+      WHERE i.status = 'disetujui'
+        AND (i.start_date, i.end_date) OVERLAPS ($1::date, $2::date)
+    `;
+    
+    // 3. Eksekusi kedua query secara parallel
+    const [attendanceResult, leaveResult] = await Promise.all([
+      pool.query(attendanceQuery, params),
+      pool.query(leaveQuery, [queryStartDate, queryEndDate])
+    ]);
+    
+    console.log(`✅ Retrieved ${attendanceResult.rows.length} attendance records and ${leaveResult.rows.length} approved leaves`);
+    
+    // 4. Hitung status untuk setiap record absensi
+    const attendanceWithStatus = attendanceResult.rows.map(record => {
+      const status = calculateFullAttendanceStatus(record, {
+        jam_masuk: record.jam_masuk_shift,
+        jam_keluar: record.jam_keluar_shift,
+        toleransi_telat_minutes: record.toleransi_telat_minutes || 5
+      }, leaveResult.rows);
+      
+      return {
+        ...record,
+        status // Status yang sudah dihitung dengan logika lengkap
+      };
+    });
     
     res.json({
       success: true,
       message: 'Data semua absensi',
       period: { startDate: queryStartDate, endDate: queryEndDate },
-      attendances: attendance
+      attendances: attendanceWithStatus
     });
   } catch (error) {
     console.error('❌ All attendance error:', error.message);
