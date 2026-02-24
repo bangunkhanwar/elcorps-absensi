@@ -50,44 +50,16 @@ const LoginScreen = () => {
         password: form.password 
       });
       
-      const responseData = response.data;
-      
-      if (responseData.token) {
-        localStorage.setItem('token', responseData.token);
-        localStorage.setItem('user', JSON.stringify(responseData.user || responseData.data));
+      // Standardized response handling thanks to interceptor
+      if (response.success && response.data?.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         navigate('/', { replace: true });
-        return;
+      } else {
+        setError('Login gagal. Periksa kembali akun Anda.');
       }
-      
-      if (responseData.success && responseData.data?.token) {
-        localStorage.setItem('token', responseData.data.token);
-        localStorage.setItem('user', JSON.stringify(responseData.data.user || responseData.data));
-        navigate('/', { replace: true });
-        return;
-      }
-      
-      if (responseData.data?.token) {
-        localStorage.setItem('token', responseData.data.token);
-        localStorage.setItem('user', JSON.stringify(responseData.data.user || responseData.data));
-        navigate('/', { replace: true });
-        return;
-      }
-      
-      console.error('Response format tidak dikenali:', responseData);
-      setError('Format response tidak dikenali');
-      
     } catch (err) {
-      console.error('Login error:', err);
-      
-      let errorMessage = 'Terjadi kesalahan saat login';
-      
-      if (err.response) {
-        errorMessage = err.response.data?.message || `Error ${err.response.status}`;
-      } else if (err.request) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
-      setError(errorMessage);
+      setError(err.message);
     } finally {
       setLoading(false);
     }

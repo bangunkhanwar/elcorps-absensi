@@ -32,13 +32,24 @@ class User {
   }
 
   static async findByEmail(email) {
+    const query = 'SELECT id, nama, nik, email, role, website_access FROM users WHERE email = $1';
+    const result = await pool.query(query, [email]);
+    return result.rows[0];
+  }
+
+  static async findByEmailWithPassword(email) {
     const query = 'SELECT * FROM users WHERE email = $1';
     const result = await pool.query(query, [email]);
     return result.rows[0];
   }
 
   static async findById(id) {
-    const query = 'SELECT * FROM users WHERE id = $1';
+    const query = `
+      SELECT id, nama, nik, email, jabatan, departemen, divisi, 
+             foto_profile, role, unit_kerja_id, shift_id, 
+             website_access, website_privileges 
+      FROM users WHERE id = $1
+    `;
     const result = await pool.query(query, [id]);
     return result.rows[0];
   }
@@ -268,47 +279,43 @@ class User {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Get total employees in the unit
-      const totalQuery = `
-        SELECT COUNT(*) as total 
-        FROM users 
-        WHERE unit_kerja_id = $1 AND role != 'hr'
+      const query = `
+        WITH employee_stats AS (
+          SELECT 
+            u.id,
+            a.waktu_masuk,
+            s.jam_masuk as shift_masuk,
+            s.toleransi_telat_minutes
+          FROM users u
+          LEFT JOIN shifts s ON u.shift_id = s.id
+          LEFT JOIN absensi a ON u.id = a.user_id AND a.tanggal_absen = $2
+          WHERE u.unit_kerja_id = $1 AND u.role != 'hr'
+        )
+        SELECT 
+          COUNT(*) as total,
+          COUNT(waktu_masuk) as present,
+          COUNT(CASE 
+            WHEN waktu_masuk > (shift_masuk::time + (toleransi_telat_minutes || ' minutes')::interval) 
+            THEN 1 
+          END) as late
+        FROM employee_stats;
       `;
-      const totalResult = await pool.query(totalQuery, [unitId]);
-      const totalEmployees = parseInt(totalResult.rows[0].total);
-
-      // Get today's attendance for the unit
-      const attendanceQuery = `
-        SELECT a.*, u.nama 
-        FROM absensi a
-        JOIN users u ON a.user_id = u.id
-        WHERE a.unit_kerja_id = $1 AND a.tanggal_absen = $2
-      `;
-      const attendanceResult = await pool.query(attendanceQuery, [unitId, today]);
-      const todayData = attendanceResult.rows;
-
-      const presentToday = todayData.length || 0;
       
-      const lateToday = todayData.filter(item => {
-        if (!item.waktu_masuk) return false;
-        const waktuMasuk = new Date(`1970-01-01T${item.waktu_masuk}`);
-        return waktuMasuk > new Date('1970-01-01T08:00:00');
-      }).length;
+      const result = await pool.query(query, [unitId, today]);
+      const data = result.rows[0];
 
-      const onTimeCount = todayData.filter(item => {
-        if (!item.waktu_masuk) return false;
-        const waktuMasuk = new Date(`1970-01-01T${item.waktu_masuk}`);
-        return waktuMasuk <= new Date('1970-01-01T08:00:00');
-      }).length;
-
-      const onTimePercentage = presentToday > 0 ? Math.round((onTimeCount / presentToday) * 100) : 0;
-
+      const totalEmployees = parseInt(data.total) || 0;
+      const presentToday = parseInt(data.present) || 0;
+      const lateToday = parseInt(data.late) || 0;
+      
       return {
         totalEmployees,
         presentToday,
         lateToday,
         absentToday: totalEmployees - presentToday,
-        onTimePercentage
+        onTimePercentage: presentToday > 0 
+          ? Math.round(((presentToday - lateToday) / presentToday) * 100) 
+          : 0
       };
     } catch (error) {
       throw error;

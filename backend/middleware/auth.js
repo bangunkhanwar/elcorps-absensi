@@ -1,33 +1,47 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const { sendError } = require('../utils/responseHandler');
 
+/**
+ * Main authentication middleware
+ */
 const auth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ error: 'Access denied. No token provided.' });
+      return sendError(res, 'Akses ditolak. Token tidak tersedia.', 401);
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Find user and select all fields (needed for later checks), but omit password
     const user = await User.findById(decoded.userId);
     
     if (!user) {
-      return res.status(401).json({ error: 'Token is not valid.' });
+      return sendError(res, 'Token tidak valid atau user tidak ditemukan.', 401);
     } 
 
     req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Token is not valid.' });
+    console.error('[AuthMiddleware]', error.message);
+    return sendError(res, 'Token tidak valid.', 401);
   }
 };
 
-const isHR = (req, res, next) => {
-  if (req.user.role !== 'hr') {
-    return res.status(403).json({ error: 'Access denied. HR role required.' });
-  }
-  next();
+/**
+ * Role-based authorization middleware
+ */
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return sendError(res, 'Akses ditolak. Izin tidak memadai.', 403);
+    }
+    next();
+  };
 };
 
-module.exports = { auth, isHR };
+// Preset authorization middlewares
+const isHR = authorize('hr');
+
+module.exports = { auth, authorize, isHR };
