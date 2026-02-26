@@ -200,7 +200,11 @@ const AttendanceScreen = () => {
                   {/* Location */}
                   <div className="flex items-center text-gray-600 text-sm">
                     <MapPin size={16} className="mr-2" />
-                    <span>{item.location || 'Lokasi tidak tersedia'}</span>
+                    <span>
+                      {item.location 
+                        ? item.location.split(' (')[0] 
+                        : 'Lokasi tidak tersedia'}
+                    </span>
                   </div>
                 </div>
               );
