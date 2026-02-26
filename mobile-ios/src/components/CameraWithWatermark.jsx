@@ -1,22 +1,56 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Camera, X, RefreshCw, MapPin, AlertCircle } from 'lucide-react';
 import { formatDate, formatTime } from '../utils/formatters';
 
-const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto" }) => {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initialLocation = null }) => {
+  const videoRef = React.useRef(null);
+  const canvasRef = React.useRef(null);
+  const streamRef = React.useRef(null); // Ref for immediate access in cleanup
   const [stream, setStream] = useState(null);
-  const [location, setLocation] = useState(null);
+  const [location, setLocation] = useState(initialLocation ? { lat: parseFloat(initialLocation.latitude), lng: parseFloat(initialLocation.longitude) } : null);
   const [address, setAddress] = useState("Mencari alamat...");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const watchId = React.useRef(null);
+  const retryCount = React.useRef(0);
+  const MAX_RETRIES = 2;
 
-  // 1. Start Camera and Get Location
+  // 1. Camera & Location Lifecycle Management
   useEffect(() => {
-    startCamera();
-    getLocation();
-    return () => stopCamera();
-  }, []);
+    const init = async () => {
+      await startCamera();
+      
+      if (initialLocation) {
+        const lat = parseFloat(initialLocation.latitude);
+        const lng = parseFloat(initialLocation.longitude);
+        setLocation({ lat, lng });
+        reverseGeocode(lat, lng);
+      } else {
+        startTrackingLocation();
+      }
+    };
+
+    init();
+
+    // Handle when user switches apps or tabs
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopCamera();
+        stopTrackingLocation();
+      } else {
+        if (!streamRef.current) startCamera();
+        if (!watchId.current && !initialLocation) startTrackingLocation();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopCamera();
+      stopTrackingLocation();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []); // Run only once on mount
 
   const startCamera = async () => {
     try {
@@ -24,36 +58,103 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto" }) => {
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false
       });
-      videoRef.current.srcObject = mediaStream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       setLoading(false);
     } catch (err) {
       console.error("Camera Error:", err);
-      setError("Gagal mengakses kamera. Pastikan izin diberikan.");
+      setError("Kamera tidak dapat diakses. Pastikan izin diberikan di pengaturan browser.");
       setLoading(false);
     }
   };
 
   const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      setStream(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   };
 
-  const getLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setLocation({ lat: latitude, lng: longitude });
+  const startTrackingLocation = () => {
+    // 1. Android/Chrome Security Check (Geolocation requires HTTPS)
+    if (window.isSecureContext === false && window.location.hostname !== 'localhost') {
+      setError("Akses lokasi diblokir: Situs tidak aman (HTTPS diperlukan).");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setError("Browser Anda tidak mendukung GPS.");
+      return;
+    }
+
+    const highAccuracyOptions = {
+      enableHighAccuracy: true,
+      timeout: 20000, // Android needs more time sometimes
+      maximumAge: 0
+    };
+
+    const standardOptions = {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 60000
+    };
+
+    const handleSuccess = (pos) => {
+      retryCount.current = 0;
+      const { latitude, longitude } = pos.coords;
+      setLocation(prev => {
+        // Only update address if location changed significantly (approx 10m)
+        if (!prev || Math.abs(prev.lat - latitude) > 0.0001 || Math.abs(prev.lng - longitude) > 0.0001) {
           reverseGeocode(latitude, longitude);
-        },
-        (err) => {
-          console.error("Geo Error:", err);
-          setError("Gagal mendapatkan lokasi GPS.");
-        },
-        { enableHighAccuracy: true }
-      );
+        }
+        return { lat: latitude, lng: longitude };
+      });
+      setError(null);
+    };
+
+    const handleError = (err) => {
+      console.error("Geo Error:", err);
+      
+      // Fallback: If High Accuracy times out, try standard accuracy
+      if (err.code === err.TIMEOUT && highAccuracyOptions.enableHighAccuracy) {
+        console.warn("[Camera-Geo] High accuracy timeout, trying standard accuracy...");
+        navigator.geolocation.getCurrentPosition(handleSuccess, (standardErr) => {
+          // Final Final Error Handling
+          if (standardErr.code === 1) {
+            setError("Izin GPS ditolak. Mohon izinkan akses lokasi di browser.");
+          } else if (standardErr.code === 3) {
+            setError("Gagal mendapatkan lokasi (Timeout). Pastikan Anda berada di tempat terbuka atau aktifkan GPS.");
+          } else {
+            setError("Masalah koneksi GPS. Pastikan GPS perangkat aktif.");
+          }
+        }, standardOptions);
+        return;
+      }
+
+      if (err.code === 1) {
+        setError("Izin GPS ditolak. Mohon izinkan akses lokasi di browser.");
+      } else if (err.code === 3) {
+        setError("Gagal mendapatkan lokasi (Timeout). Pastikan Anda berada di tempat terbuka atau aktifkan GPS.");
+      } else {
+        setError("Masalah koneksi GPS. Pastikan GPS perangkat aktif.");
+      }
+    };
+
+    // Use watchPosition for continuous updates and better accuracy over time
+    watchId.current = navigator.geolocation.watchPosition(handleSuccess, handleError, highAccuracyOptions);
+  };
+
+  const stopTrackingLocation = () => {
+    if (watchId.current !== null) {
+      navigator.geolocation.clearWatch(watchId.current);
+      watchId.current = null;
     }
   };
 
@@ -62,7 +163,13 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto" }) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
       const data = await response.json();
-      setAddress(data.display_name || "Alamat tidak ditemukan");
+      
+      // Get a more specific address but filter out redundant country/postcode if possible
+      // Using display_name is the most specific, we'll just trim the very end (country)
+      const fullAddress = data.display_name || "Alamat tidak ditemukan";
+      const cleanedAddress = fullAddress.split(',').slice(0, -2).join(',').trim() || fullAddress;
+      
+      setAddress(cleanedAddress);
     } catch (err) {
       setAddress("Gagal mengambil alamat teks");
     }
@@ -89,27 +196,51 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto" }) => {
     // Watermark Configuration
     const padding = 20;
     const fontSize = Math.floor(canvas.width * 0.025); // Responsive font size
-    ctx.font = `${fontSize}px monospace`;
+    ctx.font = `bold ${fontSize}px monospace`;
     
-    const lines = [
-      `${formatDate(new Date())} | ${formatTime(new Date())}`,
-      `Lat: ${location.lat.toFixed(6)} Long: ${location.lng.toFixed(6)}`,
-      `Alamat: ${address}`
-    ];
+    const maxTextWidth = canvas.width - (padding * 2);
+    
+    // Function to wrap text into multiple lines
+    const wrapText = (text, maxWidth) => {
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = words[0];
+
+      for (let i = 1; i < words.length; i++) {
+        const word = words[i];
+        const width = ctx.measureText(currentLine + " " + word).width;
+        if (width < maxWidth) {
+          currentLine += " " + word;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      lines.push(currentLine);
+      return lines;
+    };
+
+    const dateLine = `${formatDate(new Date())} | ${formatTime(new Date())}`;
+    const addressLines = wrapText(`Alamat: ${address}`, maxTextWidth);
+    
+    // Combine all lines (date first, then address lines)
+    const allLines = [dateLine, ...addressLines];
 
     // Measure text for background box
-    const boxHeight = (lines.length * (fontSize + 10)) + padding;
+    const lineHeight = fontSize + 10;
+    const boxHeight = (allLines.length * lineHeight) + padding;
     
     // Draw semi-transparent background box at bottom
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(0, canvas.height - boxHeight, canvas.width, boxHeight);
 
     // Draw text
     ctx.fillStyle = 'white';
     ctx.textBaseline = 'bottom';
     
-    lines.reverse().forEach((line, index) => {
-      ctx.fillText(line, padding, canvas.height - padding - (index * (fontSize + 8)));
+    // Draw lines from bottom to top
+    allLines.reverse().forEach((line, index) => {
+      ctx.fillText(line, padding, canvas.height - padding - (index * lineHeight));
     });
 
     // Output Result
@@ -167,10 +298,9 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto" }) => {
           <div className="absolute bottom-32 left-4 right-4 bg-black/40 p-3 rounded-lg border border-white/20 text-white text-xs font-mono">
             <div className="flex items-center mb-1 text-primary-light">
               <MapPin size={12} className="mr-1" />
-              <span>LIVE GPS DATA</span>
+              <span>ALAMAT TERDETEKSI</span>
             </div>
-            <p>{location ? `${location.lat}, ${location.lng}` : 'Menunggu GPS...'}</p>
-            <p className="truncate">{address}</p>
+            <p className="whitespace-pre-wrap">{address}</p>
           </div>
         )}
       </div>

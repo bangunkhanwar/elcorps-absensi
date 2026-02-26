@@ -14,7 +14,7 @@ app.use(helmet()); // Proteksi HTTP Header
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*', // Membatasi domain di produksi
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning']
 }));
 
 // Rate Limiting: Batasi request berlebihan

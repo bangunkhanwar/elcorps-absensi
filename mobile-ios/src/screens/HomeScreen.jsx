@@ -17,8 +17,6 @@ const HomeScreen = () => {
   const [todayAttendance, setTodayAttendance] = useState(null);
 
   // State Lokasi
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [locationStatus, setLocationStatus] = useState('waiting');
   const [unitKerjaData, setUnitKerjaData] = useState(null);
 
   // State Modal & Foto
@@ -30,23 +28,92 @@ const HomeScreen = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraType, setCameraType] = useState('in'); // 'in' or 'out'
 
-  const [user, setUser] = useState(null);
-  const [todayAttendance, setTodayAttendance] = useState(null);
   const [clockInPhoto, setClockInPhoto] = useState(null); // Stores { file, previewUrl }
   const [clockOutPhoto, setClockOutPhoto] = useState(null); // Stores { file, previewUrl }
   const [loading, setLoading] = useState(false);
-  const [unitKerjaData, setUnitKerjaData] = useState(null);
+  const [cameraPermissionStatus, setCameraPermissionStatus] = useState('prompt'); // granted, denied, prompt
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1); // 1: Welcome, 2: Location, 3: Camera, 4: Notifications
 
   // Hook for Location
-  const { location: currentLocation, status: locationStatus } = useLocation(unitKerjaData);
+  const { location: currentLocation, status: locationStatus, permissionStatus: locPermissionStatus, refresh: refreshLocation } = useLocation(unitKerjaData);
 
   useEffect(() => {
     loadUserData();
     checkTodayAttendance();
+    checkCameraPermissionStatus();
+
+    // Check if first login to show onboarding
+    const isFirst = localStorage.getItem('isFirstLogin');
+    const isCompleted = localStorage.getItem('onboarding_completed');
+    
+    if (isFirst === 'true' && !isCompleted) {
+      setShowOnboarding(true);
+    }
 
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleCompleteOnboarding = () => {
+    localStorage.removeItem('isFirstLogin');
+    localStorage.setItem('onboarding_completed', 'true');
+    setShowOnboarding(false);
+  };
+
+  const requestNotificationPermission = async () => {
+    try {
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          console.log('Notification permission granted.');
+          // Register service worker if not already
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('Service Worker registered:', registration);
+          }
+        }
+      }
+      setOnboardingStep(prev => prev + 1);
+    } catch (err) {
+      console.error('Error requesting notification permission:', err);
+      setOnboardingStep(prev => prev + 1);
+    }
+  };
+
+  const handleRequestLocation = async () => {
+    refreshLocation();
+    setOnboardingStep(prev => prev + 1);
+  };
+
+  const handleRequestCamera = async () => {
+    await requestPermissions();
+    setOnboardingStep(prev => prev + 1);
+  };
+
+  const checkCameraPermissionStatus = async () => {
+    try {
+      // Chrome/Android support
+      if (navigator.permissions && navigator.permissions.query) {
+        const result = await navigator.permissions.query({ name: 'camera' });
+        setCameraPermissionStatus(result.state);
+        result.onchange = () => setCameraPermissionStatus(result.state);
+      }
+    } catch (e) {
+      console.log("Camera permission query not supported");
+    }
+  };
+
+  const requestPermissions = async () => {
+    try {
+      // Trigger camera prompt
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(t => t.stop());
+      setCameraPermissionStatus('granted');
+    } catch (err) {
+      setCameraPermissionStatus('denied');
+    }
+  };
 
   // Cleanup ObjectURLs
   useEffect(() => {
@@ -126,7 +193,7 @@ const HomeScreen = () => {
     if (!clockInPhoto?.file) return alert('Harap mengambil foto terlebih dahulu');
     if (!currentLocation) return alert('Lokasi tidak terdeteksi.');
 
-    setIsProcessing(true);
+    setLoading(true);
 
     try {
       const formData = new FormData();
@@ -144,7 +211,7 @@ const HomeScreen = () => {
     } catch (error) {
       alert(error.message);
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
@@ -152,7 +219,7 @@ const HomeScreen = () => {
     if (!clockOutPhoto?.file) return alert('Harap mengambil foto terlebih dahulu');
     if (!currentLocation) return alert('Lokasi tidak terdeteksi.');
 
-    setIsProcessing(true);
+    setLoading(true);
 
     try {
       const formData = new FormData();
@@ -170,12 +237,13 @@ const HomeScreen = () => {
     } catch (error) {
       alert(error.message);
     } finally {
-      setIsProcessing(false);
+      setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login', { replace: true });
   };
 
@@ -222,21 +290,22 @@ const HomeScreen = () => {
 
           <div className="space-y-1">
             <div className="flex justify-between items-center gap-2">
-              <p className="text-s text-gray-600">Departemen</p>
+              <p className="text-sm text-gray-600">Departemen</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
                 {user?.departemen || 'IT & Technology'}
               </p>
             </div>
 
             <div className="flex justify-between items-center gap-2">
-              <p className="text-s text-gray-600">Divisi</p>
+              <p className="text-sm text-gray-600">Divisi</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
                 {user?.divisi || 'Strategic Support'}
               </p>
             </div>
 
             <div className="flex justify-between items-center gap-2">
-              <p className="text-s text-gray-600">Lokasi Kerja</p>
+
+              <p className="text-sm text-gray-600">Lokasi Kerja</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
                 {user?.unit_kerja || 'Head Office'}
               </p>
@@ -255,52 +324,6 @@ const HomeScreen = () => {
           <span className="text-2xl font-bold tracking-wider">
             {formatTime(currentTime)}
           </span>
-        </div>
-
-        {/* Status Lokasi */}
-        <div
-          className={`mt-4 rounded-lg p-3 border
-            ${
-              locationStatus === 'granted'
-                ? 'bg-green-50 border-green-200'
-                : locationStatus === 'out_of_radius'
-                ? 'bg-yellow-50 border-yellow-200'
-                : 'bg-red-50 border-red-200'
-            }`}
-        >
-          <div className="flex items-center justify-center text-center gap-2">
-            <MapPin
-              className={`shrink-0 ${
-                locationStatus === 'granted'
-                  ? 'text-green-600'
-                  : locationStatus === 'out_of_radius'
-                  ? 'text-yellow-600'
-                  : 'text-red-600'
-              }`}
-              size={18}
-            />
-
-            <div>
-              <p className="text-sm font-medium">
-                {locationStatus === 'granted'
-                  ? 'Lokasi terdeteksi - Siap untuk absensi'
-                  : locationStatus === 'out_of_radius'
-                  ? 'Lokasi di luar radius'
-                  : locationStatus === 'denied'
-                  ? 'Izin lokasi ditolak'
-                  : locationStatus === 'gps_off'
-                  ? 'GPS tidak aktif'
-                  : 'Mendeteksi lokasi...'}
-              </p>
-
-              {locationStatus === 'granted' && currentLocation && (
-                <p className="text-xs text-gray-600 mt-1">
-                  Lat: {parseFloat(currentLocation.latitude).toFixed(6)}, Lng:{' '}
-                  {parseFloat(currentLocation.longitude).toFixed(6)}
-                </p>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -540,6 +563,109 @@ const HomeScreen = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Onboarding Perizinan */}
+      {showOnboarding && (
+        <div className="fixed inset-0 bg-white z-[100] flex flex-col p-8 overflow-y-auto">
+          <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto">
+            {onboardingStep === 1 && (
+              <div className="text-center animate-fade-in">
+                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <img src={logo} alt="Logo" className="w-16 h-12 object-contain" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Selamat Datang!</h2>
+                <p className="text-gray-600 mb-8">
+                  Untuk menggunakan aplikasi absensi elcorps, kami memerlukan beberapa izin dari perangkat Anda.
+                </p>
+                <button 
+                  onClick={() => setOnboardingStep(2)}
+                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
+                >
+                  Mulai Pengaturan
+                </button>
+              </div>
+            )}
+
+            {onboardingStep === 2 && (
+              <div className="text-center animate-fade-in">
+                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <MapPin className="text-blue-600" size={48} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Izin Lokasi</h2>
+                <p className="text-gray-600 mb-8">
+                  Kami memerlukan lokasi Anda untuk memverifikasi bahwa Anda berada di area unit kerja saat melakukan absensi.
+                </p>
+                <button 
+                  onClick={handleRequestLocation}
+                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg shadow-lg"
+                >
+                  Izinkan Lokasi
+                </button>
+              </div>
+            )}
+
+            {onboardingStep === 3 && (
+              <div className="text-center animate-fade-in">
+                <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Camera className="text-emerald-600" size={48} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Izin Kamera</h2>
+                <p className="text-gray-600 mb-8">
+                  Kamera digunakan untuk mengambil foto absensi sebagai bukti kehadiran yang valid.
+                </p>
+                <button 
+                  onClick={handleRequestCamera}
+                  className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg shadow-lg"
+                >
+                  Izinkan Kamera
+                </button>
+              </div>
+            )}
+
+            {onboardingStep === 4 && (
+              <div className="text-center animate-fade-in">
+                <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle className="text-orange-600" size={48} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Notifikasi Push</h2>
+                <p className="text-gray-600 mb-8">
+                  Aktifkan notifikasi agar Anda mendapatkan pengingat jadwal absensi dan info penting lainnya.
+                </p>
+                <button 
+                  onClick={requestNotificationPermission}
+                  className="w-full py-4 bg-orange-600 text-white rounded-2xl font-bold text-lg shadow-lg"
+                >
+                  Aktifkan Notifikasi
+                </button>
+                <button 
+                  onClick={() => setOnboardingStep(5)}
+                  className="mt-4 text-gray-500 font-medium"
+                >
+                  Lewati untuk saat ini
+                </button>
+              </div>
+            )}
+
+            {onboardingStep === 5 && (
+              <div className="text-center animate-fade-in">
+                <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                  <X className="text-white rotate-45" size={48} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Semua Siap!</h2>
+                <p className="text-gray-600 mb-8">
+                  Terima kasih. Anda sekarang sudah bisa mulai menggunakan aplikasi untuk absensi harian.
+                </p>
+                <button 
+                  onClick={handleCompleteOnboarding}
+                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
+                >
+                  Masuk ke Dashboard
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

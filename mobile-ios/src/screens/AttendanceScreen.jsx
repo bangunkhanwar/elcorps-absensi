@@ -35,7 +35,7 @@ const AttendanceScreen = () => {
     }
   };
 
-  const fetchAttendanceHistory = async () => {
+  const fetchAttendanceHistory = async (userId) => {
     try {
       // 1. Hitung tanggal awal dan akhir bulan yang dipilih
       const firstDay = new Date(selectedYear, selectedMonth, 1);
@@ -53,6 +53,12 @@ const AttendanceScreen = () => {
 
       console.log(`Fetching data from ${startDate} to ${endDate}`);
       
+      const params = {
+        userId: userId,
+        startDate: startDate,
+        endDate: endDate
+      };
+
       const response = await attendanceAPI.getUserAttendance(userId, params);
       setAttendanceData(response.success ? (response.data || []) : []);
     } catch (error) {

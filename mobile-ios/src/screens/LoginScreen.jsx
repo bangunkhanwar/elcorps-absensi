@@ -54,6 +54,12 @@ const LoginScreen = () => {
       if (response.success && response.data?.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // Hanya pancing onboarding jika belum pernah selesai
+        if (!localStorage.getItem('onboarding_completed')) {
+          localStorage.setItem('isFirstLogin', 'true');
+        }
+        
         navigate('/', { replace: true });
       } else {
         setError('Login gagal. Periksa kembali akun Anda.');
