@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X, Bell } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
 import { formatDate, formatTime, formatTimeShort } from '../utils/formatters';
@@ -259,6 +259,35 @@ const HomeScreen = () => {
     }
   };
 
+  const sendTestNotification = () => {
+    if (!("Notification" in window)) {
+      alert("Browser ini tidak mendukung notifikasi.");
+      return;
+    }
+
+    if (Notification.permission === "granted") {
+      const options = {
+        body: "Ini adalah notifikasi percobaan dari Elcorps Absensi.",
+        icon: "/elogo.png",
+        badge: "/elogo.png",
+        vibrate: [200, 100, 200]
+      };
+      
+      // Try via Service Worker for PWA-style notification
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification("Tes Notifikasi Berhasil!", options);
+        });
+      } else {
+        // Fallback to standard web notification
+        new Notification("Tes Notifikasi Berhasil!", options);
+      }
+    } else {
+      alert("Izin notifikasi belum diberikan. Silakan aktifkan izin di pengaturan browser.");
+      requestNotificationPermission();
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -418,8 +447,11 @@ const HomeScreen = () => {
                     <div className="text-left"><p className="font-semibold text-gray-800">Pengajuan Izin</p></div>
                   </div>
                 </button>
-                <button onClick={handleLogout} className="w-full mt-4 py-3 bg-gray-100 text-red-600 rounded-xl font-semibold flex items-center justify-center gap-2">
-                  <LogOut size={20} /> Logout
+                <button onClick={sendTestNotification} className="w-full flex items-center justify-between p-4 bg-orange-50 rounded-xl">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mr-3"><Bell className="text-white" size={20} /></div>
+                    <div className="text-left"><p className="font-semibold text-gray-800">Notifikasi</p></div>
+                  </div>
                 </button>
               </div>
             </div>
