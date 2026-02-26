@@ -11,7 +11,7 @@ interface AttendanceData {
   unit_kerja: string
   jamMasuk: string
   jamPulang: string
-  status: 'tepat_waktu' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk'
+  status: string
   nik: string
   jabatan: string
   departemen: string
@@ -155,7 +155,7 @@ const Absensi: React.FC = () => {
         const allLeaves = leaveResponse?.data?.leaves || []
 
         approvedLeaves = allLeaves.filter((leave: any) => {
-          const isApproved = leave.status === 'approved'
+          const isApproved = leave.status === 'approved' || leave.status === 'disetujui';
           const selected = new Date(selectedDate)
           const start = new Date(leave.start_date)
           const end = new Date(leave.end_date)
@@ -252,29 +252,59 @@ const Absensi: React.FC = () => {
     }
   }
 
-  const getAttendanceStatus = (attendance: any): 'tepat_waktu' | 'telat' | 'izin' => {
+  const getAttendanceStatus = (attendance: any): string => {
+    // Jika sudah ada status dari backend, gunakan itu
+    if (attendance.status && [
+      'Tepat Waktu', 'Pulang Cepat', 'Masuk Telat', 
+      'Masuk Telat + Pulang Cepat', 'Izin', 'Tidak Lengkap', 'Alpha'
+    ].includes(attendance.status)) {
+      return attendance.status;
+    }
+
+    // Fallback untuk data lama atau dari API lain
     if (attendance.status === 'izin' || attendance.status === 'Izin') {
-      return 'izin';
+      return 'Izin';
     }
 
-    if (!attendance.waktu_masuk) {
-      return 'izin';
+    if (!attendance.waktu_masuk && !attendance.waktu_keluar) {
+      return 'Alpha';
     }
 
-    let isLate = false;
-    const waktuMasuk = attendance.waktu_masuk;
-
-    if (waktuMasuk.includes(':')) {
-      const timeParts = waktuMasuk.split(':');
-      const hours = parseInt(timeParts[0]);
-      const minutes = parseInt(timeParts[1]);
-
-      if (hours > 9 || (hours === 9 && minutes > 0)) {
-        isLate = true;
-      }
+    if (!attendance.waktu_masuk || !attendance.waktu_keluar) {
+      return 'Tidak Lengkap';
     }
 
-    return isLate ? 'telat' : 'tepat_waktu';
+    // Parse waktu untuk perhitungan
+    const parseTimeToMinutes = (timeStr: string): number => {
+      if (!timeStr) return 0;
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    // Gunakan jam shift dari data jika ada, default 09:00-17:00
+    const jamMasukShift = attendance.jam_seharusnya_masuk || attendance.jam_masuk_shift || '09:00:00';
+    const jamKeluarShift = attendance.jam_seharusnya_keluar || attendance.jam_keluar_shift || '17:00:00';
+    const toleransi = attendance.toleransi_telat_minutes || 5;
+
+    const masukMenit = parseTimeToMinutes(attendance.waktu_masuk);
+    const keluarMenit = parseTimeToMinutes(attendance.waktu_keluar);
+    const jamMasukMenit = parseTimeToMinutes(jamMasukShift);
+    const jamKeluarMenit = parseTimeToMinutes(jamKeluarShift);
+
+    const isLate = masukMenit > (jamMasukMenit + toleransi);
+    const isEarlyOut = keluarMenit < jamKeluarMenit;
+
+    if (!isLate && !isEarlyOut) {
+      return 'Tepat Waktu';
+    } else if (!isLate && isEarlyOut) {
+      return 'Pulang Cepat';
+    } else if (isLate && !isEarlyOut) {
+      return 'Masuk Telat';
+    } else if (isLate && isEarlyOut) {
+      return 'Masuk Telat + Pulang Cepat';
+    }
+
+    return 'Lainnya';
   };
 
   const getDataSource = () => {
@@ -352,30 +382,50 @@ const Absensi: React.FC = () => {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'tepat_waktu': return 'bg-green-100 text-green-800'
-      case 'telat': return 'bg-yellow-100 text-yellow-800'
-      case 'izin': return 'bg-blue-100 text-blue-800'
-      case 'pulang_cepat': return 'bg-orange-100 text-orange-800'
-      case 'telat_masuk': return 'bg-red-100 text-red-800'
-      case 'alpha': return 'bg-red-100 text-red-800'
-      case 'tidak_lengkap': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
+    const statusColors: { [key: string]: string } = {
+      'Tepat Waktu': 'bg-green-100 text-green-800',
+      'tepat_waktu': 'bg-green-100 text-green-800',
+      'Terlambat': 'bg-yellow-100 text-yellow-800',
+      'telat': 'bg-yellow-100 text-yellow-800',
+      'Masuk Telat': 'bg-orange-100 text-orange-800',
+      'masuk_telat': 'bg-orange-100 text-orange-800',
+      'Pulang Cepat': 'bg-blue-100 text-blue-800',
+      'pulang_cepat': 'bg-blue-100 text-blue-800',
+      'Masuk Telat + Pulang Cepat': 'bg-red-100 text-red-800',
+      'masuk_telat_pulang_cepat': 'bg-red-100 text-red-800',
+      'Izin': 'bg-purple-100 text-purple-800',
+      'izin': 'bg-purple-100 text-purple-800',
+      'Tidak Lengkap': 'bg-gray-100 text-gray-800',
+      'tidak_lengkap': 'bg-gray-100 text-gray-800',
+      'Alpha': 'bg-red-100 text-red-800',
+      'alpha': 'bg-red-100 text-red-800'
+    };
+
+    return statusColors[status] || 'bg-gray-100 text-gray-800';
+  };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'tepat_waktu': return 'Tepat Waktu'
-      case 'terlambat': return 'Terlambat'
-      case 'izin': return 'Izin'
-      case 'pulang_cepat': return 'Pulang Cepat'
-      case 'telat_masuk': return 'Telat Masuk'
-      case 'alpha': return 'Alpha'
-      case 'tidak_lengkap': return 'Tidak Lengkap'
-      default: return status
-    }
-  }
+    const statusMap: { [key: string]: string } = {
+      'tepat_waktu': 'Tepat Waktu',
+      'Tepat Waktu': 'Tepat Waktu',
+      'telat': 'Terlambat',
+      'Terlambat': 'Terlambat',
+      'izin': 'Izin',
+      'Izin': 'Izin',
+      'pulang_cepat': 'Pulang Cepat',
+      'Pulang Cepat': 'Pulang Cepat',
+      'masuk_telat': 'Masuk Telat',
+      'Masuk Telat': 'Masuk Telat',
+      'masuk_telat_pulang_cepat': 'Masuk Telat + Pulang Cepat',
+      'Masuk Telat + Pulang Cepat': 'Masuk Telat + Pulang Cepat',
+      'tidak_lengkap': 'Tidak Lengkap',
+      'Tidak Lengkap': 'Tidak Lengkap',
+      'alpha': 'Alpha',
+      'Alpha': 'Alpha'
+    };
+
+    return statusMap[status] || status;
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

@@ -48,12 +48,12 @@ const ShiftCalendar: React.FC<ShiftCalendarProps> = ({
   employeeShifts,
   searchData,
   setSearchData,
-  selectedUnit,
+  selectedUnit: _selectedUnit,
   selectedUnitName,
   currentPage,
   setCurrentPage,
   itemsPerPage,
-  loading = false
+  loading: _loading = false
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
 
@@ -262,7 +262,7 @@ const ShiftCalendar: React.FC<ShiftCalendarProps> = ({
                               )}
                             </div>
                           </td>
-                          {weekDates.map((date, index) => (
+                          {weekDates.map((_date, index) => (
                             <td key={index} className="px-3 sm:px-4 py-4 text-center min-w-[110px] sm:min-w-32">
                               {employeeShifts[employee.id] ? (
                                 <div className="flex flex-col items-center">
