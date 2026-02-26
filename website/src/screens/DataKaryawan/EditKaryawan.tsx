@@ -74,9 +74,16 @@ const EditKaryawan: React.FC<Props> = ({
   const [searchDivisi, setSearchDivisi] = useState("")
   const [openUnit, setOpenUnit] = useState(false)
   const [searchUnit, setSearchUnit] = useState("")
+  const [openRole, setOpenRole] = useState(false)
+  const roleRef = useRef<HTMLDivElement>(null)
 
   
   const unitOptions = unitKerjaList ? unitKerjaList.map(unit => unit.nama_unit) : []
+
+  const roleOptions = [
+    { value: 'karyawan', label: 'Karyawan - Akses Mobile App' },
+    { value: 'hr', label: 'HR/Admin - Akses Website & Mobile' }
+  ]
 
   const filteredJabatan = jabatanOptions.filter(opt => opt.toLowerCase().includes(searchJabatan.toLowerCase())).sort()
   const filteredDepartemen = departemenOptions.filter(opt => opt.toLowerCase().includes(searchDepartemen.toLowerCase())).sort()
@@ -92,8 +99,8 @@ const EditKaryawan: React.FC<Props> = ({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node
-      const refs = [jabatanRef, departemenRef, divisiRef, unitRef]
-      const states = [setOpenJabatan, setOpenDepartemen, setOpenDivisi, setOpenUnit]
+      const refs = [jabatanRef, departemenRef, divisiRef, unitRef, roleRef]
+      const states = [setOpenJabatan, setOpenDepartemen, setOpenDivisi, setOpenUnit, setOpenRole]
       
       refs.forEach((ref, index) => {
         if (ref.current && !ref.current.contains(target)) {
@@ -168,20 +175,36 @@ const EditKaryawan: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  <div>
+                  <div ref={roleRef}>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">Role Sistem</label>
                     <div className="relative">
-                      <select
-                        name="role"
-                        value={formData.role}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none pl-10"
+                      <div
+                        className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 bg-white cursor-pointer pl-10 flex justify-between items-center"
+                        onClick={() => setOpenRole(!openRole)}
                       >
-                        <option value="karyawan">Karyawan - Akses Mobile App</option>
-                        <option value="hr">HR/Admin - Akses Website & Mobile</option>
-                      </select>
+                        <span>{roleOptions.find(opt => opt.value === formData.role)?.label || "Pilih Role"}</span>
+                        <span className="text-gray-400">▼</span>
+                      </div>
                       <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🏷️</div>
+
+                      {openRole && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow">
+                          <div className="max-h-48 overflow-y-auto text-xs">
+                            {roleOptions.map((opt) => (
+                              <div
+                                key={opt.value}
+                                className="px-3 py-2 hover:bg-green-100 cursor-pointer"
+                                onClick={() => {
+                                  handleInputChange({ target: { name: 'role', value: opt.value } } as any)
+                                  setOpenRole(false)
+                                }}
+                              >
+                                {opt.label}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

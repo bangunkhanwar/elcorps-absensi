@@ -458,6 +458,79 @@ const ShiftManagement: React.FC = () => {
     return timeString.substring(0, 5)
   }
 
+  const ShiftDropdown: React.FC<{ employeeId: number; currentShiftId: number | null; shifts: Shift[];
+  onChange: (employeeId: number, shiftId: number) => void }> = ({ employeeId, currentShiftId, shifts, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const activeShifts = shifts.filter(s => s.is_active);
+    const filteredShifts = activeShifts.filter(shift =>
+      shift.nama_shift.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shift.kode_shift.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    useEffect(() => {
+      const handleClickOutside = (e: MouseEvent) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedShift = shifts.find(s => s.id === currentShiftId);
+
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <div
+          className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 bg-white cursor-pointer pl-8 flex justify-between items-center"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <span>{selectedShift ? selectedShift.nama_shift : "Pilih Shift"}</span>
+          <span className="text-gray-400">▼</span>
+        </div>
+
+        {isOpen && (
+          <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow">
+            <input
+              type="text"
+              className="w-full px-3 py-2 text-xs border-b border-gray-300 focus:outline-none rounded-t-lg"
+              placeholder="Cari shift..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              autoFocus
+            />
+            <div className="max-h-48 overflow-y-auto text-xs">
+              {filteredShifts.length > 0 ? (
+                filteredShifts.map((shift) => (
+                  <div
+                    key={shift.id}
+                    className="px-3 py-2 hover:bg-green-100 cursor-pointer"
+                    onClick={() => {
+                      onChange(employeeId, shift.id);
+                      setIsOpen(false);
+                      setSearchTerm('');
+                    }}
+                  >
+                    <div className="font-medium">{shift.nama_shift}</div>
+                    <div className="text-gray-500 text-xs">
+                      {formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)}
+                      {shift.is_default && ' (Default)'}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-gray-400">Tidak ada shift</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Pagination functions
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
   const nextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1)
@@ -804,23 +877,13 @@ const ShiftManagement: React.FC = () => {
                                       <span className="text-slate-400 text-sm">-</span>
                                     )}
                                   </td>
-                                  <td className="px-4 py-3 text-center">
-                                    <select
-                                      value={employeeShifts[employee.id]?.id || ''}
-                                      onChange={(e) => handleShiftChange(employee.id, Number(e.target.value))}
-                                      disabled={shifts.filter(shift => shift.is_active).length === 0}
-                                      className={`text-sm border border-slate-300 rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#25a298] focus:border-[#25a298] ${
-                                        shifts.filter(shift => shift.is_active).length === 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                                      }`}
-                                    >
-                                      <option value="">Pilih Shift</option>
-                                      {shifts.filter(shift => shift.is_active).map((shift) => (
-                                        <option key={shift.id} value={shift.id}>
-                                          {shift.nama_shift} ({formatTimeForDisplay(shift.jam_masuk)} - {formatTimeForDisplay(shift.jam_keluar)})
-                                          {shift.is_default && ' (Default)'}
-                                        </option>
-                                      ))}
-                                    </select>
+                                 <td className="px-4 py-3 text-center">
+                                    <ShiftDropdown
+                                      employeeId={employee.id}
+                                      currentShiftId={employeeShifts[employee.id]?.id || null}
+                                      shifts={shifts}
+                                      onChange={handleShiftChange}
+                                    />
                                   </td>
                                 </tr>
                               ))
