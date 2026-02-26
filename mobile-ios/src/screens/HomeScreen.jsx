@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X } from 'l
 import { attendanceAPI } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
 import { formatDate, formatTime, formatTimeShort } from '../utils/formatters';
+import { syncTimeWithServer, getTrueDate } from '../utils/timeSync';
 import CameraWithWatermark from '../components/CameraWithWatermark';
 import logo from '../assets/logo.png';
 
@@ -39,9 +40,21 @@ const HomeScreen = () => {
   const { location: currentLocation, status: locationStatus, permissionStatus: locPermissionStatus, refresh: refreshLocation } = useLocation(unitKerjaData);
 
   useEffect(() => {
-    loadUserData();
-    checkTodayAttendance();
-    checkCameraPermissionStatus();
+    const init = async () => {
+      await syncTimeWithServer();
+      loadUserData();
+      checkTodayAttendance();
+      checkCameraPermissionStatus();
+    };
+
+    init();
+
+    // Re-sync on focus/resume
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        syncTimeWithServer();
+      }
+    };
 
     // Check if first login to show onboarding
     const isFirst = localStorage.getItem('isFirstLogin');
@@ -51,8 +64,13 @@ const HomeScreen = () => {
       setShowOnboarding(true);
     }
 
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => setCurrentTime(getTrueDate()), 1000);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleCompleteOnboarding = () => {
@@ -376,36 +394,6 @@ const HomeScreen = () => {
           </button>
         </div>
       </div>
-
-      {/* Info Absensi Hari Ini */}
-      {todayAttendance && (
-        <div className="bg-white rounded-xl shadow p-4">
-          <h3 className="text-base font-semibold text-gray-800 mb-3">Absensi Hari Ini</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-lg p-2.5">
-              <p className="text-gray-600 text-xs">Clock In</p>
-              <p className="text-base font-bold text-gray-800">
-                {formatTimeShort(todayAttendance.waktu_masuk)}
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-2.5">
-              <p className="text-gray-600 text-xs">Clock Out</p>
-              <p className="text-base font-bold text-gray-800">
-                {formatTimeShort(todayAttendance.waktu_keluar)}
-              </p>
-            </div>
-            <div className="col-span-2">
-              <div className={`px-3 py-1.5 rounded-lg text-center font-medium text-sm ${
-                todayAttendance.status === 'Tepat Waktu' ? 'bg-green-100 text-green-800' :
-                todayAttendance.status === 'Terlambat' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                Status: {todayAttendance.status?.toUpperCase() || 'BELUM'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
 
       {/* Modal Menu */}
@@ -506,18 +494,6 @@ const HomeScreen = () => {
             <div className="p-6">
               <div className="flex justify-center items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800">Konfirmasi Clock Out</h2>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-600 font-medium">Lokasi Kerja:</p>
-                  <p className="text-gray-800 font-semibold">{user?.unit_kerja || 'Head Office'}</p>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-600 font-medium">Jam Clock Out:</p>
-                  <p className="text-gray-800 font-semibold">{formatTime(new Date())}</p>
-                </div>
               </div>
 
               <div className="mb-6">

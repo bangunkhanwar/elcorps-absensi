@@ -5,12 +5,14 @@ const {
   checkIn, 
   checkOut, 
   getHistory,
-  getToday
+  getToday,
+  getServerTime
 } = require('../controllers/attendanceController');
 
 const router = express.Router();
 
 // Attendance routes
+router.get('/server-time', getServerTime);
 router.post('/checkin', auth, upload.single('foto_masuk'), checkIn);
 router.post('/checkout', auth, upload.single('foto_keluar'), checkOut);
 router.get('/history', auth, getHistory);

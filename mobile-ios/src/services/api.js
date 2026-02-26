@@ -90,6 +90,7 @@ export const attendanceAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   getToday: (queryString = '') => api.get(`/attendance/today${queryString}`),
+  getServerTime: () => api.get('/attendance/server-time'),
   getUserAttendance: (userId, params) => api.get('/attendance/history', { params }),
 };
 

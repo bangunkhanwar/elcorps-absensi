@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Camera, X, RefreshCw, MapPin, AlertCircle } from 'lucide-react';
 import { formatDate, formatTime } from '../utils/formatters';
+import { getTrueDate } from '../utils/timeSync';
 
 const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initialLocation = null }) => {
   const videoRef = React.useRef(null);
@@ -164,12 +165,20 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
       const data = await response.json();
       
-      // Get a more specific address but filter out redundant country/postcode if possible
-      // Using display_name is the most specific, we'll just trim the very end (country)
-      const fullAddress = data.display_name || "Alamat tidak ditemukan";
-      const cleanedAddress = fullAddress.split(',').slice(0, -2).join(',').trim() || fullAddress;
+      const addr = data.address || {};
       
-      setAddress(cleanedAddress);
+      // Extract specific components
+      const road = addr.road || addr.pedestrian || "";
+      const kelurahan = addr.village || addr.suburb || addr.neighbourhood || "";
+      const kecamatan = addr.city_district || addr.district || "";
+      const kota = addr.city || addr.town || addr.municipality || "";
+      const provinsi = addr.state || "";
+
+      // Format: Jalan, Kelurahan, Kecamatan, Kota, Provinsi
+      const parts = [road, kelurahan, kecamatan, kota, provinsi].filter(p => p !== "");
+      const displayAddress = parts.join(', ');
+      
+      setAddress(displayAddress || data.display_name || "Alamat tidak ditemukan");
     } catch (err) {
       setAddress("Gagal mengambil alamat teks");
     }
@@ -220,11 +229,17 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
       return lines;
     };
 
-    const dateLine = `${formatDate(new Date())} | ${formatTime(new Date())}`;
-    const addressLines = wrapText(`Alamat: ${address}`, maxTextWidth);
+    const now = getTrueDate();
+    // Custom Format: 26 Februari 2026
+    const tanggalStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const waktuStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':');
     
-    // Combine all lines (date first, then address lines)
-    const allLines = [dateLine, ...addressLines];
+    const dateLine = `Tanggal: ${tanggalStr}`;
+    const timeLine = `Waktu: ${waktuStr}`;
+    const addressLines = wrapText(`Tempat: ${address}`, maxTextWidth);
+    
+    // Combine all lines
+    const allLines = [dateLine, timeLine, ...addressLines];
 
     // Measure text for background box
     const lineHeight = fontSize + 10;
@@ -293,14 +308,43 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
           style={{ transform: 'scaleX(-1)' }} // Mirror view for user
         />
         
-        {/* Real-time Overlay Preview */}
+        {/* Face Guide Overlay */}
         {!loading && !error && (
-          <div className="absolute bottom-32 left-4 right-4 bg-black/40 p-3 rounded-lg border border-white/20 text-white text-xs font-mono">
-            <div className="flex items-center mb-1 text-primary-light">
-              <MapPin size={12} className="mr-1" />
-              <span>ALAMAT TERDETEKSI</span>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="relative w-full max-w-[260px] aspect-[3/4] flex items-center justify-center">
+              {/* Face Frame SVG */}
+              <svg 
+                viewBox="0 0 200 260" 
+                className="w-full h-full text-white/60"
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round"
+                strokeDasharray="10 6"
+              >
+                {/* Main Face Oval */}
+                <ellipse cx="100" cy="110" rx="70" ry="95" />
+                
+                {/* Eye Level Guide (Optional, subtle) */}
+                <path d="M60,100 L140,100" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
+                
+                {/* Chin/Neck Guide */}
+                <path d="M70,230 Q100,240 130,230" strokeWidth="2" />
+                
+                {/* Corners / Scan Brackets */}
+                <path d="M10,40 L10,10 L40,10" strokeWidth="3" strokeDasharray="0" />
+                <path d="M160,10 L190,10 L190,40" strokeWidth="3" strokeDasharray="0" />
+                <path d="M10,220 L10,250 L40,250" strokeWidth="3" strokeDasharray="0" />
+                <path d="M160,250 L190,250 L190,220" strokeWidth="3" strokeDasharray="0" />
+              </svg>
+              
+              {/* Instruction Text */}
+              <div className="absolute bottom-[-40px] left-0 right-0 text-center">
+                <p className="text-white text-xs font-bold uppercase tracking-widest bg-black/50 py-1.5 px-4 rounded-full backdrop-blur-sm border border-white/10">
+                  POSISIKAN WAJAH DI DALAM OVAL
+                </p>
+              </div>
             </div>
-            <p className="whitespace-pre-wrap">{address}</p>
           </div>
         )}
       </div>

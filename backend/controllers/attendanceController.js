@@ -163,9 +163,24 @@ const getToday = async (req, res) => {
   }
 };
 
+// @desc    Get current server time for synchronization
+// @route   GET /api/attendance/server-time
+const getServerTime = async (req, res) => {
+  try {
+    const now = new Date();
+    return sendSuccess(res, 'Server time retrieved', {
+      timestamp: now.getTime(),
+      iso: now.toISOString()
+    });
+  } catch (error) {
+    return sendError(res, error.message);
+  }
+};
+
 module.exports = {
   checkIn,
   checkOut,
   getHistory,
-  getToday
+  getToday,
+  getServerTime
 };
