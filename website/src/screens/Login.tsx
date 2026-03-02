@@ -120,9 +120,6 @@ const Login: React.FC = () => {
 
           {/* Extra Links */}
           <div className="flex justify-center items-center gap-3 text-sm mt-6 transform transition-all duration-300 hover:scale-105">
-            <a href="/forgot-password" className="text-primary-600 font-medium hover:text-primary-700 transition-all duration-300 hover:underline">
-              Lupa Password
-            </a>
             <span className="text-primary-600 opacity-75 transition-all duration-300">•</span>
             <a href="/register" className="text-primary-600 font-medium hover:text-primary-700 transition-all duration-300 hover:underline">
               Daftar
