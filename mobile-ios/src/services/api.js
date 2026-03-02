@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Untuk PWA, gunakan localStorage (bukan AsyncStorage)
-const API_BASE_URL = 'https://hradmin.elhijab.com/api';
+const API_BASE_URL = 'https://elsa.elhijab.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../services/api'
 
@@ -31,6 +31,10 @@ const Reports: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0,7))
   const [selectedUnit, setSelectedUnit] = useState<string>('all')
+  const [openUnitDropdown, setOpenUnitDropdown] = useState(false)
+  const [searchUnit, setSearchUnit] = useState('')
+  const unitDropdownRef = useRef<HTMLDivElement>(null)
+  const unitSearchRef = useRef<HTMLInputElement>(null)
   const [unitKerja, setUnitKerja] = useState<any[]>([])
   const [reportData, setReportData] = useState<ReportData[]>([])
   const [summary, setSummary] = useState<ReportSummary>({
@@ -41,6 +45,11 @@ const Reports: React.FC = () => {
     totalHadir: 0,
     totalTelat: 0
   })
+
+  const filteredUnits = unitKerja.filter(unit =>
+    unit.nama_unit.toLowerCase().includes(searchUnit.toLowerCase()) ||
+    (unit.kode_unit && unit.kode_unit.toLowerCase().includes(searchUnit.toLowerCase()))
+  )
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -59,7 +68,7 @@ const Reports: React.FC = () => {
         
         if (profileResponse.data.user.role === 'hr') {
           const unitsResponse = await authAPI.getAllUnitKerja()
-          setUnitKerja(unitsResponse.data?.unit_kerja || [])
+          setUnitKerja(unitsResponse.data || [])
         }
         
         fetchReportData()
@@ -104,6 +113,22 @@ const Reports: React.FC = () => {
       fetchReportData()
     }
   }, [selectedMonth, selectedUnit, user])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
+        setOpenUnitDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (openUnitDropdown && unitSearchRef.current) {
+      unitSearchRef.current.focus()
+    }
+  }, [openUnitDropdown])
 
   const handleExport = async () => {
     try {
@@ -150,41 +175,109 @@ const Reports: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filter Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-              <div>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Bagian kiri: filter bulan dan unit kerja */}
+            <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+              {/* Filter Bulan */}
+              <div className="w-full md:w-auto min-w-[200px]">
                 <label className="block text-sm font-medium text-slate-700 mb-2">Bulan</label>
                 <input
                   type="month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298]"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] text-sm"
                 />
               </div>
-              
+
+              {/* Filter Unit Kerja (hanya untuk HR) */}
               {user?.role === 'hr' && (
-                <div>
+                <div className="w-full md:w-auto min-w-[250px]">
                   <label className="block text-sm font-medium text-slate-700 mb-2">Unit Kerja</label>
-                  <select
-                    value={selectedUnit}
-                    onChange={(e) => setSelectedUnit(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298]"
-                  >
-                    <option value="all">Semua Unit</option>
-                    {unitKerja.map(unit => (
-                      <option key={unit.id} value={unit.id}>{unit.nama_unit}</option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={unitDropdownRef}>
+                    <div
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg bg-white cursor-pointer flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] text-sm"
+                      onClick={() => setOpenUnitDropdown(!openUnitDropdown)}
+                    >
+                      <span className="text-slate-900 flex-1 truncate">
+                        {selectedUnit === 'all' 
+                          ? 'Semua Unit' 
+                          : unitKerja.find(u => u.id.toString() === selectedUnit)?.nama_unit || 'Pilih Unit'}
+                      </span>
+                      <span className="text-slate-400 flex-shrink-0">{openUnitDropdown ? '▲' : '▼'}</span>
+                    </div>
+
+                    {/* Dropdown options (tanpa perubahan) */}
+                    {openUnitDropdown && (
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-slate-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                        <div className="p-2 border-b border-slate-200">
+                          <input
+                            ref={unitSearchRef}
+                            type="text"
+                            placeholder="Cari unit kerja..."
+                            value={searchUnit}
+                            onChange={(e) => setSearchUnit(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298]"
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          <div
+                            className="px-4 py-2 cursor-pointer hover:bg-green-100 border-b border-slate-100 text-sm"
+                            onClick={() => {
+                              setSelectedUnit('all')
+                              setOpenUnitDropdown(false)
+                              setSearchUnit('')
+                            }}
+                          >
+                            Semua Unit
+                          </div>
+                          {filteredUnits.length > 0 ? (
+                            filteredUnits.map((unit) => (
+                              <div
+                                key={unit.id}
+                                className={`px-4 py-2 cursor-pointer hover:bg-green-100 border-b border-slate-100 last:border-b-0 ${
+                                  selectedUnit === unit.id.toString() ? 'bg-[#25a298] text-white hover:bg-[#1f8a80]' : ''
+                                }`}
+                                onClick={() => {
+                                  setSelectedUnit(unit.id.toString())
+                                  setOpenUnitDropdown(false)
+                                  setSearchUnit('')
+                                }}
+                              >
+                                <div className="text-sm font-medium">{unit.nama_unit}</div>
+                                {unit.kode_unit && (
+                                  <div className={`text-xs ${selectedUnit === unit.id.toString() ? 'text-blue-100' : 'text-slate-500'}`}>
+                                    {unit.kode_unit}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-center text-slate-500 text-sm">
+                              Tidak ada unit yang sesuai
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-            
+
+            {/* Tombol Export */}
             <button
               onClick={handleExport}
               disabled={reportData.length === 0}
-              className="bg-[#25a298] text-white px-4 py-2 rounded-lg hover:bg-[#1f8a80] transition-colors duration-200 self-start disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`px-3 sm:px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base w-full sm:w-auto ${
+                reportData.length === 0
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-[#25a298] text-white hover:bg-[#1f8a80] active:bg-[#1a756b]'
+              }`}
             >
-              Export Excel
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Export Excel</span>
             </button>
           </div>
         </div>

@@ -268,13 +268,13 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       allowed_radius: user.radius_meter
     });
 
-    if (distance > user.radius_meter) {
-      console.log('❌ User outside radius');
-      removeUploadedFile();
-      return res.status(400).json({ 
-        error: `Anda berada di luar radius unit kerja. Jarak: ${Math.round(distance)}m, Radius: ${user.radius_meter}m` 
-      });
-    }
+    // if (distance > user.radius_meter) {
+    //   console.log('❌ User outside radius');
+    //   removeUploadedFile();
+    //   return res.status(400).json({ 
+    //     error: `Anda berada di luar radius unit kerja. Jarak: ${Math.round(distance)}m, Radius: ${user.radius_meter}m` 
+    //   });
+    // }
 
     // AMBIL WAKTU SESUAI TIMEZONE UNIT KERJA
     const currentTime = getCurrentTimeInTimezone(timezone);
