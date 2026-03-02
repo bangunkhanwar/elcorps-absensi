@@ -50,22 +50,44 @@ const LoginScreen = () => {
         password: form.password 
       });
       
-      // Standardized response handling thanks to interceptor
-      if (response.success && response.data?.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        // Hanya pancing onboarding jika belum pernah selesai
-        if (!localStorage.getItem('onboarding_completed')) {
-          localStorage.setItem('isFirstLogin', 'true');
-        }
-        
+      const responseData = response.data;
+      
+      if (responseData.token) {
+        localStorage.setItem('token', responseData.token);
+        localStorage.setItem('user', JSON.stringify(responseData.user || responseData.data));
         navigate('/', { replace: true });
-      } else {
-        setError('Login gagal. Periksa kembali akun Anda.');
+        return;
       }
+      
+      if (responseData.success && responseData.data?.token) {
+        localStorage.setItem('token', responseData.data.token);
+        localStorage.setItem('user', JSON.stringify(responseData.data.user || responseData.data));
+        navigate('/', { replace: true });
+        return;
+      }
+      
+      if (responseData.data?.token) {
+        localStorage.setItem('token', responseData.data.token);
+        localStorage.setItem('user', JSON.stringify(responseData.data.user || responseData.data));
+        navigate('/', { replace: true });
+        return;
+      }
+      
+      console.error('Response format tidak dikenali:', responseData);
+      setError('Format response tidak dikenali');
+      
     } catch (err) {
-      setError(err.message);
+      console.error('Login error:', err);
+      
+      let errorMessage = 'Terjadi kesalahan saat login';
+      
+      if (err.response) {
+        errorMessage = err.response.data?.message || `Error ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
