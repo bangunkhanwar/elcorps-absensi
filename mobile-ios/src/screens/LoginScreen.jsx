@@ -230,18 +230,7 @@ const LoginScreen = () => {
           </form>
 
           {/* Links Section */}
-          <div className="mt-8 space-y-4 text-center">
-            <div className="flex justify-center space-x-6">
-              <Link 
-                to="/server-settings" 
-                className="font-medium hover:underline"
-                style={{ color: '#25a298' }}
-              >
-                Server Settings
-              </Link>
-            </div>
-          </div>
-
+          
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-200 text-center">
             <p className="text-gray-500 text-sm">
