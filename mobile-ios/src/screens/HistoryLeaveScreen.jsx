@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, Calendar, FileText, XCircle } from 'lucide-react';
+import { ArrowLeft, Filter, Calendar, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { leaveAPI } from '../services/api';
-import { formatDate } from '../utils/formatters';
-import dayjs from 'dayjs';
 
 const HistoryLeaveScreen = () => {
   const navigate = useNavigate();
-
+  
   const [selectedFilter, setSelectedFilter] = useState('semua');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -24,72 +22,51 @@ const HistoryLeaveScreen = () => {
     try {
       const userData = localStorage.getItem('user');
       if (userData) {
-        setUser(JSON.parse(userData));
+        const userObj = JSON.parse(userData);
+        setUser(userObj);
         await fetchLeaveHistory();
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      alert('Gagal memuat data');
     } finally {
       setLoading(false);
     }
   };
 
-  // const fetchLeaveHistory = async () => {
-  //   try {
-  //     const response = await leaveAPI.getMyLeaves();
-  //     console.log("Data dari Backend:", response.data);
-
-  //     if (response.data.success) {
-  //       const allLeaves = response.data.leaves || [];
-
-  //       // Filter berdasarkan bulan dan tahun yang dipilih
-  //       const filteredData = allLeaves.filter((item) => {
-  //         const startDate = new Date(item.start_date);
-  //         const endDate = new Date(item.end_date);
-  //         const selectedMonthStart = new Date(selectedYear, selectedMonth, 1);
-  //         const selectedMonthEnd = new Date(selectedYear, selectedMonth + 1, 0);
-
-  //         return (
-  //           (startDate >= selectedMonthStart && startDate <= selectedMonthEnd) ||
-  //           (endDate >= selectedMonthStart && endDate <= selectedMonthEnd) ||
-  //           (startDate <= selectedMonthStart && endDate >= selectedMonthEnd)
-  //         );
-  //       });
-
-  //       // Sort by date (newest first)
-  //       filteredData.sort((a, b) => {
-  //         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  //       });
-
-  //       setLeaveData(filteredData);
-  //     } else {
-  //       setLeaveData([]);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error fetching leave data:', error);
-  //     alert('Gagal mengambil data izin: ' + error.message);
-  //   }
-  // };
-
   const fetchLeaveHistory = async () => {
     try {
       const response = await leaveAPI.getMyLeaves();
       
-      if (response.success) {
-        const allLeaves = response.data || response.leaves || [];
+      if (response.data.success) {
+        const allLeaves = response.data.leaves || [];
         
-        // Filter by period and Sort (newest first)
-        const filtered = allLeaves
-          .filter((item) => {
-            const date = dayjs(item.start_date);
-            return date.month() === selectedMonth && date.year() === selectedYear;
-          })
-          .sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf());
+        // Filter berdasarkan bulan dan tahun yang dipilih
+        const filteredData = allLeaves.filter((item) => {
+          const startDate = new Date(item.start_date);
+          const endDate = new Date(item.end_date);
+          const selectedMonthStart = new Date(selectedYear, selectedMonth, 1);
+          const selectedMonthEnd = new Date(selectedYear, selectedMonth + 1, 0);
 
-        setLeaveData(filtered);
+          return (
+            (startDate >= selectedMonthStart && startDate <= selectedMonthEnd) ||
+            (endDate >= selectedMonthStart && endDate <= selectedMonthEnd) ||
+            (startDate <= selectedMonthStart && endDate >= selectedMonthEnd)
+          );
+        });
+
+        // Sort by date (newest first)
+        filteredData.sort((a, b) => {
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
+        setLeaveData(filteredData);
+      } else {
+        setLeaveData([]);
       }
     } catch (error) {
-      alert(error.message);
+      console.error('Error fetching leave data:', error);
+      alert('Gagal mengambil data izin: ' + error.message);
     }
   };
 
@@ -105,16 +82,52 @@ const HistoryLeaveScreen = () => {
     { value: 'pending', label: 'Menunggu' },
     { value: 'approved', label: 'Disetujui' },
     { value: 'rejected', label: 'Ditolak' },
+    { value: 'sakit', label: 'Sakit' },
+    { value: 'cuti', label: 'Cuti' },
+    { value: 'lainnya', label: 'Lainnya' },
   ];
 
-  // Filter data by status
+  // Filter data
   const filteredData = leaveData.filter((item) => {
     if (selectedFilter === 'semua') return true;
-    return item.status?.toLowerCase() === selectedFilter;
+    if (selectedFilter === 'pending') return item.status?.toLowerCase() === 'pending';
+    if (selectedFilter === 'approved') return item.status?.toLowerCase() === 'approved';
+    if (selectedFilter === 'rejected') return item.status?.toLowerCase() === 'rejected';
+    if (selectedFilter === 'sakit') return item.jenis_izin?.toLowerCase() === 'sakit';
+    if (selectedFilter === 'cuti') return item.jenis_izin?.toLowerCase() === 'cuti';
+    if (selectedFilter === 'lainnya') return item.jenis_izin?.toLowerCase() === 'lainnya';
+    return false;
   });
 
-  // Calculate duration using dayjs
-  const calculateDuration = (start, end) => dayjs(end).diff(dayjs(start), 'day') + 1;
+  // Format tanggal
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Hitung durasi
+  const calculateDuration = (startDateStr, endDateStr) => {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  };
 
   // Warna status
   const getStatusColor = (status) => {
@@ -190,7 +203,7 @@ const HistoryLeaveScreen = () => {
           <div className="space-y-4">
             {filteredData.map((item) => {
               const duration = calculateDuration(item.start_date, item.end_date);
-              const isSameDay = dayjs(item.start_date).isSame(dayjs(item.end_date), 'day');
+              const isSameDay = new Date(item.start_date).toDateString() === new Date(item.end_date).toDateString();
               
               return (
                 <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -211,7 +224,7 @@ const HistoryLeaveScreen = () => {
                   <div className="mb-3">
                     <p className="text-gray-600 text-sm">Diajukan:</p>
                     <p className="text-gray-800 font-medium text-sm">
-                      {dayjs(item.created_at).format('D MMMM YYYY, HH:mm')}
+                      {formatDateTime(item.created_at)}
                     </p>
                   </div>
 
@@ -222,7 +235,7 @@ const HistoryLeaveScreen = () => {
                       <p className="text-gray-800 font-medium text-sm">
                         {isSameDay ? 
                           formatDate(item.start_date) : 
-                          `${dayjs(item.start_date).format('D MMM')} - ${dayjs(item.end_date).format('D MMM YYYY')}`
+                          `${formatDate(item.start_date)} - ${formatDate(item.end_date)}`
                         }
                       </p>
                       {!isSameDay && (

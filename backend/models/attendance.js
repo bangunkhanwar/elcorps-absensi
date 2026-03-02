@@ -2,22 +2,27 @@ const pool = require('../config/database');
 
 class Attendance {
   // CREATE struktur
-  // CREATE struktur sesuai skema asli database
   static async create(attendanceData) {
     const { 
-      user_id, tanggal_absen, waktu_masuk, foto_masuk, status, location
+      user_id, tanggal_absen, waktu_masuk, foto_masuk, status,
+      user_latitude, user_longitude, distance_meter,
+      unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar
     } = attendanceData;
     
     const query = `
       INSERT INTO absensi (
-        user_id, tanggal_absen, waktu_masuk, foto_masuk, status, location
+        user_id, tanggal_absen, waktu_masuk, foto_masuk, status,
+        user_latitude, user_longitude, distance_meter,
+        unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar
       )
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *
     `;
     
     const values = [
-      user_id, tanggal_absen, waktu_masuk, foto_masuk, status, location
+      user_id, tanggal_absen, waktu_masuk, foto_masuk, status,
+      user_latitude, user_longitude, distance_meter,
+      unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -49,29 +54,84 @@ class Attendance {
     const query = `
       SELECT 
         a.*, 
-        uk.nama_unit AS location_name,
+        uk.nama_unit AS location,
         s.nama_shift,
         s.jam_masuk as jam_masuk_shift,
-        s.jam_keluar as jam_keluar_shift
+        s.jam_keluar as jam_keluar_shift,
+        s.toleransi_telat_minutes
       FROM absensi a
-      JOIN users u ON a.user_id = u.id
-      LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id
-      LEFT JOIN shifts s ON u.shift_id = s.id
+      JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
+      JOIN shifts s ON a.shift_id = s.id
       WHERE a.user_id = $1 AND a.tanggal_absen BETWEEN $2 AND $3 
-      ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC   -- Tambah sort waktu
+      ORDER BY a.tanggal_absen DESC
     `;
-    
-    // Tambahkan log untuk debug
-    // console.log("Executing History Query:", {user_id, startDate, endDate});
-    
     const result = await pool.query(query, [user_id, startDate, endDate]);
     return result.rows;
   }
 
-  // GET ALL ATTENDANCE
+  // GET ALL ATTENDANCE - FIXED SYNTAX ERROR
   static async getAllAttendance(startDate, endDate, unitId = null) {
+    console.log('📅 Executing getAllAttendance with:', { startDate, endDate, unitId });
+    
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
+    
+    // PERBAIKAN: TAMBAHKAN KOMA SETIAP KOLOM DENGAN BENAR
+    let query = `
+      SELECT 
+        a.*, 
+        u.nama, 
+        u.nik, 
+        u.jabatan, 
+        u.departemen, 
+        u.divisi,
+        uk.nama_unit,
+        uk.timezone,
+        s.nama_shift,
+        s.jam_masuk as jam_seharusnya_masuk,
+        s.jam_keluar as jam_seharusnya_keluar,
+        CONCAT(
+          EXTRACT(HOUR FROM a.waktu_masuk)::text, 
+          ':', 
+          LPAD(EXTRACT(MINUTE FROM a.waktu_masuk)::text, 2, '0')
+        ) as waktu_masuk_jakarta,
+        CONCAT(
+          EXTRACT(HOUR FROM a.waktu_keluar)::text, 
+          ':', 
+          LPAD(EXTRACT(MINUTE FROM a.waktu_keluar)::text, 2, '0')
+        ) as waktu_keluar_jakarta
+      FROM absensi a 
+      LEFT JOIN users u ON a.user_id = u.id 
+      LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
+      LEFT JOIN shifts s ON a.shift_id = s.id
+      WHERE a.tanggal_absen BETWEEN $1 AND $2
+    `;
+    
+    const params = [queryStartDate, queryEndDate];
+    
+    if (unitId) {
+      query += ` AND a.unit_kerja_id = $${params.length + 1}`;
+      params.push(unitId);
+    }
+    
+    query += ` ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC`;
+    
+    console.log('🔍 Executing SQL query...');
+    
+    try {
+      const result = await pool.query(query, params);
+      console.log('✅ Query berhasil, row count:', result.rows.length);
+      return result.rows;
+    } catch (error) {
+      console.error('❌ Database query error:', error.message);
+      console.error('❌ Full error details:', error);
+      throw error;
+    }
+  }
+
+  // GET TODAY ATTENDANCE - FIXED SYNTAX
+  static async getTodayAttendance(unitId = null) {
+    const today = new Date().toISOString().split('T')[0];
     
     let query = `
       SELECT 
@@ -79,44 +139,39 @@ class Attendance {
         u.nama, 
         u.nik, 
         u.jabatan, 
+        u.departemen, 
+        u.divisi,
         uk.nama_unit,
-        s.nama_shift
+        uk.timezone,
+        s.nama_shift,
+        s.jam_masuk as jam_seharusnya_masuk,
+        s.jam_keluar as jam_seharusnya_keluar,
+        CONCAT(
+          EXTRACT(HOUR FROM a.waktu_masuk)::text, 
+          ':', 
+          LPAD(EXTRACT(MINUTE FROM a.waktu_masuk)::text, 2, '0')
+        ) as waktu_masuk_jakarta,
+        CONCAT(
+          EXTRACT(HOUR FROM a.waktu_keluar)::text, 
+          ':', 
+          LPAD(EXTRACT(MINUTE FROM a.waktu_keluar)::text, 2, '0')
+        ) as waktu_keluar_jakarta
       FROM absensi a 
       JOIN users u ON a.user_id = u.id 
-      LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id
-      LEFT JOIN shifts s ON u.shift_id = s.id
-      WHERE a.tanggal_absen BETWEEN $1 AND $2
-    `;
-    
-    const params = [queryStartDate, queryEndDate];
-    if (unitId) {
-      query += ` AND u.unit_kerja_id = $${params.length + 1}`;
-      params.push(unitId);
-    }
-    
-    query += ` ORDER BY a.tanggal_absen DESC, a.waktu_masuk DESC`;
-    const result = await pool.query(query, params);
-    return result.rows;
-  }
-
-  // GET TODAY ATTENDANCE
-  static async getTodayAttendance(unitId = null) {
-    const today = new Date().toISOString().split('T')[0];
-    let query = `
-      SELECT 
-        a.*, 
-        u.nama, 
-        uk.nama_unit
-      FROM absensi a 
-      JOIN users u ON a.user_id = u.id 
-      LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id
+      JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
+      JOIN shifts s ON a.shift_id = s.id
       WHERE a.tanggal_absen = $1
     `;
+    
     const params = [today];
+    
     if (unitId) {
-      query += ` AND u.unit_kerja_id = $${params.length + 1}`;
+      query += ` AND a.unit_kerja_id = $${params.length + 1}`;
       params.push(unitId);
     }
+    
+    query += ` ORDER BY a.waktu_masuk DESC`;
+    
     const result = await pool.query(query, params);
     return result.rows;
   }
