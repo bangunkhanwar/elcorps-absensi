@@ -1,17 +1,6 @@
 const express = require('express');
-const Attendance = require('../models/attendance');
-const User = require('../models/user');
-const fs = require('fs');
-const path = require('path');
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
-const { 
-  checkIn, 
-  checkOut, 
-  getHistory,
-  getToday,
-  getServerTime
-} = require('../controllers/attendanceController');
 
 const router = express.Router();
 

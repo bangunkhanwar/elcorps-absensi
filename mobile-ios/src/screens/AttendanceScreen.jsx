@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Filter, Calendar, Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
-import { formatDate, formatTimeShort } from '../utils/formatters';
 import Header from '../components/Header';
 
 const AttendanceScreen = () => {
@@ -30,6 +29,7 @@ const AttendanceScreen = () => {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      alert('Gagal memuat data');
     } finally {
       setLoading(false);
     }
@@ -37,34 +37,33 @@ const AttendanceScreen = () => {
 
   const fetchAttendanceHistory = async (userId) => {
     try {
-      // 1. Hitung tanggal awal dan akhir bulan yang dipilih
-      const firstDay = new Date(selectedYear, selectedMonth, 1);
-      const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
-
-      const formatYMD = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-      };
-
-      const startDate = formatYMD(firstDay);
-      const endDate = formatYMD(lastDay);
-
-      console.log(`Fetching data from ${startDate} to ${endDate}`);
-      
       const params = {
-        userId: userId,
-        startDate: startDate,
-        endDate: endDate
+        month: selectedMonth + 1,
+        year: selectedYear
       };
-
+      
       const response = await attendanceAPI.getUserAttendance(userId, params);
-      setAttendanceData(response.success ? (response.data || []) : []);
+      
+      if (response.data.success) {
+        setAttendanceData(response.data.data || []);
+      } else {
+        setAttendanceData([]);
+      }
     } catch (error) {
       console.error('Error fetching attendance:', error);
-      alert(error.message);
+      alert('Gagal mengambil data absensi: ' + error.message);
     }
+  };
+
+  // Fungsi untuk menghitung status
+  const calculateStatus = (waktuMasuk, waktuKeluar, statusFromDB) => {
+    if (statusFromDB === 'izin' || statusFromDB === 'Izin') return 'Izin';
+    if (!waktuMasuk) return 'Tidak Hadir';
+
+    const jamMasuk = new Date(`2000-01-01T${waktuMasuk}`);
+    const batasTelat = new Date(`2000-01-01T09:00:00`);
+
+    return jamMasuk <= batasTelat ? 'Tepat Waktu' : 'Terlambat';
   };
 
   const months = [
@@ -76,16 +75,42 @@ const AttendanceScreen = () => {
 
   const filterOptions = [
     { value: 'semua', label: 'Semua' },
-    { value: 'Tepat Waktu', label: 'Tepat Waktu' },
-    { value: 'Terlambat', label: 'Terlambat' },
-    { value: 'Izin', label: 'Izin' },
+    { value: 'tepat-waktu', label: 'Tepat Waktu' },
+    { value: 'terlambat', label: 'Terlambat' },
+    { value: 'tidak-hadir', label: 'Tidak Hadir/Izin' },
   ];
 
   // Filter data
   const filteredData = attendanceData.filter(item => {
+    const status = calculateStatus(item.waktu_masuk, item.waktu_keluar, item.status);
+
     if (selectedFilter === 'semua') return true;
-    return item.status === selectedFilter;
+    if (selectedFilter === 'tepat-waktu') return status === 'Tepat Waktu';
+    if (selectedFilter === 'terlambat') return status === 'Terlambat';
+    if (selectedFilter === 'tidak-hadir') return status === 'Tidak Hadir' || status === 'Izin';
+    return false;
   });
+
+  // Format tanggal
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Format waktu
+  const formatTime = (timeString) => {
+    if (!timeString) return '-';
+    const time = new Date(`2000-01-01T${timeString}`);
+    return time.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // Warna status
   const getStatusColor = (status) => {
@@ -169,6 +194,8 @@ const AttendanceScreen = () => {
         ) : (
           <div className="space-y-4">
             {filteredData.map((item) => {
+              const status = calculateStatus(item.waktu_masuk, item.waktu_keluar, item.status);
+              
               return (
                 <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                   {/* Date Header */}
@@ -176,8 +203,8 @@ const AttendanceScreen = () => {
                     <h3 className="text-lg font-semibold text-gray-800">
                       {formatDate(item.tanggal_absen)}
                     </h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(item.status)}`}>
-                      {item.status || 'Hadir'}
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(status)}`}>
+                      {status}
                     </span>
                   </div>
 
@@ -186,13 +213,13 @@ const AttendanceScreen = () => {
                     <div className="bg-gray-50 rounded-lg p-3">
                       <p className="text-gray-600 text-sm">Clock In</p>
                       <p className="text-gray-800 font-bold text-lg">
-                        {formatTimeShort(item.waktu_masuk)}
+                        {formatTime(item.waktu_masuk)}
                       </p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-3">
                       <p className="text-gray-600 text-sm">Clock Out</p>
                       <p className="text-gray-800 font-bold text-lg">
-                        {formatTimeShort(item.waktu_keluar)}
+                        {formatTime(item.waktu_keluar)}
                       </p>
                     </div>
                   </div>
@@ -200,11 +227,7 @@ const AttendanceScreen = () => {
                   {/* Location */}
                   <div className="flex items-center text-gray-600 text-sm">
                     <MapPin size={16} className="mr-2" />
-                    <span>
-                      {item.location 
-                        ? item.location.split(' (')[0] 
-                        : 'Lokasi tidak tersedia'}
-                    </span>
+                    <span>{item.location || 'Lokasi tidak tersedia'}</span>
                   </div>
                 </div>
               );

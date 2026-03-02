@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 const API_BASE_URL = 'https://hradmin.elhijab.com/api';
@@ -6,10 +5,6 @@ const API_BASE_URL = 'https://hradmin.elhijab.com/api';
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true' // Tambahkan baris ini
-  },
   timeout: 10000,
 });
 
@@ -129,5 +124,6 @@ export const dashboardAPI = {
   getTopLateEmployees: () => api.get('/dashboard/top-late'),
   getAttendanceTrend: (days = 7) => api.get(`/dashboard/attendance-trend?days=${days}`),
 };
+
 
 export default api;

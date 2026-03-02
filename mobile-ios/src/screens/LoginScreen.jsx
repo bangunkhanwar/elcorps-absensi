@@ -59,11 +59,24 @@ const LoginScreen = () => {
         }
         
         navigate('/', { replace: true });
-      } else {
-        setError('Login gagal. Periksa kembali akun Anda.');
+        return;
       }
+      
+      console.error('Response format tidak dikenali:', responseData);
+      setError('Format response tidak dikenali');
+      
     } catch (err) {
-      setError(err.message);
+      console.error('Login error:', err);
+      
+      let errorMessage = 'Terjadi kesalahan saat login';
+      
+      if (err.response) {
+        errorMessage = err.response.data?.message || `Error ${err.response.status}`;
+      } else if (err.request) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -206,6 +219,7 @@ const LoginScreen = () => {
           </form>
 
           {/* Links Section */}
+          
           
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-200 text-center">
