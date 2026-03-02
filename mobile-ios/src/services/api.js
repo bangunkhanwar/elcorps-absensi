@@ -1,12 +1,7 @@
 import axios from 'axios';
 
-// Prioritize manual IP from localStorage if exists
-const getInitialBaseURL = () => {
-  // const manualIP = localStorage.getItem('manual_server_ip');
-  const manualIP = 'sb32k63z-5000.asse.devtunnels.ms';
-  if (manualIP) return `https://${manualIP}/api`;
-  return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-};
+// Untuk PWA, gunakan localStorage (bukan AsyncStorage)
+const API_BASE_URL = 'https://hradmin.elhijab.com/api';
 
 const api = axios.create({
   baseURL: getInitialBaseURL(),

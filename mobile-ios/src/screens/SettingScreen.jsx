@@ -20,7 +20,7 @@ const SettingScreen = () => {
     }
     
     // Get current API base URL
-    const apiBaseURL = localStorage.getItem('api_base_url') || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const apiBaseURL = localStorage.getItem('api_base_url') || 'https://hradmin.elhijab.com/api';
     console.log('Current API Base URL:', apiBaseURL);
   }, []);
 
@@ -67,7 +67,7 @@ const SettingScreen = () => {
   const handleResetToDefault = () => {
     setIpAddress('');
     localStorage.removeItem('manual_server_ip');
-    localStorage.setItem('api_base_url', import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
+    localStorage.setItem('api_base_url', 'https://hradmin.elhijab.com/api');
     setCurrentIP('');
     alert('IP server telah direset ke default (localhost)');
   };
@@ -206,7 +206,6 @@ const SettingScreen = () => {
                   </>
                 ) : (
                   <>
-                    <Server size={20} />
                     <span>Simpan IP Server</span>
                   </>
                 )}
@@ -220,109 +219,6 @@ const SettingScreen = () => {
                 Reset
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* How to Find IP */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-          <div className="flex items-center mb-4">
-            <Info className="text-blue-600 mr-3" size={24} />
-            <h3 className="text-blue-800 font-bold text-lg">Cara Menemukan IP Komputer</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="bg-white/80 rounded-xl p-4">
-              <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center mr-2 text-sm">1</span>
-                Windows
-              </h4>
-              <p className="text-gray-700 text-sm ml-8">
-                Buka <span className="font-mono bg-gray-100 px-2 py-1 rounded">CMD</span> → ketik <span className="font-mono bg-gray-100 px-2 py-1 rounded">ipconfig</span> → cari <span className="font-semibold text-blue-600">"IPv4 Address"</span>
-              </p>
-            </div>
-
-            <div className="bg-white/80 rounded-xl p-4">
-              <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center mr-2 text-sm">2</span>
-                MacOS / Linux
-              </h4>
-              <p className="text-gray-700 text-sm ml-8">
-                Buka <span className="font-mono bg-gray-100 px-2 py-1 rounded">Terminal</span> → ketik <span className="font-mono bg-gray-100 px-2 py-1 rounded">ifconfig</span> → cari <span className="font-semibold text-blue-600">"inet"</span> (bukan 127.0.0.1)
-              </p>
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <div className="flex items-start">
-                <Shield className="text-yellow-600 mr-2 mt-0.5" size={18} />
-                <div>
-                  <p className="text-yellow-800 font-semibold">Penting!</p>
-                  <p className="text-yellow-700 text-sm">
-                    Kedua perangkat harus berada di jaringan WiFi yang sama
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Server Info */}
-        <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-300">
-          <h3 className="text-gray-800 font-bold text-lg mb-4">Informasi Server</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl p-4">
-              <p className="text-gray-600 text-sm">Port Backend</p>
-              <p className="text-gray-800 font-bold text-lg">5000</p>
-            </div>
-            
-            <div className="bg-white rounded-xl p-4">
-              <p className="text-gray-600 text-sm">Port PWA</p>
-              <p className="text-gray-800 font-bold text-lg">5174</p>
-            </div>
-            
-            <div className="bg-white rounded-xl p-4">
-              <p className="text-gray-600 text-sm">Database</p>
-              <p className="text-gray-800 font-bold text-lg">PostgreSQL</p>
-            </div>
-            
-            <div className="bg-white rounded-xl p-4">
-              <p className="text-gray-600 text-sm">Backend</p>
-              <p className="text-gray-800 font-bold text-lg">Node.js</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <h3 className="text-gray-800 font-bold text-lg mb-4">Aksi Cepat</h3>
-          
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={handleTestConnection}
-              className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 transition flex items-center"
-            >
-              <Wifi size={16} className="mr-2" />
-              Test Koneksi
-            </button>
-            
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center"
-            >
-              <RefreshCw size={16} className="mr-2" />
-              Refresh Aplikasi
-            </button>
-            
-            <button
-              onClick={() => {
-                localStorage.clear();
-                alert('Semua data lokal telah dihapus');
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition"
-            >
-              Clear Cache
-            </button>
           </div>
         </div>
 
