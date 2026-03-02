@@ -1,5 +1,6 @@
 const multer = require('multer');
 const path = require('path');
+const crypto = require('crypto');
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -12,31 +13,33 @@ const storage = multer.diskStorage({
     } else if (file.fieldname === 'foto_keluar') {
       prefix = 'clockout-';
     }
-    // Ambil nama dan tanggal absen dari request
-    const nama = (req.user && req.user.nama) ? req.user.nama.replace(/\s+/g, '_').toLowerCase() : 'user';
-    // Tanggal absen dari body atau gunakan hari ini
-    let tanggal = req.body && req.body.tanggal_absen ? req.body.tanggal_absen : '';
-    if (!tanggal) {
-      const now = new Date();
-      tanggal = now.toISOString().split('T')[0];
-    }
-    // Format nama file
-    const filename = `${prefix}${nama}-${tanggal}${path.extname(file.originalname)}`;
+    
+    // Sanitize user name: only alphanumeric and underscores
+    const name = (req.user && req.user.nama) 
+      ? req.user.nama.toLowerCase().replace(/[^a-z0-9]/g, '_') 
+      : 'user';
+    
+    const date = new Date().toISOString().split('T')[0];
+    const uniqueSuffix = crypto.randomBytes(4).toString('hex');
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    const filename = `${prefix}${name}-${date}-${uniqueSuffix}${ext}`;
     cb(null, filename);
   }
 });
 
-const fileFIlter = (req, file, cb) => {
-  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only .jpeg and .png files are allowed!'), false);
+    cb(new Error('Hanya format .jpeg, .jpg, dan .png yang diizinkan!'), false);
   }
 };
 
 const upload = multer({
   storage: storage,
-  fileFilter: fileFIlter,
+  fileFilter: fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 } // 5 MB limit
 }); 
 

@@ -45,49 +45,25 @@ const LoginScreen = () => {
     setError('');
 
     try {
-      const response = await authAPI.login({ 
+      const data = await authAPI.login({ 
         email: form.email, 
         password: form.password 
       });
       
-      const responseData = response.data;
-      
-      if (responseData.token) {
-        localStorage.setItem('token', responseData.token);
-        localStorage.setItem('user', JSON.stringify(responseData.user || responseData.data));
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        if (!localStorage.getItem('onboarding_completed')) {
+          localStorage.setItem('isFirstLogin', 'true');
+        }
+        
         navigate('/', { replace: true });
-        return;
+      } else {
+        setError('Login gagal. Periksa kembali akun Anda.');
       }
-      
-      if (responseData.success && responseData.data?.token) {
-        localStorage.setItem('token', responseData.data.token);
-        localStorage.setItem('user', JSON.stringify(responseData.data.user || responseData.data));
-        navigate('/', { replace: true });
-        return;
-      }
-      
-      if (responseData.data?.token) {
-        localStorage.setItem('token', responseData.data.token);
-        localStorage.setItem('user', JSON.stringify(responseData.data.user || responseData.data));
-        navigate('/', { replace: true });
-        return;
-      }
-      
-      console.error('Response format tidak dikenali:', responseData);
-      setError('Format response tidak dikenali');
-      
     } catch (err) {
-      console.error('Login error:', err);
-      
-      let errorMessage = 'Terjadi kesalahan saat login';
-      
-      if (err.response) {
-        errorMessage = err.response.data?.message || `Error ${err.response.status}`;
-      } else if (err.request) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
-      setError(errorMessage);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -230,18 +206,7 @@ const LoginScreen = () => {
           </form>
 
           {/* Links Section */}
-          <div className="mt-8 space-y-4 text-center">
-            <div className="flex justify-center space-x-6">
-              <Link 
-                to="/server-settings" 
-                className="font-medium hover:underline"
-                style={{ color: '#25a298' }}
-              >
-                Server Settings
-              </Link>
-            </div>
-          </div>
-
+          
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-200 text-center">
             <p className="text-gray-500 text-sm">
