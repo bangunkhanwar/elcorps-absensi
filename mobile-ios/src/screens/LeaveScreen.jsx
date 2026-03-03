@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, FileText, Upload, X, Camera, File, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, Upload, X, Camera, File, AlertCircle } from 'lucide-react';
 import { leaveAPI } from '../services/api';
 import Header from '../components/Header';
 
@@ -11,28 +11,23 @@ const LeaveScreen = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
-  const [attachment, setAttachment] = useState(null);
+  const [attachment, setAttachment] = useState(null); // { file, previewUrl }
   const [showLeaveTypeModal, setShowLeaveTypeModal] = useState(false);
   const [showAttachmentModal, setShowAttachmentModal] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [filePreview, setFilePreview] = useState(null);
 
   useEffect(() => {
-    loadUserData();
+    const userData = localStorage.getItem('user');
+    if (userData) setUser(JSON.parse(userData));
   }, []);
 
-  const loadUserData = () => {
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const userObj = JSON.parse(userData);
-        setUser(userObj);
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    }
-  };
+  // Cleanup ObjectURL
+  useEffect(() => {
+    return () => {
+      if (attachment?.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+    };
+  }, [attachment]);
 
   const leaveTypes = [
     { id: 'sakit', label: 'Sakit', icon: '💊' },
@@ -40,70 +35,36 @@ const LeaveScreen = () => {
     { id: 'lainnya', label: 'Lainnya', icon: '📝' },
   ];
 
-  // Format tanggal untuk tampilan
-  const formatDateForDisplay = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
-  // Handle file upload
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('File terlalu besar. Maksimal 5MB');
-        return;
-      }
-
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-      if (!allowedTypes.includes(file.type)) {
-        alert('Hanya file JPG, PNG, atau PDF yang diizinkan');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFilePreview(e.target.result);
-      };
-      reader.readAsDataURL(file);
-
-      setAttachment(file);
+      if (file.size > 5 * 1024 * 1024) return alert('File terlalu besar. Maksimal 5MB');
+      
+      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+      setAttachment({ file, previewUrl });
+      setShowAttachmentModal(false);
     }
   };
 
-  // Handle ambil foto
-  const handleTakePhoto = () => {
-    setShowAttachmentModal(false);
+  const openCamera = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'user'; // Kamera depan
-    
+    input.capture = 'user';
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setFilePreview(e.target.result);
-        };
-        reader.readAsDataURL(file);
-        setAttachment(file);
+        const previewUrl = URL.createObjectURL(file);
+        setAttachment({ file, previewUrl });
+        setShowAttachmentModal(false);
       }
     };
-    
     input.click();
   };
 
-  // Handle submit
   const handleSubmit = async () => {
     if (!leaveType || !startDate || !endDate || description.length < 10) {
-      alert('Harap isi semua data dengan benar. Keterangan minimal 10 karakter.');
-      return;
+      return alert('Harap isi semua data dengan benar. Keterangan minimal 10 karakter.');
     }
 
     setLoading(true);
@@ -113,22 +74,15 @@ const LeaveScreen = () => {
       formData.append('end_date', endDate);
       formData.append('jenis_izin', leaveType.toLowerCase());
       formData.append('keterangan', description);
-      
-      if (attachment) {
-        formData.append('lampiran', attachment);
-      }
+      if (attachment?.file) formData.append('file', attachment.file);
 
       const response = await leaveAPI.apply(formData);
-      
-      if (response.data.success) {
+      if (response.success) {
         alert('Pengajuan izin berhasil dikirim!');
         navigate('/');
-      } else {
-        alert(response.data.message || 'Gagal mengajukan izin');
       }
     } catch (error) {
-      console.error('Error submitting leave:', error);
-      alert(error.message || 'Terjadi kesalahan');
+      alert(error.message);
     } finally {
       setLoading(false);
     }
@@ -271,22 +225,19 @@ const LeaveScreen = () => {
               <div className="border-2 border-green-500 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center">
-                    {attachment.type === 'application/pdf' ? (
+                    {attachment.file.type === 'application/pdf' ? (
                       <File className="text-green-600 mr-2" size={24} />
                     ) : (
-                      <img src={filePreview} alt="Preview" className="w-10 h-10 rounded-lg mr-2 object-cover" />
+                      <img src={attachment.previewUrl} alt="Preview" className="w-10 h-10 rounded-lg mr-2 object-cover" />
                     )}
-                    <div>
-                      <p className="text-green-700 font-semibold">
-                        {attachment.type === 'application/pdf' ? 'PDF Terlampir' : 'Foto Terlampir'}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-green-700 font-semibold truncate">
+                        {attachment.file.type === 'application/pdf' ? 'PDF Terlampir' : 'Foto Terlampir'}
                       </p>
-                      <p className="text-gray-600 text-sm">{attachment.name}</p>
+                      <p className="text-gray-600 text-sm truncate">{attachment.file.name}</p>
                     </div>
                   </div>
-                  <button onClick={() => {
-                    setAttachment(null);
-                    setFilePreview(null);
-                  }} className="text-red-500 hover:text-red-700">
+                  <button onClick={() => setAttachment(null)} className="text-red-500 hover:text-red-700 ml-2">
                     <X size={20} />
                   </button>
                 </div>
@@ -312,7 +263,7 @@ const LeaveScreen = () => {
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
             <div className="flex items-start">
               <AlertCircle className="text-blue-500 mr-2 flex-shrink-0 mt-1" size={20} />
-              <p className="text-blue-800">
+              <p className="text-blue-800 text-sm">
                 Pastikan semua data yang diisi sudah benar. Pengajuan izin akan diproses dalam 1-2 hari kerja.
               </p>
             </div>
@@ -374,23 +325,27 @@ const LeaveScreen = () => {
 
       {/* Modal Menu Lampiran */}
       {showAttachmentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4 text-center">Pilih Lampiran</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-xl font-bold mb-6 text-center text-gray-800">Pilih Lampiran</h3>
             
-            <div className="space-y-3">
+            <div className="space-y-4">
               <button
-                onClick={handleTakePhoto}
-                className="w-full flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                onClick={openCamera}
+                className="w-full flex items-center p-4 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition"
               >
-                <Camera className="text-blue-600 mr-3" size={24} />
-                <span className="text-gray-800 font-medium">Ambil Foto dari Kamera</span>
+                <div className="w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center mr-4">
+                  <Camera className="text-white" size={24} />
+                </div>
+                <span className="text-gray-800 font-semibold text-lg">Ambil Foto</span>
               </button>
               
               <label className="block w-full">
-                <div className="w-full flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition cursor-pointer">
-                  <Upload className="text-purple-600 mr-3" size={24} />
-                  <span className="text-gray-800 font-medium">Upload File dari Device</span>
+                <div className="w-full flex items-center p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition cursor-pointer">
+                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
+                    <Upload className="text-white" size={24} />
+                  </div>
+                  <span className="text-gray-800 font-semibold text-lg">Pilih File</span>
                 </div>
                 <input
                   type="file"
@@ -403,7 +358,7 @@ const LeaveScreen = () => {
 
             <button
               onClick={() => setShowAttachmentModal(false)}
-              className="w-full mt-6 py-3 text-red-500 font-semibold hover:text-red-700"
+              className="w-full mt-8 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition"
             >
               Batal
             </button>

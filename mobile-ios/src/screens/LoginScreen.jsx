@@ -45,39 +45,28 @@ const LoginScreen = () => {
     setError('');
 
     try {
-      const data = await authAPI.login({ 
+      const response = await authAPI.login({ 
         email: form.email, 
         password: form.password 
       });
       
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+      // Langsung cek token dari response.data
+      if (response.data?.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         
         if (!localStorage.getItem('onboarding_completed')) {
           localStorage.setItem('isFirstLogin', 'true');
         }
         
         navigate('/', { replace: true });
-        return;
+      } else {
+        setError('Login gagal. Periksa kembali akun Anda.');
       }
-      
-      console.error('Response format tidak dikenali:', responseData);
-      setError('Format response tidak dikenali');
-      
     } catch (err) {
-      console.error('Login error:', err);
-      
-      let errorMessage = 'Terjadi kesalahan saat login';
-      
-      if (err.response) {
-        errorMessage = err.response.data?.message || `Error ${err.response.status}`;
-      } else if (err.request) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
-      setError(errorMessage);
-    } finally {
+      setError(err.message);
+    }
+     finally {
       setLoading(false);
     }
   };
@@ -219,7 +208,6 @@ const LoginScreen = () => {
           </form>
 
           {/* Links Section */}
-          
           
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-200 text-center">

@@ -9,7 +9,7 @@ const getInitialBaseURL = () => {
 };
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getInitialBaseURL(),
   timeout: 60000,
   headers: {
     'Accept': 'application/json',
