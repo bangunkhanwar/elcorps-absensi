@@ -53,14 +53,13 @@ const AttendanceScreen = () => {
 
       console.log(`Fetching data from ${startDate} to ${endDate}`);
       
-      const params = {
-        userId: userId,
-        startDate: startDate,
-        endDate: endDate
-      };
-
-      const response = await attendanceAPI.getUserAttendance(userId, params);
-      setAttendanceData(response.success ? (response.data || []) : []);
+      const response = await attendanceAPI.getUserAttendance(userId, {
+        month: selectedMonth + 1,
+        year: selectedYear
+      });
+      // Handle both formats: array or {success, data}
+      const data = Array.isArray(response) ? response : (response.success ? (response.data || []) : []);
+      setAttendanceData(data);
     } catch (error) {
       console.error('Error fetching attendance:', error);
       alert(error.message);

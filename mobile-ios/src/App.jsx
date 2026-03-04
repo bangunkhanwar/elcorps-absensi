@@ -8,15 +8,18 @@ import AttendanceScreen from './screens/AttendanceScreen';
 import LeaveScreen from './screens/LeaveScreen';
 import HistoryLeaveScreen from './screens/HistoryLeaveScreen';
 import SettingScreen from './screens/SettingScreen';
+import NotificationScreen from './screens/NotificationScreen';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   useEffect(() => {
-    // Register service worker untuk PWA
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+    // Register service worker untuk PWA (Web Push)
+    if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(error => {
-          console.log('Service Worker registration failed:', error);
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+          console.log('✅ Service Worker registered:', reg.scope);
+        }).catch(error => {
+          console.log('❌ Service Worker registration failed:', error);
         });
       });
     }
@@ -50,6 +53,12 @@ function App() {
         <Route path="/history-leave" element={
           <PrivateRoute>
             <HistoryLeaveScreen />
+          </PrivateRoute>
+        } />
+        
+        <Route path="/notifications" element={
+          <PrivateRoute>
+            <NotificationScreen />
           </PrivateRoute>
         } />
         

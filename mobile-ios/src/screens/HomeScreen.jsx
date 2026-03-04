@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X, Bell } from 'lucide-react';
+import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X, Bell, CheckCircle } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
+import { useNotifications } from '../hooks/useNotifications';
 import { formatDate, formatTime, formatTimeShort } from '../utils/formatters';
 import { syncTimeWithServer, getTrueDate } from '../utils/timeSync';
 import CameraWithWatermark from '../components/CameraWithWatermark';
@@ -32,12 +33,16 @@ const HomeScreen = () => {
   const [clockInPhoto, setClockInPhoto] = useState(null); // Stores { file, previewUrl }
   const [clockOutPhoto, setClockOutPhoto] = useState(null); // Stores { file, previewUrl }
   const [loading, setLoading] = useState(false);
+  const [loadingLocation, setLoadingLocation] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [cameraPermissionStatus, setCameraPermissionStatus] = useState('prompt'); // granted, denied, prompt
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1); // 1: Welcome, 2: Location, 3: Camera, 4: Notifications
 
   // Hook for Location
   const { location: currentLocation, status: locationStatus, permissionStatus: locPermissionStatus, refresh: refreshLocation } = useLocation(unitKerjaData);
+  const { unreadCount, refresh: refreshNotifications } = useNotifications();
 
   useEffect(() => {
     const init = async () => {
@@ -81,23 +86,58 @@ const HomeScreen = () => {
 
   const requestNotificationPermission = async () => {
     try {
-      if ('Notification' in window) {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          console.log('Notification permission granted.');
-          // Register service worker if not already
-          if ('serviceWorker' in navigator) {
-            const registration = await navigator.serviceWorker.register('/sw.js');
-            console.log('Service Worker registered:', registration);
-          }
-        }
+      if (!('Notification' in window)) {
+        alert("Browser tidak mendukung notifikasi.");
+        return;
       }
-      setOnboardingStep(prev => prev + 1);
+
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        console.log('✅ Notification permission granted.');
+        
+        // 1. Get VAPID Public Key from server
+        const keyRes = await notificationAPI.getVapidKey();
+        const publicKey = keyRes.publicKey;
+
+        // 2. Register/Get Service Worker
+        const registration = await navigator.serviceWorker.ready;
+
+        // 3. Subscribe to Push Manager
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        // 4. Send subscription to backend
+        const subData = JSON.parse(JSON.stringify(subscription));
+        await notificationAPI.subscribe({
+          endpoint: subData.endpoint,
+          keys: {
+            p256dh: subData.keys.p256dh,
+            auth: subData.keys.auth
+          }
+        });
+
+        console.log('🚀 Push Subscription successful');
+      }
+      if (showOnboarding) setOnboardingStep(prev => prev + 1);
     } catch (err) {
-      console.error('Error requesting notification permission:', err);
-      setOnboardingStep(prev => prev + 1);
+      console.error('❌ Error subscribing to push:', err);
+      if (showOnboarding) setOnboardingStep(prev => prev + 1);
     }
   };
+
+  // Helper function for VAPID key conversion
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
 
   const handleRequestLocation = async () => {
     refreshLocation();
@@ -144,7 +184,13 @@ const HomeScreen = () => {
   const loadUserData = () => {
     try {
       const userData = localStorage.getItem('user');
-      if (userData) setUser(JSON.parse(userData));
+      if (userData) {
+        setUser(JSON.parse(userData));
+        // Auto-subscribe if already granted
+        if (Notification.permission === 'granted') {
+          requestNotificationPermission();
+        }
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -190,9 +236,22 @@ const HomeScreen = () => {
     }
   };
 
-  const openCustomCamera = (type) => {
-    setCameraType(type);
-    setShowCamera(true);
+  const openCustomCamera = async (type) => {
+    setLoadingLocation(true);
+    try {
+      // Refresh location and wait for it
+      await refreshLocation();
+      
+      // Give a small delay for GPS stabilization if needed
+      setTimeout(() => {
+        setLoadingLocation(false);
+        setCameraType(type);
+        setShowCamera(true);
+      }, 500);
+    } catch (err) {
+      setLoadingLocation(false);
+      alert('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif.');
+    }
   };
 
   const handleCapture = (captureData) => {
@@ -223,8 +282,10 @@ const HomeScreen = () => {
       if (response.success) {
         setShowClockInModal(false);
         setClockInPhoto(null);
-        // Khusus error ini, kita fetch ulang untuk sinkronisasi
+        setSuccessMessage('Berhasil Clock In! Selamat bekerja.');
+        setShowSuccessModal(true);
         checkTodayAttendance();
+        refreshNotifications();
       }
     } catch (error) {
       alert(error.message);
@@ -249,8 +310,10 @@ const HomeScreen = () => {
       if (response.success) {
         setShowClockOutModal(false);
         setClockOutPhoto(null);
-        alert('Clock out berhasil!');
+        setSuccessMessage('Berhasil Clock Out! Sampai jumpa besok.');
+        setShowSuccessModal(true);
         checkTodayAttendance();
+        refreshNotifications();
       }
     } catch (error) {
       alert(error.message);
@@ -300,6 +363,7 @@ const HomeScreen = () => {
       {showCamera && (
         <CameraWithWatermark
           title={cameraType === 'in' ? "Foto Clock In" : "Foto Clock Out"}
+          type={cameraType}
           onCapture={handleCapture}
           onClose={() => setShowCamera(false)}
         />
@@ -392,26 +456,30 @@ const HomeScreen = () => {
               }
               setShowClockInModal(true);
             }}
-            disabled={clockInStatus !== 'Belum Clock In'}
+            disabled={clockInStatus !== 'Belum Clock In' || loadingLocation}
             className={`w-full py-3 rounded-lg font-bold text-base flex items-center justify-center space-x-2 transition
-              ${clockInStatus === 'Belum Clock In' ? 
+              ${clockInStatus === 'Belum Clock In' && !loadingLocation ? 
                 'bg-primary hover:bg-primary-dark text-white' : 
                 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
           >
-            <Camera size={20} />
-            <span>CLOCK IN</span>
+            {loadingLocation && cameraType === 'in' ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+            ) : <Camera size={20} />}
+            <span>{loadingLocation && cameraType === 'in' ? 'MENCARI GPS...' : 'CLOCK IN'}</span>
           </button>
 
           <button
             onClick={() => setShowClockOutModal(true)}
-            disabled={clockInStatus !== 'Sudah Clock In'}
+            disabled={clockInStatus !== 'Sudah Clock In' || loadingLocation}
             className={`w-full py-3 rounded-lg font-bold text-base flex items-center justify-center space-x-2 transition
-              ${clockInStatus === 'Sudah Clock In' ? 
+              ${clockInStatus === 'Sudah Clock In' && !loadingLocation ? 
                 'bg-primary hover:bg-primary-dark text-white' : 
                 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
           >
-            <Camera size={20} />
-            <span>CLOCK OUT</span>
+            {loadingLocation && cameraType === 'out' ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+            ) : <Camera size={20} />}
+            <span>{loadingLocation && cameraType === 'out' ? 'MENCARI GPS...' : 'CLOCK OUT'}</span>
           </button>
 
           <button
@@ -447,11 +515,18 @@ const HomeScreen = () => {
                     <div className="text-left"><p className="font-semibold text-gray-800">Pengajuan Izin</p></div>
                   </div>
                 </button>
-                <button onClick={sendTestNotification} className="w-full flex items-center justify-between p-4 bg-orange-50 rounded-xl">
+                <button onClick={() => navigate('/notifications')} className="w-full flex items-center justify-between p-4 bg-orange-50 rounded-xl relative">
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mr-3"><Bell className="text-white" size={20} /></div>
-                    <div className="text-left"><p className="font-semibold text-gray-800">Notifikasi</p></div>
+                    <div className="text-left">
+                      <p className="font-semibold text-gray-800">Notifikasi</p>
+                    </div>
                   </div>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold h-5 min-w-[20px] px-1 rounded-full flex items-center justify-center border-2 border-white">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -571,6 +646,25 @@ const HomeScreen = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Success Absensi */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-6 animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-8 text-center animate-scale-in">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="text-green-600" size={48} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Berhasil!</h2>
+            <p className="text-gray-600 mb-8">{successMessage}</p>
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-primary-dark transition"
+            >
+              Selesai
+            </button>
           </div>
         </div>
       )}

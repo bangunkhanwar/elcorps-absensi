@@ -3,7 +3,7 @@ import { Camera, X, RefreshCw, MapPin, AlertCircle } from 'lucide-react';
 import { formatDate, formatTime } from '../utils/formatters';
 import { getTrueDate } from '../utils/timeSync';
 
-const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initialLocation = null }) => {
+const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initialLocation = null, type = "" }) => {
   const videoRef = React.useRef(null);
   const canvasRef = React.useRef(null);
   const streamRef = React.useRef(null); // Ref for immediate access in cleanup
@@ -238,8 +238,12 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
     const timeLine = `Waktu: ${waktuStr}`;
     const addressLines = wrapText(`Tempat: ${address}`, maxTextWidth);
     
+    // Add Attendance Type Line
+    const typeLabel = type === 'in' ? "Absensi Masuk" : type === 'out' ? "Absensi Keluar" : "";
+    
     // Combine all lines
     const allLines = [dateLine, timeLine, ...addressLines];
+    if (typeLabel) allLines.push(typeLabel);
 
     // Measure text for background box
     const lineHeight = fontSize + 10;

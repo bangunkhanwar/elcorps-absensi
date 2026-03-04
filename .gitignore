@@ -5,6 +5,7 @@ backend/sql/
 # Ignore node_modules in all main folders
 backend/node_modules/
 mobile/node_modules/
+mobile-ios/node_modules/
 website/node_modules/
 
 # Ignore system files

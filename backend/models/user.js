@@ -43,6 +43,12 @@ class User {
     return result.rows[0];
   }
 
+  static async findByJabatan(jabatanId) {
+    const query = 'SELECT * FROM users WHERE jabatan_id = $1';
+    const result = await pool.query(query, [jabatanId]);
+    return result.rows;
+  }
+
   static async getAll() {
     const query = `
       SELECT 

@@ -2,8 +2,8 @@ import axios from 'axios';
 
 // Prioritize manual IP from localStorage if exists
 const getInitialBaseURL = () => {
-  // const manualIP = localStorage.getItem('manual_server_ip');
-  const manualIP = 'elsa.elhijab.com';
+  const manualIP = 'sb32k63z-5000.asse.devtunnels.ms';
+  // const manualIP = 'elsa.elhijab.com';
   if (manualIP) return `https://${manualIP}/api`;
   return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 };
@@ -83,7 +83,7 @@ api.interceptors.response.use(
       status: response.status,
       url: response.config.url
     });
-    return response;
+    return response.data;
   },
   
   async (error) => {
@@ -186,9 +186,12 @@ export const attendanceAPI = {
     return api.post('/attendance/checkout', data);
   },
   
-  getToday: () => {
+  getToday: (params = '') => {
     console.log('🔄 Fetching today attendance...');
-    return api.get('/attendance/today');
+    if (typeof params === 'string' && params.startsWith('?')) {
+      return api.get(`/attendance/today${params}`);
+    }
+    return api.get('/attendance/today', { params });
   },
   
   getHistory: (params) => {
@@ -198,6 +201,10 @@ export const attendanceAPI = {
   
   getUserAttendance: (userId, params) => {
     return api.get(`/attendance/user/${userId}`, { params });
+  },
+  
+  getServerTime: () => {
+    return api.get('/attendance/server-time');
   }
 };
 
@@ -205,11 +212,21 @@ export const attendanceAPI = {
 export const leaveAPI = {
   apply: (data) => api.post('/leave/apply', data),
   getMyLeaves: () => api.get('/leave/my-leaves'),
+  getTeamApprovals: () => api.get('/leave/team-approval'),
+  action: (data) => api.post('/leave/action', data),
   upload: (formData) => api.post('/leave/upload', formData, {
     headers: { 
       'Content-Type': 'multipart/form-data'
     }
   })
+};
+
+// API endpoints untuk notifications
+export const notificationAPI = {
+  getNotifications: () => api.get('/notifications'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  getVapidKey: () => api.get('/notifications/vapid-key'),
+  subscribe: (subscription) => api.post('/notifications/subscribe', subscription),
 };
 
 export default api;

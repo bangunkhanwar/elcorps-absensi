@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const attendanceRoutes = require('./routes/attendance');
 const leaveRoutes = require('./routes/leave');
 const shiftRoutes = require('./routes/shift'); 
+const { router: notificationRoutes } = require('./routes/notification');
 
 // Middleware
 app.use(cors());
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/shifts', shiftRoutes); 
+app.use('/api/notifications', notificationRoutes); 
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

@@ -50,10 +50,10 @@ const LoginScreen = () => {
         password: form.password 
       });
       
-      // Langsung cek token dari response.data
-      if (response.data?.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+      // response is now the data object from the interceptor
+      if (response?.token) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
         
         if (!localStorage.getItem('onboarding_completed')) {
           localStorage.setItem('isFirstLogin', 'true');

@@ -1,6 +1,9 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const User = require('../models/user');
+const Attendance = require('../models/attendance');
+const fs = require('fs');
 
 const router = express.Router();
 
@@ -174,18 +177,35 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     if (!user) {
       console.log('❌ User not found');
       removeUploadedFile();
-      return res.status(404).json({ error: 'User tidak ditemukan' });
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
     }
 
     // Gunakan waktu sesuai timezone unit kerja
     const timezone = user.timezone || 'Asia/Jakarta';
     const today = getCurrentDateInTimezone(timezone);
     
+    // FALLBACK: Jika user tidak punya shift, ambil default dari unit kerja
+    if (!user.shift_id || !user.jam_masuk) {
+      console.log('⚠️ User has no shift, attempting to find default shift for unit:', user.unit_kerja_id);
+      const defaultShift = await User.getDefaultShift(user.unit_kerja_id);
+      if (defaultShift) {
+        console.log('✅ Found default shift:', defaultShift.nama_shift);
+        user.shift_id = defaultShift.id;
+        user.jam_masuk = defaultShift.jam_masuk;
+        user.jam_keluar = defaultShift.jam_keluar;
+        user.nama_shift = defaultShift.nama_shift;
+        user.toleransi_telat_minutes = defaultShift.toleransi_telat_minutes;
+      } else {
+        console.log('❌ No default shift found for unit:', user.unit_kerja_id);
+        // Tetap lanjutkan, tapi status mungkin "Invalid shift time"
+      }
+    }
+
     const existingAttendance = await Attendance.findByUserAndDate(req.user.id, today);
     if (existingAttendance) {
       console.log('❌ User already checked in today');
       removeUploadedFile();
-      return res.status(400).json({ error: 'Anda sudah check-in hari ini' });
+      return res.status(400).json({ success: false, error: 'Anda sudah check-in hari ini' });
     }
 
     console.log('📍 User data from database:', {
@@ -210,6 +230,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       });
       removeUploadedFile();
       return res.status(400).json({ 
+        success: false,
         error: `Unit kerja ${user.nama_unit} belum memiliki koordinat lokasi` 
       });
     }
@@ -227,6 +248,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       console.log('❌ Coordinates undefined from mobile');
       removeUploadedFile();
       return res.status(400).json({ 
+        success: false,
         error: 'Koordinat lokasi tidak terdeteksi. Pastikan GPS aktif dan izin lokasi diberikan.' 
       });
     }
@@ -234,7 +256,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     if (!latitude || !longitude) {
       console.log('❌ Missing coordinates from mobile');
       removeUploadedFile();
-      return res.status(400).json({ error: 'Koordinat lokasi diperlukan' });
+      return res.status(400).json({ success: false, error: 'Koordinat lokasi diperlukan' });
     }
 
     const lat = parseFloat(latitude);
@@ -244,6 +266,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       console.log('❌ Invalid coordinate format:', { lat, lng });
       removeUploadedFile();
       return res.status(400).json({ 
+        success: false,
         error: 'Format koordinat tidak valid. Pastikan aplikasi memiliki akses lokasi.' 
       });
     }
@@ -306,6 +329,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
     console.log('✅ Check-in successful for user:', req.user.id);
     
     res.status(201).json({ 
+      success: true,
       message: 'Check-in berhasil',
       attendance: {
         ...attendance,
@@ -345,11 +369,11 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
     
     const attendance = await Attendance.findByUserAndDate(req.user.id, today);
     if (!attendance) {
-      return res.status(400).json({ error: 'Anda belum check-in hari ini' });
+      return res.status(400).json({ success: false, error: 'Anda belum check-in hari ini' });
     }
 
     if (attendance.waktu_keluar) {
-      return res.status(400).json({ error: 'Anda sudah check-out hari ini' });
+      return res.status(400).json({ success: false, error: 'Anda sudah check-out hari ini' });
     }
 
     console.log('📍 Current user data for check-out:', {
@@ -365,6 +389,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
         current_unit: user.unit_kerja_id
       });
       return res.status(400).json({ 
+        success: false,
         error: `Unit kerja Anda telah diubah. Silakan hubungi HR.` 
       });
     }
@@ -372,6 +397,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
     if (!user.latitude || !user.longitude) {
       console.log('❌ Unit kerja missing coordinates');
       return res.status(400).json({ 
+        success: false,
         error: `Unit kerja ${user.nama_unit} belum memiliki koordinat lokasi` 
       });
     }
@@ -385,6 +411,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
     
     if (latitude === undefined || longitude === undefined) {
       return res.status(400).json({ 
+        success: false,
         error: 'Koordinat lokasi tidak terdeteksi. Pastikan GPS aktif dan izin lokasi diberikan.' 
       });
     }
@@ -394,6 +421,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
     
     if (isNaN(lat) || isNaN(lng)) {
       return res.status(400).json({ 
+        success: false,
         error: 'Format koordinat tidak valid. Pastikan aplikasi memiliki akses lokasi.' 
       });
     }
@@ -417,6 +445,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
     if (distance > user.radius_meter) {
       console.log('❌ User outside radius during check-out');
       return res.status(400).json({ 
+        success: false,
         error: `Anda berada di luar radius unit kerja. Jarak: ${Math.round(distance)}m, Radius: ${user.radius_meter}m` 
       });
     }
@@ -432,6 +461,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
     console.log('✅ Check-out successful for user:', req.user.id);
     
     res.json({ 
+      success: true,
       message: 'Check-out berhasil',
       attendance: {
         ...updatedAttendance,
@@ -455,13 +485,14 @@ router.get('/history', auth, async (req, res) => {
     const attendance = await Attendance.getUserAttendance(user_id, startDate, endDate);
     
     res.json({
+      success: true,
       message: 'Data history berhasil diambil',
       data: attendance
     });
 
   } catch (error) {
     console.error('Error getting history:', error);
-    res.status(500).json({ error: 'Terjadi kesalahan pada server' });
+    res.status(500).json({ success: false, error: 'Terjadi kesalahan pada server' });
   }
 });
 
@@ -470,7 +501,7 @@ router.get('/today', auth, async (req, res) => {
   try {
     const user = await User.findByIdWithUnitAndShift(req.user.id);
     if (!user) {
-      return res.status(404).json({ error: 'User tidak ditemukan' });
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
     }
     
     const timezone = user?.timezone || 'Asia/Jakarta';
@@ -488,6 +519,7 @@ router.get('/today', auth, async (req, res) => {
     };
     
     res.json({
+      success: true,
       message: 'Status absensi hari ini',
       date: today,
       data: attendance || null,
@@ -649,6 +681,17 @@ router.get('/shifts/:unitKerjaId', auth, async (req, res) => {
     console.error('Shifts error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// GET SERVER TIME
+router.get('/server-time', async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      timestamp: Date.now(),
+      iso: new Date().toISOString()
+    }
+  });
 });
 
 module.exports = router;

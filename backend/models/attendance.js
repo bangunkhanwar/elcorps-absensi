@@ -60,8 +60,8 @@ class Attendance {
         s.jam_keluar as jam_keluar_shift,
         s.toleransi_telat_minutes
       FROM absensi a
-      JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
-      JOIN shifts s ON a.shift_id = s.id
+      LEFT JOIN unit_kerja uk ON a.unit_kerja_id = uk.id
+      LEFT JOIN shifts s ON a.shift_id = s.id
       WHERE a.user_id = $1 AND a.tanggal_absen BETWEEN $2 AND $3 
       ORDER BY a.tanggal_absen DESC
     `;

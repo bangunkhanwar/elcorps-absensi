@@ -116,6 +116,66 @@ const HistoryLeaveScreen = () => {
   // Calculate duration using dayjs
   const calculateDuration = (start, end) => dayjs(end).diff(dayjs(start), 'day') + 1;
 
+  const renderAttachment = (lampiran) => {
+    if (!lampiran || lampiran === '{}') return null;
+    
+    // Check if it's an image
+    const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(lampiran);
+    
+    let fileUrl = lampiran;
+    if (!lampiran.startsWith('http')) {
+      const serverBase = window.location.origin.includes('localhost') 
+        ? 'http://localhost:5000' 
+        : `https://${import.meta.env.VITE_API_URL || 'sb32k63z-5000.asse.devtunnels.ms'}`;
+      
+      fileUrl = `${serverBase}/uploads/leave/${lampiran}`;
+    }
+
+    if (isImage) {
+      return (
+        <div className="mt-3">
+          <p className="text-gray-600 text-xs mb-2 font-semibold">Lampiran Bukti:</p>
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+            <img 
+              src={fileUrl} 
+              alt="Lampiran" 
+              className="w-full h-32 object-cover rounded-xl border border-gray-200 shadow-sm"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                const link = e.target.parentElement.nextSibling;
+                if (link) link.style.display = 'flex';
+              }}
+            />
+          </a>
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'none' }}
+            className="flex items-center p-2 bg-blue-50 text-blue-700 rounded-lg font-semibold hover:bg-blue-100 transition"
+          >
+            <FileText size={16} className="mr-2" />
+            <span className="text-sm">Lihat Lampiran</span>
+          </a>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-3">
+        <a
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center p-2 bg-blue-50 text-blue-700 rounded-lg font-semibold hover:bg-blue-100 transition"
+        >
+          <FileText size={16} className="mr-2" />
+          <span className="text-sm">Lihat Dokumen</span>
+        </a>
+      </div>
+    );
+  };
+
   // Warna status
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -246,23 +306,7 @@ const HistoryLeaveScreen = () => {
                   )}
 
                   {/* Lampiran */}
-                  {item.lampiran && (
-                    <div>
-                      <p className="text-gray-600 text-sm">Lampiran:</p>
-                      <a
-                        href={item.lampiran}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center mt-1 p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
-                      >
-                        <FileText className="text-blue-600 mr-2" size={16} />
-                        <span className="text-blue-600 font-medium text-sm flex-1">
-                          Lihat Lampiran
-                        </span>
-                        <span className="text-blue-600">→</span>
-                      </a>
-                    </div>
-                  )}
+                  {renderAttachment(item.lampiran)}
                 </div>
               );
             })}
