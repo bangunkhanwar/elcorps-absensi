@@ -154,7 +154,7 @@ const DetailAbsensi: React.FC = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button 
@@ -174,146 +174,159 @@ const DetailAbsensi: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* Data Karyawan */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-[#25a298] to-teal-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-lg font-bold">
-                  {attendance.nama.split(' ').map(n => n[0]).join('').toUpperCase()}
-                </span>
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Data Karyawan & Data Izin */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Data Karyawan */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-[#25a298] to-teal-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-lg font-bold">
+                    {attendance.nama.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">{attendance.nama}</h2>
+                  <p className="text-slate-600">{attendance.jabatan} • {attendance.departemen}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">{attendance.nama}</h2>
-                <p className="text-slate-600">{attendance.jabatan} • {attendance.departemen}</p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">NIK</label>
-                  <p className="text-slate-900 font-medium">{attendance.nik}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">Jabatan</label>
-                  <p className="text-slate-900 font-medium">{attendance.jabatan}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">Divisi</label>
-                  <p className="text-slate-900 font-medium">{attendance.divisi}</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">Departemen</label>
-                  <p className="text-slate-900 font-medium">{attendance.departemen}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">Unit Kerja</label>
-                  <p className="text-slate-900 font-medium">{attendance.unit_kerja}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">Lokasi Absen</label>
-                  <p className="text-slate-900 font-medium">{attendance.location}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Data Absensi */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">
-              <span className="w-2 h-2 bg-[#25a298] rounded-full mr-3"></span>
-              Data Absensi
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Absensi</label>
-                <p className="text-slate-900 font-medium">{formatDate(attendance.tanggal_absen)}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Status</label>
-                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(attendance.status)}`}>
-                  {getStatusText(attendance.status)}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">Waktu Masuk</label>
-                  <p className="text-slate-900 font-medium text-lg">{attendance.waktu_masuk}</p>
-                </div>
-                {attendance.foto_masuk && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Foto Masuk</label>
-                    <img
-                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_masuk}`}
-                      alt="Foto masuk"
-                      className="w-32 h-32 object-cover rounded-lg border border-slate-200"
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">Waktu Keluar</label>
-                  <p className="text-slate-900 font-medium text-lg">{attendance.waktu_keluar}</p>
-                </div>
-                {attendance.foto_keluar && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Foto Keluar</label>
-                    <img
-                      src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_keluar}`}
-                      alt="Foto keluar"
-                      className="w-32 h-32 object-cover rounded-lg border border-slate-200"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Data Izin */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">
-              <span className="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
-              Data Izin
-            </h3>
-
-            {leaveData ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-1">Jenis Izin</label>
-                    <p className="text-slate-900 font-medium capitalize">{leaveData.jenis_izin}</p>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">NIK</label>
+                    <p className="text-slate-900 font-medium">{attendance.nik}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Mulai</label>
-                    <p className="text-slate-900 font-medium">{formatDate(leaveData.tanggal_mulai)}</p>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Jabatan</label>
+                    <p className="text-slate-900 font-medium">{attendance.jabatan}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Divisi</label>
+                    <p className="text-slate-900 font-medium">{attendance.divisi}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Selesai</label>
-                    <p className="text-slate-900 font-medium">{formatDate(leaveData.tanggal_selesai)}</p>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Departemen</label>
+                    <p className="text-slate-900 font-medium">{attendance.departemen}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
-                    <p className="text-slate-900 font-medium">{leaveData.keterangan}</p>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Unit Kerja</label>
+                    <p className="text-slate-900 font-medium">{attendance.unit_kerja}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Lokasi Absen</label>
+                    <p className="text-slate-900 font-medium">{attendance.location}</p>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-slate-400 text-lg mb-2">—</div>
-                <p className="text-slate-500">Tidak ada data izin</p>
+            </div>
+
+            {/* Data Izin */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">
+                <span className="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
+                Data Izin
+              </h3>
+
+              {leaveData ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">Jenis Izin</label>
+                      <p className="text-slate-900 font-medium capitalize">{leaveData.jenis_izin}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Mulai</label>
+                      <p className="text-slate-900 font-medium">{formatDate(leaveData.tanggal_mulai)}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Selesai</label>
+                      <p className="text-slate-900 font-medium">{formatDate(leaveData.tanggal_selesai)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                      <p className="text-slate-900 font-medium">{leaveData.keterangan}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-slate-400 text-lg mb-2">—</div>
+                  <p className="text-slate-500">Tidak ada data izin</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Data Absensi */}
+          <div className="lg:col-span-7">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">
+                <span className="w-2 h-2 bg-[#25a298] rounded-full mr-3"></span>
+                Data Absensi
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 pb-8 border-b border-slate-100">
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Absensi</label>
+                  <p className="text-slate-900 font-medium text-lg">{formatDate(attendance.tanggal_absen)}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">Status Kehadiran</label>
+                  <span className={`inline-flex px-4 py-1.5 rounded-full text-sm font-semibold border ${getStatusColor(attendance.status)}`}>
+                    {getStatusText(attendance.status)}
+                  </span>
+                </div>
               </div>
-            )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Waktu Masuk</label>
+                    <p className="text-[#25a298] font-bold text-2xl">{attendance.waktu_masuk}</p>
+                  </div>
+                  {attendance.foto_masuk && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-3">Foto Presensi Masuk</label>
+                      <div className="relative group">
+                        <img
+                          src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_masuk}`}
+                          alt="Foto masuk"
+                          loading="lazy"
+                          className="w-full aspect-square object-cover rounded-2xl border-2 border-slate-200 shadow-sm transition-transform duration-200 group-hover:scale-[1.02]"
+                        />
+                        <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5 pointer-events-none"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-6">
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <label className="block text-sm font-medium text-slate-500 mb-1">Waktu Keluar</label>
+                    <p className="text-slate-900 font-bold text-2xl">{attendance.waktu_keluar || '--:--'}</p>
+                  </div>
+                  {attendance.foto_keluar && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-600 mb-3">Foto Presensi Keluar</label>
+                      <div className="relative group">
+                        <img
+                          src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_keluar}`}
+                          alt="Foto keluar"
+                          loading="lazy"
+                          className="w-full aspect-square object-cover rounded-2xl border-2 border-slate-200 shadow-sm transition-transform duration-200 group-hover:scale-[1.02]"
+                        />
+                        <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5 pointer-events-none"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
