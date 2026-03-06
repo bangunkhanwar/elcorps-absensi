@@ -366,25 +366,6 @@ const DataKaryawan: React.FC = () => {
     }
   }
 
-  // Tampilkan judul berdasarkan filter
-  const getPageTitle = () => {
-    if (activeFilters.role === 'hr') {
-      return 'Data Admin HR'
-    } else if (activeFilters.role === 'karyawan') {
-      return 'Data Karyawan'
-    }
-    return 'Data Karyawan'
-  }
-
-  const getPageDescription = () => {
-    if (activeFilters.role === 'hr') {
-      return 'Kelola informasi dan akun Admin HR'
-    } else if (activeFilters.role === 'karyawan') {
-      return 'Kelola informasi dan akun karyawan'
-    }
-    return 'Kelola informasi dan akun karyawan'
-  }
-
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
