@@ -29,7 +29,6 @@ app.use('/api/notifications', notificationRoutes);
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads/leave', express.static(path.join(__dirname, 'uploads/leave')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Basic routes
 app.get('/', (req, res) => {

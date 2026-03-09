@@ -182,17 +182,26 @@ const AttendanceScreen = () => {
 
                   {/* Time Information */}
                   <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-sm">Clock In</p>
-                      <p className="text-gray-800 font-bold text-lg">
-                        {formatTimeShort(item.waktu_masuk)}
-                      </p>
+                    {/* Clock In */}
+                    <div className="bg-emerald-50 rounded-xl p-3 flex flex-col items-center border border-emerald-100">
+                      <p className="text-emerald-600 text-[10px] font-bold uppercase mb-1">Clock In</p>
+                      <div className="flex items-center space-x-2">
+                        <Clock size={16} className="text-emerald-500" />
+                        <p className="text-gray-800 font-bold text-base">
+                          {formatTimeShort(item.waktu_masuk)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-sm">Clock Out</p>
-                      <p className="text-gray-800 font-bold text-lg">
-                        {formatTimeShort(item.waktu_keluar)}
-                      </p>
+
+                    {/* Clock Out */}
+                    <div className="bg-orange-50 rounded-xl p-3 flex flex-col items-center border border-orange-100">
+                      <p className="text-orange-600 text-[10px] font-bold uppercase mb-1">Clock Out</p>
+                      <div className="flex items-center space-x-2">
+                        <Clock size={16} className="text-orange-500" />
+                        <p className="text-gray-800 font-bold text-base">
+                          {formatTimeShort(item.waktu_keluar)}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -317,8 +326,7 @@ const AttendanceScreen = () => {
             </div>
           </div>
         </div>
-      )}
-    </div>
+      </div>
   );
 };
 

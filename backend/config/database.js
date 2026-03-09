@@ -7,6 +7,9 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
+  max: 20, // Maksimal koneksi aktif per cluster instance
+  idleTimeoutMillis: 30000, // Menutup koneksi yang tidak terpakai setelah 30 detik
+  connectionTimeoutMillis: 2000, // Gagal cepat jika DB terlalu sibuk (2 detik)
 });
 
 // Test connection

@@ -6,38 +6,52 @@ class Attendance {
     const { 
       user_id, tanggal_absen, waktu_masuk, foto_masuk, status,
       user_latitude, user_longitude, distance_meter,
-      unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar
+      unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar,
+      accuracy, ip_address, is_suspicious, suspicious_reason
     } = attendanceData;
     
     const query = `
       INSERT INTO absensi (
         user_id, tanggal_absen, waktu_masuk, foto_masuk, status,
         user_latitude, user_longitude, distance_meter,
-        unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar
+        unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar,
+        accuracy, ip_address, is_suspicious, suspicious_reason
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *
     `;
     
     const values = [
       user_id, tanggal_absen, waktu_masuk, foto_masuk, status,
       user_latitude, user_longitude, distance_meter,
-      unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar
+      unit_kerja_id, shift_id, jam_seharusnya_masuk, jam_seharusnya_keluar,
+      accuracy || null, ip_address || null, is_suspicious || false, suspicious_reason || null
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
 
   // UPDATE CHECKOUT struktur
-  static async updateCheckOut(id, waktu_keluar, foto_keluar) {
+  static async updateCheckOut(id, waktu_keluar, foto_keluar, extraData = {}) {
+    const { accuracy, ip_address, is_suspicious, suspicious_reason } = extraData;
     const query = `
       UPDATE absensi 
-      SET waktu_keluar = $1, foto_keluar = $2 
-      WHERE id = $3 
+      SET waktu_keluar = $1, foto_keluar = $2,
+          accuracy_out = $3, ip_address_out = $4,
+          is_suspicious_out = $5, suspicious_reason_out = $6
+      WHERE id = $7 
       RETURNING *
     `;
     
-    const values = [waktu_keluar, foto_keluar, id];
+    const values = [
+      waktu_keluar, 
+      foto_keluar, 
+      accuracy || null, 
+      ip_address || null, 
+      is_suspicious || false, 
+      suspicious_reason || null,
+      id
+    ];
     const result = await pool.query(query, values);
     return result.rows[0];
   }

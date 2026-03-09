@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, FileText, Upload, X, Camera, File, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { leaveAPI } from '../services/api';
+import { leaveAPI, getMediaUrl } from '../services/api';
 import { useNotifications } from '../hooks/useNotifications';
 import Header from '../components/Header';
 
@@ -12,7 +12,9 @@ const LeaveScreen = () => {
   const [activeTab, setActiveTab] = useState('my-leave'); // 'my-leave' | 'team-approval'
   const [teamApprovals, setTeamApprovals] = useState([]);
   const [isHR, setIsHR] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
   const [hasSubordinates, setHasSubordinates] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   
   const [leaveType, setLeaveType] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -34,10 +36,16 @@ const LeaveScreen = () => {
     try {
       const res = await leaveAPI.getTeamApprovals();
       if (res.success) {
-        setTeamApprovals(res.data);
+        // Sort items by created_at descending (newest first)
+        const sortedData = [...res.data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setTeamApprovals(sortedData);
         setIsHR(res.isHR);
-        // If it's HR or has records or at least returns successfully (even empty), show tab
-        setHasSubordinates(true);
+        setIsSupervisor(res.isSupervisor);
+        
+        // Show tab only if user is NOT HR and IS a supervisor
+        // Note: HR can see all but if they are not specifically a supervisor for someone, we hide the tab
+        // based on user request "hanya muncul bagi supervisor saja"
+        setHasSubordinates(res.isSupervisor && !res.isHR);
       }
     } catch (err) {
       console.log('User has no subordinate access');
@@ -155,29 +163,21 @@ const LeaveScreen = () => {
   };
 
   const renderAttachment = (lampiran) => {
-    if (!lampiran || lampiran === '{}') return null;
+    const fileUrl = getMediaUrl(lampiran);
+    if (!fileUrl) return null;
     
     // Check if it's an image
-    const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(lampiran);
+    const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(fileUrl);
     
-    let fileUrl = lampiran;
-    if (!lampiran.startsWith('http')) {
-      const serverBase = window.location.origin.includes('localhost') 
-        ? 'http://localhost:5000' 
-        : `https://${import.meta.env.VITE_API_URL || 'sb32k63z-5000.asse.devtunnels.ms'}`;
-      
-      fileUrl = `${serverBase}/uploads/leave/${lampiran}`;
-    }
-
     if (isImage) {
       return (
         <div className="mt-3">
           <p className="text-gray-600 text-xs mb-2 font-semibold">Lampiran Bukti:</p>
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+          <div className="cursor-pointer" onClick={() => setSelectedImage(fileUrl)}>
             <img 
               src={fileUrl} 
               alt="Lampiran" 
-              className="w-full h-40 object-cover rounded-xl border border-gray-200 shadow-sm"
+              className="w-full h-40 object-cover rounded-xl border border-gray-200 shadow-sm hover:opacity-90 transition"
               onError={(e) => {
                 e.target.style.display = 'none';
                 // Show link instead if image fails
@@ -185,17 +185,15 @@ const LeaveScreen = () => {
                 if (link) link.style.display = 'flex';
               }}
             />
-          </a>
-          <a
-            href={fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+          <button
+            onClick={() => setSelectedImage(fileUrl)}
             style={{ display: 'none' }}
-            className="flex items-center p-3 bg-blue-50 text-blue-700 rounded-xl font-semibold hover:bg-blue-100 transition"
+            className="w-full flex items-center p-3 bg-blue-50 text-blue-700 rounded-xl font-semibold hover:bg-blue-100 transition"
           >
             <FileText size={18} className="mr-2" />
             <span>Lihat Lampiran</span>
-          </a>
+          </button>
         </div>
       );
     }
@@ -211,6 +209,25 @@ const LeaveScreen = () => {
           <FileText size={18} className="mr-2" />
           <span>Lihat Dokumen Pendukung</span>
         </a>
+      </div>
+    );
+  };
+
+  const ImageModal = ({ url, onClose }) => {
+    if (!url) return null;
+    return (
+      <div className="fixed inset-0 bg-black/90 z-[100] flex flex-col p-4 animate-fade-in" onClick={onClose}>
+        <div className="flex justify-end p-2">
+          <button className="text-white p-2 bg-white/10 rounded-full"><X size={32} /></button>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <img 
+            src={url} 
+            alt="Preview" 
+            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            onClick={e => e.stopPropagation()} 
+          />
+        </div>
       </div>
     );
   };
@@ -491,7 +508,7 @@ const LeaveScreen = () => {
                       </button>
                       <button 
                         onClick={() => handleAction(approval.id, 'approved')}
-                        className="flex-1 flex items-center justify-center space-x-2 py-3.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition"
+                        className="flex-1 flex items-center justify-center space-x-2 py-3.5 bg-primary text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition"
                       >
                         <CheckCircle size={20} /> <span>Setujui</span>
                       </button>
@@ -582,6 +599,14 @@ const LeaveScreen = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Full Screen Image Preview */}
+      {selectedImage && (
+        <ImageModal 
+          url={selectedImage} 
+          onClose={() => setSelectedImage(null)} 
+        />
       )}
     </div>
   );

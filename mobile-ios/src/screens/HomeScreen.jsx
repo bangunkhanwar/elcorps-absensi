@@ -8,6 +8,7 @@ import { formatDate, formatTime, formatTimeShort } from '../utils/formatters';
 import { syncTimeWithServer, getTrueDate } from '../utils/timeSync';
 import CameraWithWatermark from '../components/CameraWithWatermark';
 import logo from '../assets/logo.png';
+import HmacSHA256 from 'crypto-js/hmac-sha256';
 
 const HomeScreen = () => {
   const navigate = useNavigate();
@@ -273,9 +274,14 @@ const HomeScreen = () => {
     setLoading(true);
 
     try {
+      const SECRET_KEY = 'your-secret-key'; // MUST MATCH BACKEND
+      const signature = HmacSHA256(`${user.id}:${currentLocation.latitude}:${currentLocation.longitude}`, SECRET_KEY).toString();
+
       const formData = new FormData();
       formData.append('latitude', currentLocation.latitude);
       formData.append('longitude', currentLocation.longitude);
+      formData.append('accuracy', currentLocation.accuracy);
+      formData.append('signature', signature);
       formData.append('foto_masuk', clockInPhoto.file);
 
       const response = await attendanceAPI.checkIn(formData);
@@ -301,9 +307,14 @@ const HomeScreen = () => {
     setLoading(true);
 
     try {
+      const SECRET_KEY = 'your-secret-key'; // MUST MATCH BACKEND
+      const signature = HmacSHA256(`${user.id}:${currentLocation.latitude}:${currentLocation.longitude}`, SECRET_KEY).toString();
+
       const formData = new FormData();
       formData.append('latitude', currentLocation.latitude);
       formData.append('longitude', currentLocation.longitude);
+      formData.append('accuracy', currentLocation.accuracy);
+      formData.append('signature', signature);
       formData.append('foto_keluar', clockOutPhoto.file);
 
       const response = await attendanceAPI.checkOut(formData);
@@ -454,6 +465,9 @@ const HomeScreen = () => {
               if (locationStatus === 'out_of_radius') {
                 return alert('Anda berada di luar radius unit kerja.');
               }
+              if (currentLocation && currentLocation.accuracy > 100) {
+                return alert(`Sinyal GPS lemah (Akurasi: ${Math.round(currentLocation.accuracy)}m). Mohon keluar ruangan atau ke tempat terbuka agar lokasi lebih akurat.`);
+              }
               setShowClockInModal(true);
             }}
             disabled={clockInStatus !== 'Belum Clock In' || loadingLocation}
@@ -469,7 +483,15 @@ const HomeScreen = () => {
           </button>
 
           <button
-            onClick={() => setShowClockOutModal(true)}
+            onClick={() => {
+              if (locationStatus === 'out_of_radius') {
+                return alert('Anda berada di luar radius unit kerja.');
+              }
+              if (currentLocation && currentLocation.accuracy > 100) {
+                return alert(`Sinyal GPS lemah (Akurasi: ${Math.round(currentLocation.accuracy)}m). Mohon keluar ruangan atau ke tempat terbuka agar lokasi lebih akurat.`);
+              }
+              setShowClockOutModal(true);
+            }}
             disabled={clockInStatus !== 'Sudah Clock In' || loadingLocation}
             className={`w-full py-3 rounded-lg font-bold text-base flex items-center justify-center space-x-2 transition
               ${clockInStatus === 'Sudah Clock In' && !loadingLocation ? 

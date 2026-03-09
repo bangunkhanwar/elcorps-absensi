@@ -207,7 +207,6 @@ export const attendanceAPI = {
     return api.get('/attendance/server-time');
   }
 };
-
 // API endpoints untuk leave
 export const leaveAPI = {
   apply: (data) => api.post('/leave/apply', data),
@@ -219,6 +218,29 @@ export const leaveAPI = {
       'Content-Type': 'multipart/form-data'
     }
   })
+};
+
+export const getMediaUrl = (path) => {
+  if (!path || path === '{}' || typeof path !== 'string') return null;
+
+  let filename = path;
+
+  // Handle if path is already a full URL
+  if (path.startsWith('http')) {
+    // If it's already a correct remote URL (not localhost), we might keep it
+    // But to be safe and consistent with current server, we extract filename and rebuild
+    try {
+      const url = new URL(path);
+      // Only extract filename if it's localhost or we want to force current server
+      const pathParts = url.pathname.split('/');
+      filename = pathParts[pathParts.length - 1];
+    } catch (e) {
+      // Not a valid URL, treat as filename
+    }
+  }
+
+  const baseUrl = api.defaults.baseURL.replace('/api', '');
+  return `${baseUrl}/uploads/leave/${filename}`;
 };
 
 // API endpoints untuk notifications

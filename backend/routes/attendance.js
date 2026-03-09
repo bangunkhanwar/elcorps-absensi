@@ -1,11 +1,28 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const optimizeImage = require('../middleware/optimizeImage');
 const User = require('../models/user');
 const Attendance = require('../models/attendance');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const router = express.Router();
+
+const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+
+// Helper: Validate Payload Signature
+function validateSignature(payload, signature) {
+  if (!signature) return false;
+  
+  // Create string to hash: user_id + lat + lng + secret
+  const data = `${payload.user_id}:${payload.latitude}:${payload.longitude}:${SECRET_KEY}`;
+  const expectedSignature = crypto.createHmac('sha256', SECRET_KEY)
+    .update(data)
+    .digest('hex');
+    
+  return expectedSignature === signature;
+}
 
 // Helper function: Calculate distance between coordinates (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -153,7 +170,7 @@ function getCurrentJakartaDate() {
 }
 
 // CHECK-IN
-router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
+router.post('/checkin', auth, upload.single('foto_masuk'), optimizeImage, async (req, res) => {
   // Helper untuk hapus file jika ada
   function removeUploadedFile() {
     if (req.file && req.file.path) {
@@ -235,12 +252,13 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       });
     }
 
-    const { latitude, longitude } = req.body;
+    const { latitude, longitude, accuracy, signature } = req.body;
+    const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
     console.log('📍 Raw location data from mobile:', { 
       latitude, 
       longitude,
-      type_lat: typeof latitude,
-      type_lng: typeof longitude,
+      accuracy,
       foto_masuk: req.file ? req.file.filename : 'No photo'
     });
     
@@ -277,6 +295,23 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       lat, lng,
       parseFloat(user.latitude), parseFloat(user.longitude)
     );
+
+    // 3. FRAUD DETECTION
+    let is_suspicious = false;
+    let suspicious_reason = "";
+
+    const payload = { user_id: req.user.id, latitude, longitude };
+    if (!signature || !validateSignature(payload, signature)) {
+      is_suspicious = true;
+      suspicious_reason += "Signature mismatch/missing (Potential API Spoofing); ";
+      console.log('⚠️ FRAUD DETECTED: Signature mismatch for user:', req.user.id);
+    }
+
+    if (accuracy !== undefined && (parseFloat(accuracy) <= 1)) {
+      is_suspicious = true;
+      suspicious_reason += `Unnatural accuracy: ${accuracy}m (Potential Fake GPS); `;
+      console.log('⚠️ FRAUD DETECTED: Unnatural accuracy for user:', req.user.id);
+    }
 
     console.log('📍 Distance calculation:', {
       user_lat: user.latitude,
@@ -319,7 +354,11 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
       unit_kerja_id: user.unit_kerja_id,
       shift_id: user.shift_id,
       jam_seharusnya_masuk: user.jam_masuk,
-      jam_seharusnya_keluar: user.jam_keluar
+      jam_seharusnya_keluar: user.jam_keluar,
+      accuracy: accuracy,
+      ip_address: ip_address,
+      is_suspicious: is_suspicious,
+      suspicious_reason: suspicious_reason
     };
 
     console.log('💾 Saving attendance data:', attendanceData);
@@ -355,9 +394,8 @@ router.post('/checkin', auth, upload.single('foto_masuk'), async (req, res) => {
   }
 });
 
-// CHECK-OUT 
-router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) => {
-  try {
+// CHECK-OUT
+router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, async (req, res) => {  try {
     console.log('📱 Check-out request received:', {
       user_id: req.user.id,
       body: req.body
@@ -402,10 +440,13 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       });
     }
 
-    const { latitude, longitude } = req.body;
+    const { latitude, longitude, accuracy, signature } = req.body;
+    const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+
     console.log('📍 Check-out location data:', { 
       latitude, 
       longitude,
+      accuracy,
       foto_keluar: req.file ? req.file.filename : 'No photo'
     });
     
@@ -433,6 +474,23 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
       parseFloat(user.latitude), parseFloat(user.longitude)
     );
 
+    // 3. FRAUD DETECTION
+    let is_suspicious = false;
+    let suspicious_reason = "";
+
+    const payload = { user_id: req.user.id, latitude, longitude };
+    if (!signature || !validateSignature(payload, signature)) {
+      is_suspicious = true;
+      suspicious_reason += "Signature mismatch/missing (Potential API Spoofing); ";
+      console.log('⚠️ FRAUD DETECTED (Out): Signature mismatch for user:', req.user.id);
+    }
+
+    if (accuracy !== undefined && (parseFloat(accuracy) <= 1)) {
+      is_suspicious = true;
+      suspicious_reason += `Unnatural accuracy: ${accuracy}m (Potential Fake GPS); `;
+      console.log('⚠️ FRAUD DETECTED (Out): Unnatural accuracy for user:', req.user.id);
+    }
+
     console.log('📍 Check-out distance calculation:', {
       user_lat: user.latitude,
       user_lng: user.longitude,
@@ -455,7 +513,13 @@ router.post('/checkout', auth, upload.single('foto_keluar'), async (req, res) =>
     const updatedAttendance = await Attendance.updateCheckOut(
       attendance.id,
       currentTime,
-      req.file ? req.file.filename : ''
+      req.file ? req.file.filename : '',
+      {
+        accuracy,
+        ip_address,
+        is_suspicious,
+        suspicious_reason
+      }
     );
 
     console.log('✅ Check-out successful for user:', req.user.id);

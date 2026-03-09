@@ -7,6 +7,7 @@ const fs = require('fs');
 const cron = require('node-cron');
 const pool = require('../config/database');
 const User = require('../models/user');
+const optimizeImage = require('../middleware/optimizeImage');
 const { createNotification } = require('./notification');
 
 const router = express.Router();
@@ -87,7 +88,7 @@ const upload = multer({
 });
 
 // File upload endpoint
-router.post('/upload', auth, upload.single('file'), async (req, res) => {
+router.post('/upload', auth, upload.single('file'), optimizeImage, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
@@ -251,6 +252,12 @@ router.get('/team-approval', auth, async (req, res) => {
     let values = [];
 
     // Jika HRD, tampilkan semua izin (View-Only)
+    let isSupervisor = false;
+    if (userJabatanId) {
+      const supervisorCheck = await pool.query('SELECT 1 FROM jabatan WHERE reports_to_id = $1 LIMIT 1', [userJabatanId]);
+      isSupervisor = supervisorCheck.rowCount > 0;
+    }
+
     if (userRole === 'hr') {
       query = `
         SELECT i.*, u.nama, j.nama_jabatan 
@@ -262,7 +269,7 @@ router.get('/team-approval', auth, async (req, res) => {
     } else {
       // Hanya tampilkan izin yang di-targetkan ke jabatan user ini
       if (!userJabatanId) {
-        return res.json({ success: true, data: [], isHR: false });
+        return res.json({ success: true, data: [], isHR: false, isSupervisor: false });
       }
       query = `
         SELECT i.*, u.nama, j.nama_jabatan 
@@ -276,7 +283,7 @@ router.get('/team-approval', auth, async (req, res) => {
     }
 
     const result = await pool.query(query, values);
-    res.json({ success: true, data: result.rows, isHR: userRole === 'hr' });
+    res.json({ success: true, data: result.rows, isHR: userRole === 'hr', isSupervisor: isSupervisor });
   } catch (error) {
     console.error('Error fetching team approvals:', error);
     res.status(500).json({ success: false, error: 'Terjadi kesalahan server' });

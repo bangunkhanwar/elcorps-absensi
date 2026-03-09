@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Filter, Calendar, FileText, XCircle } from 'lucide-react';
-import { leaveAPI } from '../services/api';
-import { formatDate } from '../utils/formatters';
+import { ArrowLeft, Filter, Calendar, FileText, XCircle, X } from 'lucide-react';
 import dayjs from 'dayjs';
+import { leaveAPI, getMediaUrl } from '../services/api';
+import { formatDate } from '../utils/formatters';
 
 const HistoryLeaveScreen = () => {
   const navigate = useNavigate();
@@ -15,6 +15,27 @@ const HistoryLeaveScreen = () => {
   const [user, setUser] = useState(null);
   const [leaveData, setLeaveData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  const ImageModal = ({ url, onClose }) => {
+    if (!url) return null;
+    return (
+      <div className="fixed inset-0 bg-black/90 z-[100] flex flex-col p-4 animate-fade-in" onClick={onClose}>
+        <div className="flex justify-end p-2">
+          <button className="text-white p-2 bg-white/10 rounded-full"><X size={32} /></button>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <img 
+            src={url} 
+            alt="Preview" 
+            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            onClick={e => e.stopPropagation()} 
+          />
+        </div>
+      </div>
+    );
+  };
+
 
   useEffect(() => {
     loadUserDataAndLeaves();
@@ -117,46 +138,36 @@ const HistoryLeaveScreen = () => {
   const calculateDuration = (start, end) => dayjs(end).diff(dayjs(start), 'day') + 1;
 
   const renderAttachment = (lampiran) => {
-    if (!lampiran || lampiran === '{}') return null;
+    const fileUrl = getMediaUrl(lampiran);
+    if (!fileUrl) return null;
     
     // Check if it's an image
-    const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(lampiran);
+    const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(fileUrl);
     
-    let fileUrl = lampiran;
-    if (!lampiran.startsWith('http')) {
-      const serverBase = window.location.origin.includes('localhost') 
-        ? 'http://localhost:5000' 
-        : `https://${import.meta.env.VITE_API_URL || 'sb32k63z-5000.asse.devtunnels.ms'}`;
-      
-      fileUrl = `${serverBase}/uploads/leave/${lampiran}`;
-    }
-
     if (isImage) {
       return (
         <div className="mt-3">
           <p className="text-gray-600 text-xs mb-2 font-semibold">Lampiran Bukti:</p>
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+          <div className="cursor-pointer" onClick={() => setSelectedImage(fileUrl)}>
             <img 
               src={fileUrl} 
               alt="Lampiran" 
-              className="w-full h-32 object-cover rounded-xl border border-gray-200 shadow-sm"
+              className="w-full h-32 object-cover rounded-xl border border-gray-200 shadow-sm hover:opacity-90 transition"
               onError={(e) => {
                 e.target.style.display = 'none';
                 const link = e.target.parentElement.nextSibling;
                 if (link) link.style.display = 'flex';
               }}
             />
-          </a>
-          <a
-            href={fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+          <button
+            onClick={() => setSelectedImage(fileUrl)}
             style={{ display: 'none' }}
-            className="flex items-center p-2 bg-blue-50 text-blue-700 rounded-lg font-semibold hover:bg-blue-100 transition"
+            className="w-full flex items-center p-2 bg-blue-50 text-blue-700 rounded-lg font-semibold hover:bg-blue-100 transition"
           >
             <FileText size={16} className="mr-2" />
             <span className="text-sm">Lihat Lampiran</span>
-          </a>
+          </button>
         </div>
       );
     }
@@ -424,6 +435,14 @@ const HistoryLeaveScreen = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Full Screen Image Preview */}
+      {selectedImage && (
+        <ImageModal 
+          url={selectedImage} 
+          onClose={() => setSelectedImage(null)} 
+        />
       )}
     </div>
   );

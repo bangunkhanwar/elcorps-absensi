@@ -262,16 +262,16 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
       ctx.fillText(line, padding, canvas.height - padding - (index * lineHeight));
     });
 
-    // Output Result
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    // Output Result with better compression (0.6)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
     
-    // Convert to Blob for Server Upload
+    // Convert to Blob for Server Upload with compression
     canvas.toBlob((blob) => {
       onCapture({
         previewUrl: dataUrl,
         file: new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
       });
-    }, 'image/jpeg', 0.8);
+    }, 'image/jpeg', 0.6);
   };
 
   return (
