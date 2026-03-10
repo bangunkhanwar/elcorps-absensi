@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { leaveAPI } from '../../services/api'
 
 interface AttendanceDetail {
   id: number
@@ -19,18 +18,12 @@ interface AttendanceDetail {
   location: string
 }
 
-interface LeaveData {
-  jenis_izin: string
-  tanggal_mulai: string
-  tanggal_selesai: string
-  keterangan: string
-}
 
 const DetailAbsensi: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [attendance, setAttendance] = useState<AttendanceDetail | null>(null)
-  const [leaveData, setLeaveData] = useState<LeaveData | null>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -52,48 +45,16 @@ const DetailAbsensi: React.FC = () => {
         status: att.status,
         location: att.lokasi || '-'
       })
-      fetchLeaveData(att.nik, att.tanggal_absen)
+      setLoading(false)
+    } else {
+      setLoading(false)
     }
   }, [location])
 
-  const fetchLeaveData = async (nik: string, tanggal: string) => {
-    try {
-      const response = await leaveAPI.getAllLeaves()
-      const leaves = response?.data?.leaves || []
-      
-      const tgl = new Date(tanggal);
-      tgl.setHours(0, 0, 0, 0);
-
-      const leave = leaves.find((l: any) => {
-        const mulai = new Date(l.start_date);
-        const selesai = new Date(l.end_date);
-
-        mulai.setHours(0, 0, 0, 0);
-        selesai.setHours(0, 0, 0, 0);
-
-        return (
-          l.nik === nik &&
-          ["pending", "approved", "rejected"].includes(l.status) &&
-          tgl >= mulai &&
-          tgl <= selesai
-        );
-      });
-
-
-      if (leave) {
-        setLeaveData({
-          jenis_izin: leave.leave_type || leave.jenis_izin || '-',
-          tanggal_mulai: leave.start_date,
-          tanggal_selesai: leave.end_date,
-          keterangan: leave.reason || leave.keterangan || '-'
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching leave data:', error)
-    } finally {
-      setLoading(false)
-    }
+  const handleImageClick = (imageUrl: string) => {
+    setPreviewImage(imageUrl)
   }
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -154,7 +115,7 @@ const DetailAbsensi: React.FC = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button 
@@ -174,7 +135,7 @@ const DetailAbsensi: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Data Karyawan & Data Izin */}
           <div className="lg:col-span-5 space-y-6">
@@ -193,7 +154,7 @@ const DetailAbsensi: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1">NIK</label>
                     <p className="text-slate-900 font-medium">{attendance.nik}</p>
@@ -207,7 +168,7 @@ const DetailAbsensi: React.FC = () => {
                     <p className="text-slate-900 font-medium">{attendance.divisi}</p>
                   </div>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1">Departemen</label>
                     <p className="text-slate-900 font-medium">{attendance.departemen}</p>
@@ -223,44 +184,6 @@ const DetailAbsensi: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Data Izin */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">
-                <span className="w-2 h-2 bg-amber-500 rounded-full mr-3"></span>
-                Data Izin
-              </h3>
-
-              {leaveData ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">Jenis Izin</label>
-                      <p className="text-slate-900 font-medium capitalize">{leaveData.jenis_izin}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Mulai</label>
-                      <p className="text-slate-900 font-medium">{formatDate(leaveData.tanggal_mulai)}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Selesai</label>
-                      <p className="text-slate-900 font-medium">{formatDate(leaveData.tanggal_selesai)}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
-                      <p className="text-slate-900 font-medium">{leaveData.keterangan}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-slate-400 text-lg mb-2">—</div>
-                  <p className="text-slate-500">Tidak ada data izin</p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Right Column: Data Absensi */}
@@ -271,7 +194,7 @@ const DetailAbsensi: React.FC = () => {
                 Data Absensi
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 pb-8 border-b border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-4 pb-4 border-b border-slate-100">
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Absensi</label>
                   <p className="text-slate-900 font-medium text-lg">{formatDate(attendance.tanggal_absen)}</p>
@@ -295,10 +218,11 @@ const DetailAbsensi: React.FC = () => {
                       <label className="block text-sm font-medium text-slate-600 mb-3">Foto Presensi Masuk</label>
                       <div className="relative group">
                         <img
-                          src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_masuk}`}
+                          src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_masuk}?t=${Date.now()}`}
                           alt="Foto masuk"
                           loading="lazy"
-                          className="w-full aspect-square object-cover rounded-2xl border-2 border-slate-200 shadow-sm transition-transform duration-200 group-hover:scale-[1.02]"
+                          onClick={() => handleImageClick(`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_masuk}?t=${Date.now()}`)}
+                          className="w-full aspect-square object-cover object-bottom rounded-2xl border-2 border-slate-200 shadow-sm transition-transform duration-200 group-hover:scale-[1.02] cursor-pointer"
                         />
                         <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5 pointer-events-none"></div>
                       </div>
@@ -308,23 +232,48 @@ const DetailAbsensi: React.FC = () => {
                 <div className="space-y-6">
                   <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                     <label className="block text-sm font-medium text-slate-500 mb-1">Waktu Keluar</label>
-                    <p className="text-slate-900 font-bold text-2xl">{attendance.waktu_keluar || '--:--'}</p>
+                    <p className="text-[#25a298] font-bold text-2xl">{attendance.waktu_keluar || '--:--'}</p>
                   </div>
                   {attendance.foto_keluar && (
                     <div>
                       <label className="block text-sm font-medium text-slate-600 mb-3">Foto Presensi Keluar</label>
                       <div className="relative group">
                         <img
-                          src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_keluar}`}
+                          src={`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_keluar}?t=${Date.now()}`}
                           alt="Foto keluar"
                           loading="lazy"
-                          className="w-full aspect-square object-cover rounded-2xl border-2 border-slate-200 shadow-sm transition-transform duration-200 group-hover:scale-[1.02]"
+                          onClick={() => handleImageClick(`${import.meta.env.VITE_API_URL || window.location.origin}/uploads/attendance/${attendance.foto_keluar}?t=${Date.now()}`)}
+                          className="w-full aspect-square object-cover object-bottom rounded-2xl border-2 border-slate-200 shadow-sm transition-transform duration-200 group-hover:scale-[1.02] cursor-pointer"
                         />
                         <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/5 pointer-events-none"></div>
                       </div>
                     </div>
                   )}
                 </div>
+                {/* Modal Preview Gambar */}
+                {previewImage && (
+                  <div 
+                    className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+                    onClick={() => setPreviewImage(null)}
+                  >
+                    <div className="relative max-w-4xl max-h-full">
+                      <img 
+                        src={previewImage} 
+                        alt="Preview" 
+                        className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                      />
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPreviewImage(null)
+                        }}
+                        className="absolute top-2 right-2 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 w-8 h-8 flex items-center justify-center transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
