@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Filter, Calendar, Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { useModal } from '../context/ModalContext';
 import { attendanceAPI } from '../services/api';
 import { formatDate, formatTimeShort } from '../utils/formatters';
 import Header from '../components/Header';
 
 const AttendanceScreen = () => {
   const navigate = useNavigate();
+  const { showError } = useModal();
 
   const [selectedFilter, setSelectedFilter] = useState('semua');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -62,7 +64,7 @@ const AttendanceScreen = () => {
       setAttendanceData(data);
     } catch (error) {
       console.error('Error fetching attendance:', error);
-      alert(error.message);
+      showError(error.message);
     }
   };
 

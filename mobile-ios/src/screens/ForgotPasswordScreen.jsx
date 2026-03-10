@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { Mail, Loader2 } from 'lucide-react';
 import api from '../services/api';
+import { useModal } from '../context/ModalContext';
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState({ type: '', message: '' });
+  const { showSuccess, showError } = useModal();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setAlert({ type: '', message: '' });
     try {
       await api.post('/auth/forgot-password', { email });
-      setAlert({ type: 'success', message: 'Link reset password telah dikirim ke email Anda.' });
+      showSuccess('Link reset password telah dikirim ke email Anda.');
     } catch (err) {
-      setAlert({ type: 'error', message: err.response?.data?.message || 'Gagal mengirim email reset password.' });
+      showError(err.message || 'Gagal mengirim email reset password.');
     } finally {
       setLoading(false);
     }
@@ -29,9 +29,7 @@ const ForgotPasswordScreen = () => {
           <h2 className="text-xl font-bold mb-1">Lupa Password?</h2>
           <p className="text-gray-500 text-sm text-center">Masukkan email Anda untuk menerima link reset password.</p>
         </div>
-        {alert.message && (
-          <div className={`mb-4 text-sm rounded px-3 py-2 ${alert.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{alert.message}</div>
-        )}
+        
         <div className="mb-4">
           <label className="block text-gray-700 mb-1">Email</label>
           <input

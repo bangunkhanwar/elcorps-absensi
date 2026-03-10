@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useModal } from '../context/ModalContext';
 
 const ResetPasswordScreen = () => {
   const [searchParams] = useSearchParams();
@@ -9,29 +10,25 @@ const ResetPasswordScreen = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [alert, setAlert] = useState({ type: '', message: '' });
+  const { showSuccess, showError } = useModal();
 
   const email = searchParams.get('email');
   const token = searchParams.get('token');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setAlert({ type: '', message: '' });
     if (!newPassword || newPassword.length < 6) {
-      setAlert({ type: 'error', message: 'Password minimal 6 karakter.' });
-      return;
+      return showError('Password minimal 6 karakter.');
     }
     if (newPassword !== confirmPassword) {
-      setAlert({ type: 'error', message: 'Konfirmasi password tidak cocok.' });
-      return;
+      return showError('Konfirmasi password tidak cocok.');
     }
     setLoading(true);
     try {
       await api.post('/auth/reset-password', { email, token, newPassword });
-      setAlert({ type: 'success', message: 'Password berhasil direset. Silakan login.' });
-      setTimeout(() => navigate('/login'), 2000);
+      showSuccess('Password berhasil direset. Silakan login.', () => navigate('/login'));
     } catch (err) {
-      setAlert({ type: 'error', message: err.response?.data?.message || 'Gagal reset password.' });
+      showError(err.message || 'Gagal reset password.');
     } finally {
       setLoading(false);
     }
@@ -55,9 +52,7 @@ const ResetPasswordScreen = () => {
           <h2 className="text-xl font-bold mb-1">Reset Password</h2>
           <p className="text-gray-500 text-sm text-center">Masukkan password baru Anda.</p>
         </div>
-        {alert.message && (
-          <div className={`mb-4 text-sm rounded px-3 py-2 ${alert.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{alert.message}</div>
-        )}
+        
         <div className="mb-4">
           <label className="block text-gray-700 mb-1">Password Baru</label>
           <input

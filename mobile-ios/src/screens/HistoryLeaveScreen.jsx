@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Filter, Calendar, FileText, XCircle, X } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useModal } from '../context/ModalContext';
 import { leaveAPI, getMediaUrl } from '../services/api';
 import { formatDate } from '../utils/formatters';
 
 const HistoryLeaveScreen = () => {
   const navigate = useNavigate();
+  const { showError } = useModal();
 
   const [selectedFilter, setSelectedFilter] = useState('semua');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -110,7 +112,7 @@ const HistoryLeaveScreen = () => {
         setLeaveData(filtered);
       }
     } catch (error) {
-      alert(error.message);
+      showError(error.message);
     }
   };
 

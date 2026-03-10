@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X, Bell, CheckCircle } from 'lucide-react';
-import { attendanceAPI } from '../services/api';
+import api, { attendanceAPI } from '../services/api';
+import { useModal } from '../context/ModalContext';
 import { useLocation } from '../hooks/useLocation';
 import { useNotifications } from '../hooks/useNotifications';
 import { formatDate, formatTime, formatTimeShort } from '../utils/formatters';
@@ -9,9 +10,19 @@ import { syncTimeWithServer, getTrueDate } from '../utils/timeSync';
 import CameraWithWatermark from '../components/CameraWithWatermark';
 import logo from '../assets/logo.png';
 
+const getAttendanceImageUrl = (filename) => {
+  if (!filename) return null;
+  // baseURL sudah benar (misal: https://elsa.elhijab.com/api)
+  // Path statis di server diatur pada /uploads, jadi kita perlu mengganti /api menjadi /uploads
+  const baseUrl = api.defaults.baseURL.replace('/api', '');
+  return `${baseUrl}/uploads/${filename}`;
+};
 
 const HomeScreen = () => {
   const navigate = useNavigate();
+
+  // State Image Modal
+  const [selectedImage, setSelectedImage] = useState(null);
 
   // State Utama
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -35,11 +46,11 @@ const HomeScreen = () => {
   const [clockOutPhoto, setClockOutPhoto] = useState(null); // Stores { file, previewUrl }
   const [loading, setLoading] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  
   const [cameraPermissionStatus, setCameraPermissionStatus] = useState('prompt'); // granted, denied, prompt
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1); // 1: Welcome, 2: Location, 3: Camera, 4: Notifications
+  const { showSuccess, showError } = useModal();
 
   // Hook for Location
   const { location: currentLocation, status: locationStatus, permissionStatus: locPermissionStatus, refresh: refreshLocation } = useLocation(unitKerjaData);
@@ -251,7 +262,7 @@ const HomeScreen = () => {
       }, 500);
     } catch (err) {
       setLoadingLocation(false);
-      alert('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif.');
+      showError('Gagal mendapatkan lokasi GPS. Pastikan GPS aktif.');
     }
   };
 
@@ -268,8 +279,8 @@ const HomeScreen = () => {
 
   // --- PERBAIKAN LOGIC CLOCK IN ---
   const handleClockIn = async () => {
-    if (!clockInPhoto?.file) return alert('Harap mengambil foto terlebih dahulu');
-    if (!currentLocation) return alert('Lokasi tidak terdeteksi.');
+    if (!clockInPhoto?.file) return showError('Harap mengambil foto terlebih dahulu');
+    if (!currentLocation) return showError('Lokasi tidak terdeteksi.');
 
     setLoading(true);
 
@@ -284,21 +295,20 @@ const HomeScreen = () => {
       if (response.success) {
         setShowClockInModal(false);
         setClockInPhoto(null);
-        setSuccessMessage('Berhasil Clock In! Selamat bekerja.');
-        setShowSuccessModal(true);
+        showSuccess('Berhasil Clock In! Selamat bekerja.');
         checkTodayAttendance();
         refreshNotifications();
       }
     } catch (error) {
-      alert(error.message);
+      showError(error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleClockOut = async () => {
-    if (!clockOutPhoto?.file) return alert('Harap mengambil foto terlebih dahulu');
-    if (!currentLocation) return alert('Lokasi tidak terdeteksi.');
+    if (!clockOutPhoto?.file) return showError('Harap mengambil foto terlebih dahulu');
+    if (!currentLocation) return showError('Lokasi tidak terdeteksi.');
 
     setLoading(true);
 
@@ -313,13 +323,12 @@ const HomeScreen = () => {
       if (response.success) {
         setShowClockOutModal(false);
         setClockOutPhoto(null);
-        setSuccessMessage('Berhasil Clock Out! Sampai jumpa besok.');
-        setShowSuccessModal(true);
+        showSuccess('Berhasil Clock Out! Sampai jumpa besok.');
         checkTodayAttendance();
         refreshNotifications();
       }
     } catch (error) {
-      alert(error.message);
+      showError(error.message);
     } finally {
       setLoading(false);
     }
@@ -327,7 +336,7 @@ const HomeScreen = () => {
 
   const sendTestNotification = () => {
     if (!("Notification" in window)) {
-      alert("Browser ini tidak mendukung notifikasi.");
+      showError("Browser ini tidak mendukung notifikasi.");
       return;
     }
 
@@ -349,7 +358,7 @@ const HomeScreen = () => {
         new Notification("Tes Notifikasi Berhasil!", options);
       }
     } else {
-      alert("Izin notifikasi belum diberikan. Silakan aktifkan izin di pengaturan browser.");
+      showError("Izin notifikasi belum diberikan. Silakan aktifkan izin di pengaturan browser.");
       requestNotificationPermission();
     }
   };
@@ -450,15 +459,17 @@ const HomeScreen = () => {
           </span>
         </h3>
 
+
+
         {/* Tombol Absensi */}
         <div className="space-y-3">
           <button
             onClick={() => {
               if (locationStatus === 'out_of_radius') {
-                return alert('Anda berada di luar radius unit kerja.');
+                return showError('Anda berada di luar radius unit kerja.');
               }
               if (currentLocation && currentLocation.accuracy > 100) {
-                return alert(`Sinyal GPS lemah (Akurasi: ${Math.round(currentLocation.accuracy)}m). Mohon keluar ruangan atau ke tempat terbuka agar lokasi lebih akurat.`);
+                return showError(`Sinyal GPS lemah (Akurasi: ${Math.round(currentLocation.accuracy)}m). Mohon keluar ruangan atau ke tempat terbuka agar lokasi lebih akurat.`);
               }
               setShowClockInModal(true);
             }}
@@ -559,11 +570,13 @@ const HomeScreen = () => {
               <p className="text-gray-700 font-semibold mb-2 text-center text-sm">Foto Clock In</p>
               <div className="border-2 border-dashed border-gray-300 rounded-lg h-36 flex items-center justify-center bg-gray-50 overflow-hidden">
                 {clockInPhoto?.previewUrl ? (
-                  <img 
-                    src={clockInPhoto.previewUrl} 
-                    alt="Clock In" 
-                    className="w-full h-full object-cover" 
-                  />
+                  <button onClick={() => setSelectedImage(clockInPhoto.previewUrl)} className="w-full h-full p-0">
+                    <img
+                      src={clockInPhoto.previewUrl}
+                      alt="Clock In"
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
                 ) : (
                   <div className="text-center text-gray-400">
                     <Camera size={32} className="mx-auto mb-1" />
@@ -621,7 +634,9 @@ const HomeScreen = () => {
                 <p className="text-gray-700 font-semibold mb-3 text-center">Foto Clock Out</p>
                 <div className="border-2 border-dashed border-gray-300 rounded-xl h-48 flex items-center justify-center bg-gray-50 overflow-hidden">
                   {clockOutPhoto?.previewUrl ? (
-                    <img src={clockOutPhoto.previewUrl} alt="Clock Out" className="w-full h-full object-cover" />
+                    <button onClick={() => setSelectedImage(clockOutPhoto.previewUrl)} className="w-full h-full p-0">
+                      <img src={clockOutPhoto.previewUrl} alt="Clock Out" className="w-full h-full object-cover" />
+                    </button>
                   ) : (
                     <div className="text-center text-gray-400">
                       <Camera size={48} className="mx-auto mb-2" />
@@ -664,24 +679,7 @@ const HomeScreen = () => {
         </div>
       )}
 
-      {/* Modal Success Absensi */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-6 animate-fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-8 text-center animate-scale-in">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="text-green-600" size={48} />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Berhasil!</h2>
-            <p className="text-gray-600 mb-8">{successMessage}</p>
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-primary-dark transition"
-            >
-              Selesai
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Modal Onboarding Perizinan */}
       {showOnboarding && (
@@ -782,6 +780,18 @@ const HomeScreen = () => {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Full Image */}
+      {selectedImage && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={() => setSelectedImage(null)}>
+          <div className="relative">
+            <img src={selectedImage} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-lg"/>
+            <button onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 text-white bg-gray-800 rounded-full p-1">
+              <X size={24} />
+            </button>
           </div>
         </div>
       )}

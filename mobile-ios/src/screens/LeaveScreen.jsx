@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, FileText, Upload, X, Camera, File, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { leaveAPI, getMediaUrl } from '../services/api';
+import { useModal } from '../context/ModalContext';
 import { useNotifications } from '../hooks/useNotifications';
 import Header from '../components/Header';
 
@@ -9,6 +10,7 @@ const LeaveScreen = () => {
   const navigate = useNavigate();
   const { refresh: refreshNotifications } = useNotifications();
   
+  const { showSuccess, showError, showConfirmation } = useModal();
   const [activeTab, setActiveTab] = useState('my-leave'); // 'my-leave' | 'team-approval'
   const [teamApprovals, setTeamApprovals] = useState([]);
   const [isHR, setIsHR] = useState(false);
@@ -54,21 +56,26 @@ const LeaveScreen = () => {
   };
 
   const handleAction = async (izin_id, action) => {
-    if(!window.confirm(`Apakah Anda yakin ingin me-${action === 'approved' ? 'nyetujui' : 'nolak'} izin ini?`)) return;
-    
-    setLoading(true);
-    try {
-      const res = await leaveAPI.action({ izin_id, action });
-      if (res.success) {
-        alert(`Berhasil di-${action}`);
-        refreshNotifications();
-        fetchTeamApprovals(); // Refresh list
+    const actionText = action === 'approved' ? 'menyetujui' : 'menolak';
+    showConfirmation(
+      'Konfirmasi Tindakan',
+      `Apakah Anda yakin ingin ${actionText} izin ini?`,
+      async () => {
+        setLoading(true);
+        try {
+          const res = await leaveAPI.action({ izin_id, action });
+          if (res.success) {
+            showSuccess(`Berhasil di-${action}`);
+            refreshNotifications();
+            fetchTeamApprovals(); // Refresh list
+          }
+        } catch (error) {
+          showError(error.message || "Terjadi kesalahan");
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      alert(error.message || "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   // Cleanup ObjectURL
@@ -87,7 +94,7 @@ const LeaveScreen = () => {
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) return alert('File terlalu besar. Maksimal 5MB');
+      if (file.size > 5 * 1024 * 1024) return showError('File terlalu besar. Maksimal 5MB');
       
       const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
       setAttachment({ file, previewUrl });
@@ -113,7 +120,7 @@ const LeaveScreen = () => {
 
   const handleSubmit = async () => {
     if (!leaveType || !startDate || !endDate || description.length < 10) {
-      return alert('Harap isi semua data dengan benar. Keterangan minimal 10 karakter.');
+      return showError('Harap isi semua data dengan benar. Keterangan minimal 10 karakter.');
     }
 
     setLoading(true);
@@ -141,12 +148,11 @@ const LeaveScreen = () => {
 
       const response = await leaveAPI.apply(leavePayload);
       if (response.success) {
-        alert('Pengajuan izin berhasil dikirim!');
+        showSuccess('Pengajuan izin berhasil dikirim!', () => navigate('/'));
         refreshNotifications();
-        navigate('/');
       }
     } catch (error) {
-      alert(error.message || 'Terjadi kesalahan saat pengajuan');
+      showError(error.message || 'Terjadi kesalahan saat pengajuan');
     } finally {
       setLoading(false);
     }
@@ -608,6 +614,8 @@ const LeaveScreen = () => {
           onClose={() => setSelectedImage(null)} 
         />
       )}
+
+
     </div>
   );
 };
