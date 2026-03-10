@@ -7,7 +7,6 @@ import HomeScreen from './screens/HomeScreen';
 import AttendanceScreen from './screens/AttendanceScreen';
 import LeaveScreen from './screens/LeaveScreen';
 import HistoryLeaveScreen from './screens/HistoryLeaveScreen';
-import SettingScreen from './screens/SettingScreen';
 import NotificationScreen from './screens/NotificationScreen';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -61,18 +60,13 @@ function App() {
             <NotificationScreen />
           </PrivateRoute>
         } />
-        
-        <Route path="/settings" element={
-          <PrivateRoute>
-            <SettingScreen />
-          </PrivateRoute>
-        } />
+
         
         {/* Tambahkan rute untuk link di LoginScreen */}
         <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
         <Route path="/reset-password" element={<ResetPasswordScreen />} />
         
-        <Route path="/server-settings" element={<SettingScreen />} />
+
         
         {/* Fallback Route */}
         <Route path="*" element={<Navigate to="/" replace />} />
