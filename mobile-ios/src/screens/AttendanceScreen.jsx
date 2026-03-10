@@ -7,7 +7,7 @@ import Header from '../components/Header';
 
 const AttendanceScreen = () => {
   const navigate = useNavigate();
-  
+
   const [selectedFilter, setSelectedFilter] = useState('semua');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -52,7 +52,7 @@ const AttendanceScreen = () => {
       const endDate = formatYMD(lastDay);
 
       console.log(`Fetching data from ${startDate} to ${endDate}`);
-      
+
       const response = await attendanceAPI.getUserAttendance(userId, {
         month: selectedMonth + 1,
         year: selectedYear
@@ -209,8 +209,8 @@ const AttendanceScreen = () => {
                   <div className="flex items-center text-gray-600 text-sm">
                     <MapPin size={16} className="mr-2" />
                     <span>
-                      {item.location 
-                        ? item.location.split(' (')[0] 
+                      {item.location
+                        ? item.location.split(' (')[0]
                         : 'Lokasi tidak tersedia'}
                     </span>
                   </div>
@@ -326,7 +326,8 @@ const AttendanceScreen = () => {
             </div>
           </div>
         </div>
-      </div>
+      )}
+    </div>
   );
 };
 
