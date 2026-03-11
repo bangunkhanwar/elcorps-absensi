@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Absensi Karyawan',
-        short_name: 'Absensi',
+        name: 'Elsa',
+        short_name: 'Elsa',
         description: 'Aplikasi absensi karyawan untuk iOS dan Android',
         theme_color: '#3b82f6',
         background_color: '#ffffff',
@@ -20,12 +20,12 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'icons/pwa-192x192.png',
+            src: 'src/assets/logoelcorps2.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'icons/pwa-512x512.png',
+            src: 'src/assets/logoelcorps2.png',
             sizes: '512x512',
             type: 'image/png'
           }
