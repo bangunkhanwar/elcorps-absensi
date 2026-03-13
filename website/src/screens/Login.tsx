@@ -47,9 +47,9 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen w-screen fixed top-0 left-0 overflow-hidden flex justify-center items-center bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700">
+    <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 px-4">
       {/* Login Card */}
-      <div className="w-96 p-8 rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl z-10 border border-white/30 transform transition-all duration-500 hover:shadow-3xl">
+      <div className="max-w-xs w-full sm:w-96 p-8 rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl z-10 border border-white/30 transform transition-all duration-500 hover:shadow-3xl">
         {/* Header */}
         <div className="text-center mb-7">
           <div className="w-32 h-32 mx-auto mb-4 transform transition-all duration-700 hover:scale-105">
