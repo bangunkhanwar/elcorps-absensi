@@ -574,7 +574,6 @@ const Dashboard: React.FC = () => {
                         <p className="text-xs text-slate-500 mb-1">Total Karyawan</p>
                         <p className="text-lg font-bold text-slate-900">{stats.totalKaryawan}</p>
                       </button>
-                      
                       <button 
                         onClick={() => navigateToEmployees('hr')}
                         className="text-center p-3 rounded-lg border border-slate-200 hover:border-[#25a298] transition-colors flex flex-col items-center justify-center"
@@ -583,36 +582,36 @@ const Dashboard: React.FC = () => {
                         <p className="text-lg font-bold text-slate-900">{stats.totalAdmin}</p>
                       </button>
                     </div>
-
-                    {/* Stats List */}
-                    <div className="space-y-2">
+                    <hr className="border-gray-300 mb-4" />
+                    {/* Stats List 2 column */}
+                    <div className="grid grid-cols-2 gap-2">
                       {[
-                      { key: 'hadirHariIni' as const, label: 'Hadir Hari Ini', value: stats.hadirHariIni, description: 'Clock in & out' },
-                      { key: 'tepatWaktu' as const, label: 'Tepat Waktu', value: stats.tepatWaktu, percentage: stats.hadirHariIni > 0 ? Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100) : 0 },
-                      { key: 'telatMasuk' as const, label: 'Telat Masuk', value: stats.telatMasuk, percentage: stats.hadirHariIni > 0 ? Math.round((stats.telatMasuk / stats.hadirHariIni) * 100) : 0 },
-                      { key: 'pulangCepat' as const, label: 'Pulang Cepat', value: stats.pulangCepat, percentage: stats.hadirHariIni > 0 ? Math.round((stats.pulangCepat / stats.hadirHariIni) * 100) : 0 },
-                      { key: 'absensiTidakLengkap' as const, label: 'Tidak Lengkap', value: stats.absensiTidakLengkap, description: 'Hanya masuk/keluar' },
-                      { key: 'alpha' as const, label: 'Alpha', value: stats.alpha, description: 'Tidak hadir & tidak izin' },
-                      { key: 'totalIzin' as const, label: 'Total Izin', value: stats.totalIzin, description: 'Termasuk multi-day' },
-                      { key: 'pendingIzin' as const, label: 'Pending Izin', value: stats.pendingIzin, description: 'Perlu persetujuan' },
-                    ].map((stat) => (
-                      <button
-                        key={stat.key}
-                        onClick={() => handleReview(stat.key, detailData[stat.key])}
-                        className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left"
-                      >
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-700">{stat.label}</p>
-                          {stat.description && <p className="text-xs text-slate-500 text-left">{stat.description}</p>}
-                        </div>
-                        <div className="flex flex-col items-end ml-4">
-                          <p className="text-base font-bold text-slate-900">{stat.value}</p>
-                          {stat.percentage !== undefined && (
-                            <p className="text-xs text-slate-600">{stat.percentage}%</p>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                        { key: 'hadirHariIni' as const, label: 'Hadir Hari Ini', value: stats.hadirHariIni, description: 'Clock in & out' },
+                        { key: 'tepatWaktu' as const, label: 'Tepat Waktu', value: stats.tepatWaktu, percentage: stats.hadirHariIni > 0 ? Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100) : 0 },
+                        { key: 'telatMasuk' as const, label: 'Telat Masuk', value: stats.telatMasuk, percentage: stats.hadirHariIni > 0 ? Math.round((stats.telatMasuk / stats.hadirHariIni) * 100) : 0 },
+                        { key: 'pulangCepat' as const, label: 'Pulang Cepat', value: stats.pulangCepat, percentage: stats.hadirHariIni > 0 ? Math.round((stats.pulangCepat / stats.hadirHariIni) * 100) : 0 },
+                        { key: 'absensiTidakLengkap' as const, label: 'Tidak Lengkap', value: stats.absensiTidakLengkap, description: 'Hanya masuk/keluar' },
+                        { key: 'alpha' as const, label: 'Alpha', value: stats.alpha, description: 'Tidak hadir & tidak izin' },
+                        { key: 'totalIzin' as const, label: 'Total Izin', value: stats.totalIzin, description: 'Termasuk multi-day' },
+                        { key: 'pendingIzin' as const, label: 'Pending Izin', value: stats.pendingIzin, description: 'Perlu persetujuan' },
+                      ].map((stat) => (
+                        <button
+                          key={stat.key}
+                          onClick={() => handleReview(stat.key, detailData[stat.key])}
+                          className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left"
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-700">{stat.label}</p>
+                            {stat.description && <p className="text-xs text-slate-500 text-left">{stat.description}</p>}
+                          </div>
+                          <div className="flex flex-col items-end ml-4">
+                            <p className="text-base font-bold text-slate-900">{stat.value}</p>
+                            {stat.percentage !== undefined && (
+                              <p className="text-xs text-slate-600">{stat.percentage}%</p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -861,21 +860,41 @@ const Dashboard: React.FC = () => {
             <div className="mb-6">
               {quickActions.length > 0 ? (
                 <>
-                  {/* Mobile View - Simple List */}
-                  <div className="sm:hidden space-y-2">
-                    {quickActions.map((action) => (
-                      <button
-                        key={action.id}
-                        onClick={() => handleNavigation(action.path)}
-                        className="w-full bg-white p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left flex items-center justify-between"
-                      >
-                        <div>
-                          <h3 className="font-bold text-sm text-slate-900">{action.title}</h3>
-                          <p className="text-xs text-slate-600 mt-1">{action.description}</p>
-                        </div>
-                        <span className="text-slate-400 ml-4">→</span>
-                      </button>
-                    ))}
+                  {/* Mobile View - 2 column for Data Karyawan - Laporan, 1 column for Pengaturan */}
+                  <div className="sm:hidden">
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      {quickActions
+                        .filter((action) => action.title !== 'Pengaturan')
+                        .map((action) => (
+                          <button
+                            key={action.id}
+                            onClick={() => handleNavigation(action.path)}
+                            className="w-full bg-white p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left flex items-center justify-between"
+                          >
+                            <div>
+                              <h3 className="font-bold text-sm text-slate-900">{action.title}</h3>
+                              <p className="text-xs text-slate-600 mt-1">{action.description}</p>
+                            </div>
+                            <span className="text-slate-400 ml-4">→</span>
+                          </button>
+                        ))}
+                    </div>
+                    {/* Pengaturan tetap 1 kolom */}
+                    {quickActions
+                      .filter((action) => action.title === 'Pengaturan')
+                      .map((action) => (
+                        <button
+                          key={action.id}
+                          onClick={() => handleNavigation(action.path)}
+                          className="w-full bg-white p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left flex items-center justify-between mb-2"
+                        >
+                          <div>
+                            <h3 className="font-bold text-sm text-slate-900">{action.title}</h3>
+                            <p className="text-xs text-slate-600 mt-1">{action.description}</p>
+                          </div>
+                          <span className="text-slate-400 ml-4">→</span>
+                        </button>
+                      ))}
                   </div>
 
                   {/* Desktop View - Grid with Icons */}
