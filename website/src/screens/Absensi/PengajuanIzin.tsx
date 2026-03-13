@@ -195,6 +195,12 @@ const PengajuanIzin: React.FC = () => {
     setShowDetailModal(true)
   }
 
+  const getFileUrl = (lampiran: string | undefined): string => {
+    if (!lampiran) return '';
+    const fileName = lampiran.split('/').pop();
+    return `https://api.elhijab.com/uploads/leave/${fileName}`;
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -648,22 +654,22 @@ const PengajuanIzin: React.FC = () => {
                           {selectedRequest.lampiran &&
                             (selectedRequest.lampiran.endsWith('.pdf') ? (
                               <iframe
-                                src={selectedRequest.lampiran}
+                                src={getFileUrl(selectedRequest.lampiran)}
                                 title="Lampiran PDF"
                                 className="w-full h-64 rounded-lg border-2 border-purple-300 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
                               />
                             ) : (
                               <img
-                                src={selectedRequest.lampiran}
+                                src={getFileUrl(selectedRequest.lampiran)}
                                 alt="Lampiran"
                                 className="w-full h-auto rounded-lg border-2 border-purple-300 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                                onClick={() => window.open(selectedRequest.lampiran, '_blank')}
+                                onClick={() => window.open(getFileUrl(selectedRequest.lampiran), '_blank')}
                               />
                             ))}
                         </div>
                         
                         <button
-                          onClick={() => window.open(selectedRequest.lampiran, '_blank')}
+                          onClick={() => window.open(getFileUrl(selectedRequest.lampiran), '_blank')}
                           className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-medium transition-colors duration-200 flex items-center space-x-2"
                         >
                           <span>Lihat Full Size</span>
