@@ -5,7 +5,97 @@ const pool = require('../config/database');
 const { auth } = require('../middleware/auth');
 const User = require('../models/user');
 
+const { sendOTPEmail } = require('../utils/email');
+
 const router = express.Router();
+
+// Forgot Password - Generate and send OTP
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email harus diisi' });
+    }
+
+    const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = userResult.rows[0];
+
+    if (!user) {
+      // Untuk keamanan, jangan beri tahu jika email tidak ada
+      return res.json({ message: 'Jika email terdaftar, kode OTP akan dikirim.' });
+    }
+
+    // Cek jika sudah ada OTP yang dikirim dalam 5 menit terakhir (jika belum expired)
+    if (user.reset_password_expires && new Date() < new Date(user.reset_password_expires)) {
+      return res.status(429).json({ 
+        error: 'Kode OTP baru saja dikirim. Silakan tunggu 5 menit sebelum meminta kode baru.' 
+      });
+    }
+
+    // Generate 6 digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
+
+    // Update user with OTP and expiration
+    await pool.query(
+      'UPDATE users SET reset_password_otp = $1, reset_password_expires = $2 WHERE id = $3',
+      [otp, expires, user.id]
+    );
+
+    // Send email
+    await sendOTPEmail(email, otp);
+
+    res.json({ message: 'Kode OTP telah dikirim ke email Anda.' });
+  } catch (error) {
+    console.error('❌ Forgot password error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset Password - Verify OTP and update password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ error: 'Email, OTP, dan password baru harus diisi' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password minimal 6 karakter' });
+    }
+
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE email = $1 AND reset_password_otp = $2',
+      [email, otp]
+    );
+    const user = userResult.rows[0];
+
+    if (!user) {
+      return res.status(400).json({ error: 'Kode OTP tidak valid' });
+    }
+
+    // Cek jika OTP sudah expired
+    if (new Date() > new Date(user.reset_password_expires)) {
+      return res.status(400).json({ error: 'Kode OTP telah kadaluarsa' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear OTP
+    await pool.query(
+      'UPDATE users SET password = $1, reset_password_otp = NULL, reset_password_expires = NULL WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+
+    res.json({ message: 'Password berhasil diperbarui. Silakan login.' });
+  } catch (error) {
+    console.error('❌ Reset password error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Register user (HR only)
 router.post('/register', auth, async (req, res) => {
