@@ -9,6 +9,7 @@ import { formatDate, formatTime, formatTimeShort } from '../utils/formatters';
 import { syncTimeWithServer, getTrueDate } from '../utils/timeSync';
 import CameraWithWatermark from '../components/CameraWithWatermark';
 import logo from '../assets/logo.png';
+import logo2 from '../assets/logo2.png';
 
 const getAttendanceImageUrl = (filename) => {
   if (!filename) return null;
@@ -683,106 +684,152 @@ const HomeScreen = () => {
 
       {/* Modal Onboarding Perizinan */}
       {showOnboarding && (
-        <div className="fixed inset-0 bg-white z-[100] flex flex-col p-8 overflow-y-auto">
-          <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto">
-            {onboardingStep === 1 && (
-              <div className="text-center animate-fade-in">
-                <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <img src={logo} alt="Logo" className="w-16 h-12 object-contain" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Selamat Datang!</h2>
-                <p className="text-gray-600 mb-8">
-                  Untuk menggunakan aplikasi absensi elcorps, kami memerlukan beberapa izin dari perangkat Anda.
-                </p>
-                <button 
-                  onClick={() => setOnboardingStep(2)}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
-                >
-                  Mulai Pengaturan
-                </button>
-              </div>
-            )}
+  <div className="fixed inset-0 bg-white z-[100] flex flex-col p-8 overflow-y-auto">
+    
+    <div className="flex-1 flex flex-col items-center justify-center max-w-sm mx-auto">
 
-            {onboardingStep === 2 && (
-              <div className="text-center animate-fade-in">
-                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <MapPin className="text-blue-600" size={48} />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Izin Lokasi</h2>
-                <p className="text-gray-600 mb-8">
-                  Kami memerlukan lokasi Anda untuk memverifikasi bahwa Anda berada di area unit kerja saat melakukan absensi.
-                </p>
-                <button 
-                  onClick={handleRequestLocation}
-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg shadow-lg"
-                >
-                  Izinkan Lokasi
-                </button>
-              </div>
-            )}
-
-            {onboardingStep === 3 && (
-              <div className="text-center animate-fade-in">
-                <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Camera className="text-emerald-600" size={48} />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Izin Kamera</h2>
-                <p className="text-gray-600 mb-8">
-                  Kamera digunakan untuk mengambil foto absensi sebagai bukti kehadiran yang valid.
-                </p>
-                <button 
-                  onClick={handleRequestCamera}
-                  className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg shadow-lg"
-                >
-                  Izinkan Kamera
-                </button>
-              </div>
-            )}
-
-            {onboardingStep === 4 && (
-              <div className="text-center animate-fade-in">
-                <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <AlertCircle className="text-orange-600" size={48} />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Notifikasi Push</h2>
-                <p className="text-gray-600 mb-8">
-                  Aktifkan notifikasi agar Anda mendapatkan pengingat jadwal absensi dan info penting lainnya.
-                </p>
-                <button 
-                  onClick={requestNotificationPermission}
-                  className="w-full py-4 bg-orange-600 text-white rounded-2xl font-bold text-lg shadow-lg"
-                >
-                  Aktifkan Notifikasi
-                </button>
-                <button 
-                  onClick={() => setOnboardingStep(5)}
-                  className="mt-4 text-gray-500 font-medium"
-                >
-                  Lewati untuk saat ini
-                </button>
-              </div>
-            )}
-
-            {onboardingStep === 5 && (
-              <div className="text-center animate-fade-in">
-                <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
-                  <X className="text-white rotate-45" size={48} />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Semua Siap!</h2>
-                <p className="text-gray-600 mb-8">
-                  Terima kasih. Anda sekarang sudah bisa mulai menggunakan aplikasi untuk absensi harian.
-                </p>
-                <button 
-                  onClick={handleCompleteOnboarding}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
-                >
-                  Masuk ke Dashboard
-                </button>
-              </div>
-            )}
+      {/* STEP 1 */}
+      {onboardingStep === 1 && (
+        <div className="text-center animate-fade-in w-full">
+          <div className="flex justify-center mb-12">
+            <img src={logo2} alt="Logo" className="w-52 object-contain" />
           </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Selamat Datang!
+          </h2>
+
+          <p className="text-gray-600 mb-10">
+            Untuk mulai menggunakan Absensi Elcorps, kami memerlukan beberapa izin dari perangkat Anda.
+          </p>
+
+          <button
+            onClick={() => setOnboardingStep(2)}
+            className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
+          >
+            Mulai Pengaturan
+          </button>
         </div>
       )}
+
+      {/* STEP 2 */}
+      {onboardingStep === 2 && (
+        <div className="text-center animate-fade-in w-full">
+          <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <MapPin className="text-blue-600" size={48} />
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Izin Lokasi
+          </h2>
+
+          <p className="text-gray-600 mb-10">
+            Akses lokasi diperlukan untuk memastikan Anda berada di area kerja saat absensi.
+          </p>
+
+          <button
+            onClick={handleRequestLocation}
+            className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg shadow-lg"
+          >
+            Izinkan Lokasi
+          </button>
+        </div>
+      )}
+
+      {/* STEP 3 */}
+      {onboardingStep === 3 && (
+        <div className="text-center animate-fade-in w-full">
+          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Camera className="text-emerald-600" size={48} />
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Izin Kamera
+          </h2>
+
+          <p className="text-gray-600 mb-10">
+            Kamera digunakan untuk mengambil foto saat absensi sebagai bukti kehadiran.
+          </p>
+
+          <button
+            onClick={handleRequestCamera}
+            className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold text-lg shadow-lg"
+          >
+            Izinkan Kamera
+          </button>
+        </div>
+      )}
+
+      {/* STEP 4 */}
+      {onboardingStep === 4 && (
+        <div className="text-center animate-fade-in w-full">
+          <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="text-orange-600" size={48} />
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Notifikasi Push
+          </h2>
+
+          <p className="text-gray-600 mb-8">
+            Notifikasi digunakan untuk pengingat absensi dan informasi penting.
+          </p>
+
+          <button
+            onClick={requestNotificationPermission}
+            className="w-full py-4 bg-orange-600 text-white rounded-2xl font-bold text-lg shadow-lg"
+          >
+            Aktifkan Notifikasi
+          </button>
+
+          <button
+            onClick={() => setOnboardingStep(5)}
+            className="mt-4 text-gray-500 font-medium"
+          >
+            Lewati untuk saat ini
+          </button>
+        </div>
+      )}
+
+      {/* STEP 5 */}
+      {onboardingStep === 5 && (
+        <div className="text-center animate-fade-in w-full">
+          <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+            <CheckCircle className="text-white" size={48} />
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Semua Siap!
+          </h2>
+
+          <p className="text-gray-600 mb-10">
+            Pengaturan selesai. Anda siap menggunakan Absensi Elcorps.
+          </p>
+
+          <button
+            onClick={handleCompleteOnboarding}
+            className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg shadow-lg"
+          >
+            Masuk ke Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* PROGRESS STEP */}
+      <div className="flex justify-center gap-2 mt-12">
+        {[1,2,3,4,5].map((step) => (
+          <div
+            key={step}
+            className={`h-2 w-8 rounded-full transition-all duration-500 ease-out ${
+              onboardingStep >= step ? "bg-primary" : "bg-gray-200"
+            }`}
+          />
+        ))}
+      </div>
+
+    </div>
+  </div>
+)}
 
       {/* Modal Full Image */}
       {selectedImage && (
