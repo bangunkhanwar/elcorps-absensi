@@ -166,6 +166,14 @@ const ResetPasswordScreen = () => {
             </p>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/login')}
+          className="w-full mt-4 py-2 text-gray-400 hover:text-gray-600 transition text-sm font-medium flex items-center justify-center gap-1"
+        >
+          Kembali ke Login
+        </button>
       </form>
     </div>
   );
