@@ -328,13 +328,18 @@ const LeaveScreen = () => {
                 <label className="text-lg font-semibold text-gray-800 mb-3 block">
                   Tanggal Mulai <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-xl p-4 text-gray-800 hover:border-emerald-500 transition"
-                  min={new Date().toISOString().split('T')[0]}
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full border-2 border-gray-300 rounded-xl p-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition appearance-none bg-white"
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <Calendar size={20} />
+                  </div>
+                </div>
               </div>
 
               {/* Tanggal Selesai */}
@@ -342,13 +347,18 @@ const LeaveScreen = () => {
                 <label className="text-lg font-semibold text-gray-800 mb-3 block">
                   Tanggal Selesai <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full border-2 border-gray-300 rounded-xl p-4 text-gray-800 hover:border-emerald-500 transition"
-                  min={startDate || new Date().toISOString().split('T')[0]}
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full border-2 border-gray-300 rounded-xl p-4 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] transition appearance-none bg-white"
+                    min={startDate || new Date().toISOString().split('T')[0]}
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <Calendar size={20} />
+                  </div>
+                </div>
               </div>
 
               {/* Durasi */}
@@ -534,8 +544,8 @@ const LeaveScreen = () => {
 
       {/* Modal Jenis Izin */}
       {showLeaveTypeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
-          <div className="bg-white rounded-t-3xl p-6 w-full max-w-lg max-h-[70vh] overflow-y-auto">
+        <div className="fixed inset-0 top-0 left-0 w-full h-full bg-black/50 flex items-end justify-center z-[60]">
+          <div className="bg-white rounded-t-3xl p-6 w-full max-h-[70vh] overflow-y-auto animate-slide-up shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Pilih Jenis Izin</h2>
               <button onClick={() => setShowLeaveTypeModal(false)} className="text-gray-500 hover:text-gray-700">
@@ -566,8 +576,8 @@ const LeaveScreen = () => {
 
       {/* Modal Menu Lampiran */}
       {showAttachmentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 top-0 left-0 w-full h-full bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-fade-in">
             <h3 className="text-xl font-bold mb-6 text-center text-gray-800">Pilih Lampiran</h3>
             
             <div className="space-y-4">

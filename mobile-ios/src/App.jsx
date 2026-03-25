@@ -25,53 +25,57 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Public Route */}
-        <Route path="/login" element={<LoginScreen />} />
-        
-        {/* Protected Routes */}
-        <Route path="/" element={
-          <PrivateRoute>
-            <HomeScreen />
-          </PrivateRoute>
-        } />
-        
-        <Route path="/attendance" element={
-          <PrivateRoute>
-            <AttendanceScreen />
-          </PrivateRoute>
-        } />
-        
-        <Route path="/leave" element={
-          <PrivateRoute>
-            <LeaveScreen />
-          </PrivateRoute>
-        } />
-        
-        <Route path="/history-leave" element={
-          <PrivateRoute>
-            <HistoryLeaveScreen />
-          </PrivateRoute>
-        } />
-        
-        <Route path="/notifications" element={
-          <PrivateRoute>
-            <NotificationScreen />
-          </PrivateRoute>
-        } />
+    <div className="h-screen bg-gray-200 flex justify-center overflow-hidden">
+      <div className="w-full max-w-md h-screen bg-white shadow-2xl flex flex-col relative overflow-y-auto transform translate-x-0">
+        <BrowserRouter>
+          <Routes>
+            {/* Public Route */}
+            <Route path="/login" element={<LoginScreen />} />
+            
+            {/* Protected Routes */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <HomeScreen />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/attendance" element={
+              <PrivateRoute>
+                <AttendanceScreen />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/leave" element={
+              <PrivateRoute>
+                <LeaveScreen />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/history-leave" element={
+              <PrivateRoute>
+                <HistoryLeaveScreen />
+              </PrivateRoute>
+            } />
+            
+            <Route path="/notifications" element={
+              <PrivateRoute>
+                <NotificationScreen />
+              </PrivateRoute>
+            } />
 
-        
-        {/* Tambahkan rute untuk link di LoginScreen */}
-        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-        <Route path="/reset-password" element={<ResetPasswordScreen />} />
-        
+            
+            {/* Tambahkan rute untuk link di LoginScreen */}
+            <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+            <Route path="/reset-password" element={<ResetPasswordScreen />} />
+            
 
-        
-        {/* Fallback Route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+            
+            {/* Fallback Route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </div>
+    </div>
   );
 }
 
