@@ -241,7 +241,7 @@ const LeaveScreen = () => {
   const isFormValid = leaveType && startDate && endDate && description.length >= 10;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-y-auto no-scrollbar">
       {/* Header */}
       <div className="sticky top-0 z-40">
         <div className="bg-primary py-4 px-4 rounded-b-3xl shadow-lg">
@@ -545,7 +545,7 @@ const LeaveScreen = () => {
       {/* Modal Jenis Izin */}
       {showLeaveTypeModal && (
         <div className="fixed inset-0 top-0 left-0 w-full h-full bg-black/50 flex items-end justify-center z-[60]">
-          <div className="bg-white rounded-t-3xl p-6 w-full max-h-[70vh] overflow-y-auto animate-slide-up shadow-2xl">
+          <div className="bg-white rounded-t-3xl p-6 w-full max-h-[70vh] overflow-y-auto no-scrollbar animate-slide-up shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">Pilih Jenis Izin</h2>
               <button onClick={() => setShowLeaveTypeModal(false)} className="text-gray-500 hover:text-gray-700">
