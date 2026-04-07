@@ -289,7 +289,6 @@ const HomeScreen = () => {
       const formData = new FormData();
       formData.append('latitude', currentLocation.latitude);
       formData.append('longitude', currentLocation.longitude);
-      formData.append('accuracy', currentLocation.accuracy);
       formData.append('lokasi_masuk', clockInPhoto.address);
       formData.append('foto_masuk', clockInPhoto.file);
 
@@ -318,7 +317,6 @@ const HomeScreen = () => {
       const formData = new FormData();
       formData.append('latitude', currentLocation.latitude);
       formData.append('longitude', currentLocation.longitude);
-      formData.append('accuracy', currentLocation.accuracy);
       formData.append('lokasi_keluar', clockOutPhoto.address);
       formData.append('foto_keluar', clockOutPhoto.file);
 
@@ -471,9 +469,6 @@ const HomeScreen = () => {
               if (locationStatus === 'out_of_radius') {
                 return showError('Anda berada di luar radius unit kerja.');
               }
-              if (currentLocation && currentLocation.accuracy > 100) {
-                return showError(`Sinyal GPS lemah (Akurasi: ${Math.round(currentLocation.accuracy)}m). Mohon keluar ruangan atau ke tempat terbuka agar lokasi lebih akurat.`);
-              }
               setShowClockInModal(true);
             }}
             disabled={clockInStatus !== 'Belum Clock In' || loadingLocation}
@@ -492,9 +487,6 @@ const HomeScreen = () => {
             onClick={() => {
               if (locationStatus === 'out_of_radius') {
                 return alert('Anda berada di luar radius unit kerja.');
-              }
-              if (currentLocation && currentLocation.accuracy > 100) {
-                return alert(`Sinyal GPS lemah (Akurasi: ${Math.round(currentLocation.accuracy)}m). Mohon keluar ruangan atau ke tempat terbuka agar lokasi lebih akurat.`);
               }
               setShowClockOutModal(true);
             }}

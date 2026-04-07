@@ -252,13 +252,11 @@ router.post('/checkin', auth, upload.single('foto_masuk'), optimizeImage, async 
       });
     }
 
-    const { latitude, longitude, accuracy, signature, lokasi_masuk } = req.body;
-    const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const { latitude, longitude, signature, lokasi_masuk } = req.body;
 
     console.log('📍 Raw location data from mobile:', { 
       latitude, 
       longitude,
-      accuracy,
       lokasi_masuk,
       foto_masuk: req.file ? req.file.filename : 'No photo'
     });
@@ -296,23 +294,6 @@ router.post('/checkin', auth, upload.single('foto_masuk'), optimizeImage, async 
       lat, lng,
       parseFloat(user.latitude), parseFloat(user.longitude)
     );
-
-    // 3. FRAUD DETECTION
-    let is_suspicious = false;
-    let suspicious_reason = "";
-
-    const payload = { user_id: req.user.id, latitude, longitude };
-    if (!signature || !validateSignature(payload, signature)) {
-      is_suspicious = true;
-      suspicious_reason += "Signature mismatch/missing (Potential API Spoofing); ";
-      console.log('⚠️ FRAUD DETECTED: Signature mismatch for user:', req.user.id);
-    }
-
-    if (accuracy !== undefined && (parseFloat(accuracy) <= 1)) {
-      is_suspicious = true;
-      suspicious_reason += `Unnatural accuracy: ${accuracy}m (Potential Fake GPS); `;
-      console.log('⚠️ FRAUD DETECTED: Unnatural accuracy for user:', req.user.id);
-    }
 
     console.log('📍 Distance calculation:', {
       user_lat: user.latitude,
@@ -356,10 +337,6 @@ router.post('/checkin', auth, upload.single('foto_masuk'), optimizeImage, async 
       shift_id: user.shift_id,
       jam_seharusnya_masuk: user.jam_masuk,
       jam_seharusnya_keluar: user.jam_keluar,
-      accuracy: accuracy,
-      ip_address: ip_address,
-      is_suspicious: is_suspicious,
-      suspicious_reason: suspicious_reason,
       lokasi_masuk: lokasi_masuk
     };
 
@@ -442,13 +419,11 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
       });
     }
 
-    const { latitude, longitude, accuracy, signature, lokasi_keluar } = req.body;
-    const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const { latitude, longitude, signature, lokasi_keluar } = req.body;
 
     console.log('📍 Check-out location data:', { 
       latitude, 
       longitude,
-      accuracy,
       lokasi_keluar,
       foto_keluar: req.file ? req.file.filename : 'No photo'
     });
@@ -477,23 +452,6 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
       parseFloat(user.latitude), parseFloat(user.longitude)
     );
 
-    // 3. FRAUD DETECTION
-    let is_suspicious = false;
-    let suspicious_reason = "";
-
-    const payload = { user_id: req.user.id, latitude, longitude };
-    if (!signature || !validateSignature(payload, signature)) {
-      is_suspicious = true;
-      suspicious_reason += "Signature mismatch/missing (Potential API Spoofing); ";
-      console.log('⚠️ FRAUD DETECTED (Out): Signature mismatch for user:', req.user.id);
-    }
-
-    if (accuracy !== undefined && (parseFloat(accuracy) <= 1)) {
-      is_suspicious = true;
-      suspicious_reason += `Unnatural accuracy: ${accuracy}m (Potential Fake GPS); `;
-      console.log('⚠️ FRAUD DETECTED (Out): Unnatural accuracy for user:', req.user.id);
-    }
-
     console.log('📍 Check-out distance calculation:', {
       user_lat: user.latitude,
       user_lng: user.longitude,
@@ -503,13 +461,13 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
       allowed_radius: user.radius_meter
     });
 
-    if (distance > user.radius_meter) {
-      console.log('❌ User outside radius during check-out');
-      return res.status(400).json({ 
-        success: false,
-        error: `Anda berada di luar radius unit kerja. Jarak: ${Math.round(distance)}m, Radius: ${user.radius_meter}m` 
-      });
-    }
+    // if (distance > user.radius_meter) {
+    //   console.log('❌ User outside radius during check-out');
+    //   return res.status(400).json({ 
+    //     success: false,
+    //     error: `Anda berada di luar radius unit kerja. Jarak: ${Math.round(distance)}m, Radius: ${user.radius_meter}m` 
+    //   });
+    // }
 
     // AMBIL WAKTU SESUAI TIMEZONE UNIT KERJA
     const currentTime = getCurrentTimeInTimezone(timezone);
@@ -518,10 +476,6 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
       currentTime,
       req.file ? req.file.filename : '',
       {
-        accuracy,
-        ip_address,
-        is_suspicious,
-        suspicious_reason,
         lokasi_keluar
       }
     );
