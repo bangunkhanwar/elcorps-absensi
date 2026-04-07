@@ -269,7 +269,8 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
     canvas.toBlob((blob) => {
       onCapture({
         previewUrl: dataUrl,
-        file: new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
+        file: new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' }),
+        address: address
       });
     }, 'image/jpeg', 0.6);
   };

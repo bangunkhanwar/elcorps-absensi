@@ -16,7 +16,7 @@ const getAttendanceImageUrl = (filename) => {
   // baseURL sudah benar (misal: https://elsa.elhijab.com/api)
   // Path statis di server diatur pada /uploads, jadi kita perlu mengganti /api menjadi /uploads
   const baseUrl = api.defaults.baseURL.replace('/api', '');
-  return `${baseUrl}/uploads/${filename}`;
+  return `${baseUrl}/uploads/attendance/${filename}`;
 };
 
 const HomeScreen = () => {
@@ -290,6 +290,7 @@ const HomeScreen = () => {
       formData.append('latitude', currentLocation.latitude);
       formData.append('longitude', currentLocation.longitude);
       formData.append('accuracy', currentLocation.accuracy);
+      formData.append('lokasi_masuk', clockInPhoto.address);
       formData.append('foto_masuk', clockInPhoto.file);
 
       const response = await attendanceAPI.checkIn(formData);
@@ -318,6 +319,7 @@ const HomeScreen = () => {
       formData.append('latitude', currentLocation.latitude);
       formData.append('longitude', currentLocation.longitude);
       formData.append('accuracy', currentLocation.accuracy);
+      formData.append('lokasi_keluar', clockOutPhoto.address);
       formData.append('foto_keluar', clockOutPhoto.file);
 
       const response = await attendanceAPI.checkOut(formData);

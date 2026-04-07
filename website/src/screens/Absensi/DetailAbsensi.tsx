@@ -43,7 +43,7 @@ const DetailAbsensi: React.FC = () => {
         foto_masuk: att.foto_masuk || '',
         foto_keluar: att.foto_keluar || '',
         status: att.status,
-        location: att.lokasi || '-'
+        location: att.lokasi || '-',
       })
       setLoading(false)
     } else {
@@ -176,10 +176,6 @@ const DetailAbsensi: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1">Unit Kerja</label>
                     <p className="text-slate-900 font-medium">{attendance.unit_kerja}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-1">Lokasi Absen</label>
-                    <p className="text-slate-900 font-medium">{attendance.location}</p>
                   </div>
                 </div>
               </div>

@@ -208,13 +208,21 @@ const AttendanceScreen = () => {
                   </div>
 
                   {/* Location */}
-                  <div className="flex items-center text-gray-600 text-sm">
-                    <MapPin size={16} className="mr-2" />
-                    <span>
-                      {item.location
-                        ? item.location.split(' (')[0]
-                        : 'Lokasi tidak tersedia'}
-                    </span>
+                  <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-gray-100">
+                    <div className="flex items-start text-gray-600 text-sm">
+                      <MapPin size={16} className="mr-2 mt-0.5 flex-shrink-0 text-emerald-500" />
+                      <div>
+                        <span className="font-semibold text-xs text-gray-500 block">Lokasi Masuk</span>
+                        <span>{item.lokasi_masuk || (item.location ? item.location.split(' (')[0] : 'Lokasi tidak tersedia')}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start text-gray-600 text-sm">
+                      <MapPin size={16} className="mr-2 mt-0.5 flex-shrink-0 text-orange-500" />
+                      <div>
+                        <span className="font-semibold text-xs text-gray-500 block">Lokasi Keluar</span>
+                        <span>{item.lokasi_keluar || '-'}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );

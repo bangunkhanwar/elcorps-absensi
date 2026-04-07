@@ -252,13 +252,14 @@ router.post('/checkin', auth, upload.single('foto_masuk'), optimizeImage, async 
       });
     }
 
-    const { latitude, longitude, accuracy, signature } = req.body;
+    const { latitude, longitude, accuracy, signature, lokasi_masuk } = req.body;
     const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     console.log('📍 Raw location data from mobile:', { 
       latitude, 
       longitude,
       accuracy,
+      lokasi_masuk,
       foto_masuk: req.file ? req.file.filename : 'No photo'
     });
     
@@ -358,7 +359,8 @@ router.post('/checkin', auth, upload.single('foto_masuk'), optimizeImage, async 
       accuracy: accuracy,
       ip_address: ip_address,
       is_suspicious: is_suspicious,
-      suspicious_reason: suspicious_reason
+      suspicious_reason: suspicious_reason,
+      lokasi_masuk: lokasi_masuk
     };
 
     console.log('💾 Saving attendance data:', attendanceData);
@@ -440,13 +442,14 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
       });
     }
 
-    const { latitude, longitude, accuracy, signature } = req.body;
+    const { latitude, longitude, accuracy, signature, lokasi_keluar } = req.body;
     const ip_address = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
     console.log('📍 Check-out location data:', { 
       latitude, 
       longitude,
       accuracy,
+      lokasi_keluar,
       foto_keluar: req.file ? req.file.filename : 'No photo'
     });
     
@@ -518,7 +521,8 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
         accuracy,
         ip_address,
         is_suspicious,
-        suspicious_reason
+        suspicious_reason,
+        lokasi_keluar
       }
     );
 

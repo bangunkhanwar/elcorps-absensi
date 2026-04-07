@@ -17,6 +17,8 @@ interface AttendanceData {
   departemen: string
   divisi: string
   lokasi: string
+  lokasi_masuk: string
+  lokasi_keluar: string
   keteranganIzin?: string
   foto_masuk: string
   foto_keluar: string
@@ -187,6 +189,8 @@ const Absensi: React.FC = () => {
           departemen: att.departemen || '-',
           divisi: att.divisi || '-',
           lokasi: att.location || att.nama_unit || '-',
+          lokasi_masuk: att.lokasi_masuk || att.location || att.nama_unit || '-',
+          lokasi_keluar: att.lokasi_keluar || '-',
           keteranganIzin: userLeave ? userLeave.keterangan : '',
           foto_masuk: att.foto_masuk || '',
           foto_keluar: att.foto_keluar || '',
@@ -209,6 +213,8 @@ const Absensi: React.FC = () => {
           departemen: leave.departemen || '-',
           divisi: leave.divisi || '-',
           lokasi: leave.unit_kerja || '-',
+          lokasi_masuk: '-',
+          lokasi_keluar: '-',
           keteranganIzin: leave.keterangan || '',
           foto_masuk: '',
           foto_keluar: '',
@@ -236,6 +242,8 @@ const Absensi: React.FC = () => {
           departemen: att.departemen || '-',
           divisi: att.divisi || '-',
           lokasi: att.location || att.nama_unit || '-',
+          lokasi_masuk: att.lokasi_masuk || att.location || att.nama_unit || '-',
+          lokasi_keluar: att.lokasi_keluar || '-',
           keteranganIzin: '',
           foto_masuk: att.foto_masuk || '',
           foto_keluar: att.foto_keluar || '',
@@ -292,6 +300,8 @@ const Absensi: React.FC = () => {
         departemen: item.departemen || '-',
         divisi: item.divisi || '-',
         lokasi: item.unit_kerja || '-',
+        lokasi_masuk: item.lokasi_masuk || item.unit_kerja || '-',
+        lokasi_keluar: item.lokasi_keluar || '-',
         keteranganIzin: item.keterangan || item.keteranganIzin || '',
         foto_masuk: item.foto_masuk || '',
         foto_keluar: item.foto_keluar || '',
@@ -469,7 +479,9 @@ const Absensi: React.FC = () => {
         "Work Time": workTimeCategory,
         "LEMBUR": overtime,
         "Rata - rata jam kerja": workDuration,
-        "Keterangan": item.keteranganIzin || (item.status === 'izin' ? 'Izin' : getStatusText(item.status))
+        "Keterangan": item.keteranganIzin || (item.status === 'izin' ? 'Izin' : getStatusText(item.status)),
+        "Lokasi Absensi Masuk": item.lokasi_masuk || item.lokasi || '-',
+        "Lokasi Absensi Keluar": item.lokasi_keluar || '-',
       }
     })
 
