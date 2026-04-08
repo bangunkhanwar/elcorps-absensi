@@ -361,9 +361,9 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
       <div className="h-32 bg-black flex items-center justify-center px-10">
         <button
           onClick={capturePhoto}
-          disabled={loading || !location}
+          disabled={loading || !location || address === "Mencari alamat..."}
           className={`w-20 h-20 rounded-full border-4 border-white flex items-center justify-center transition active:scale-90 ${
-            (loading || !location) ? 'opacity-50' : 'bg-white/20'
+            (loading || !location || address === "Mencari alamat...") ? 'opacity-50' : 'bg-white/20'
           }`}
         >
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
