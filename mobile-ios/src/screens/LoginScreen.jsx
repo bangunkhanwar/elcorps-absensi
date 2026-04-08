@@ -8,8 +8,8 @@ const LoginScreen = () => {
   const navigate = useNavigate();
   
   const [form, setForm] = useState({
-    email: 'bangun@gmail.com',
-    password: 'password'
+    email: '',
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

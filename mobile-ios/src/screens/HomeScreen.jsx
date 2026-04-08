@@ -370,6 +370,11 @@ const HomeScreen = () => {
     navigate('/login', { replace: true });
   };
 
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Custom Camera Overlay */}
@@ -397,13 +402,13 @@ const HomeScreen = () => {
       <div className="bg-white rounded-xl shadow p-4 flex-shrink-0">
         <div className="mb-2">
           <h2 className="text-lg font-semibold text-gray-900 truncate">
-            {user?.nama || 'Bangun Chaerudin Anwar'}
+            {toTitleCase(user?.nama) || 'Bangun Chaerudin Anwar'}
           </h2>
           <p className="text-sm text-gray-600">
             {user?.nik || '52510.3138'}
           </p>
           <p className="text-sm text-gray-600 truncate">
-            {user?.jabatan || 'Staff Of Programmer'}
+            {toTitleCase(user?.jabatan) || 'Staff Of Programmer'}
           </p>
         </div>
 
@@ -416,14 +421,14 @@ const HomeScreen = () => {
             <div className="flex justify-between items-center gap-2">
               <p className="text-sm text-gray-600">Departemen</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
-                {user?.departemen || 'IT & Technology'}
+                {toTitleCase(user?.departemen) || 'IT & Technology'}
               </p>
             </div>
 
             <div className="flex justify-between items-center gap-2">
               <p className="text-sm text-gray-600">Divisi</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
-                {user?.divisi || 'Strategic Support'}
+                {toTitleCase(user?.divisi) || 'Strategic Support'}
               </p>
             </div>
 
@@ -431,7 +436,7 @@ const HomeScreen = () => {
 
               <p className="text-sm text-gray-600">Lokasi Kerja</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
-                {user?.unit_kerja || 'Head Office'}
+                {toTitleCase(user?.unit_kerja) || 'Head Office'}
               </p>
             </div>
           </div>
