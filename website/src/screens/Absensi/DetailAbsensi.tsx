@@ -14,10 +14,15 @@ interface AttendanceDetail {
   waktu_keluar: string
   foto_masuk: string
   foto_keluar: string
-  status: string
+  status: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap' | 'izin' | 'alpha' | string
   location: string
 }
 
+// 🔹 Fungsi helper untuk capitalize setiap kata (sama seperti di HomeScreen)
+const toTitleCase = (str: string) => {
+  if (!str) return ''
+  return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase())
+}
 
 const DetailAbsensi: React.FC = () => {
   const navigate = useNavigate()
@@ -55,7 +60,6 @@ const DetailAbsensi: React.FC = () => {
     setPreviewImage(imageUrl)
   }
 
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('id-ID', {
@@ -68,19 +72,27 @@ const DetailAbsensi: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'tepat_waktu': return 'bg-green-100 text-green-800 border-green-200'
-      case 'telat': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'izin': return 'bg-blue-100 text-blue-800 border-blue-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'tepat_waktu':              return 'bg-green-100 text-green-800 border-green-200'
+      case 'telat_masuk':              return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'pulang_cepat':             return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'telat_masuk_pulang_cepat': return 'bg-red-100 text-red-800 border-red-200'
+      case 'tidak_lengkap':            return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'izin':                     return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'alpha':                    return 'bg-red-100 text-red-800 border-red-200'
+      default:                         return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'tepat_waktu': return 'Tepat Waktu'
-      case 'telat': return 'Telat'
-      case 'izin': return 'Izin'
-      default: return status
+      case 'tepat_waktu':              return 'Tepat Waktu'
+      case 'telat_masuk':              return 'Telat Masuk'
+      case 'pulang_cepat':             return 'Pulang Cepat'
+      case 'telat_masuk_pulang_cepat': return 'Telat Masuk + Pulang Cepat'
+      case 'tidak_lengkap':            return 'Tidak Lengkap'
+      case 'izin':                     return 'Izin'
+      case 'alpha':                    return 'Alpha'
+      default:                         return status
     }
   }
 
@@ -148,8 +160,12 @@ const DetailAbsensi: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">{attendance.nama}</h2>
-                  <p className="text-slate-600">{attendance.jabatan} • {attendance.departemen}</p>
+                  {/* 🔹 Nama dengan capitalize each word */}
+                  <h2 className="text-xl font-bold text-slate-900">{toTitleCase(attendance.nama)}</h2>
+                  {/* 🔹 Jabatan & departemen juga capitalize */}
+                  <p className="text-slate-600">
+                    {toTitleCase(attendance.jabatan)} • {toTitleCase(attendance.departemen)}
+                  </p>
                 </div>
               </div>
 
@@ -161,28 +177,32 @@ const DetailAbsensi: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1">Jabatan</label>
-                    <p className="text-slate-900 font-medium">{attendance.jabatan}</p>
+                    {/* 🔹 Capitalize */}
+                    <p className="text-slate-900 font-medium">{toTitleCase(attendance.jabatan)}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1">Divisi</label>
-                    <p className="text-slate-900 font-medium">{attendance.divisi}</p>
+                    {/* 🔹 Capitalize */}
+                    <p className="text-slate-900 font-medium">{toTitleCase(attendance.divisi)}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1">Departemen</label>
-                    <p className="text-slate-900 font-medium">{attendance.departemen}</p>
+                    {/* 🔹 Capitalize */}
+                    <p className="text-slate-900 font-medium">{toTitleCase(attendance.departemen)}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-600 mb-1">Unit Kerja</label>
-                    <p className="text-slate-900 font-medium">{attendance.unit_kerja}</p>
+                    {/* 🔹 Capitalize */}
+                    <p className="text-slate-900 font-medium">{toTitleCase(attendance.unit_kerja)}</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Data Absensi */}
+          {/* Right Column: Data Absensi (tidak diubah) */}
           <div className="lg:col-span-7">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-semibold text-slate-900 mb-6 flex items-center">

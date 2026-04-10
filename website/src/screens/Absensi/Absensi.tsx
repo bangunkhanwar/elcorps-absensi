@@ -11,7 +11,7 @@ interface AttendanceData {
   unit_kerja: string
   jamMasuk: string
   jamPulang: string
-  status: 'tepat_waktu' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk'
+  status: 'tepat_waktu' | 'telat_masuk' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap' | 'alpha'
   nik: string
   jabatan: string
   departemen: string
@@ -54,7 +54,8 @@ const Absensi: React.FC = () => {
   const isEmployeeOnlyView = reviewMode && (
     reviewCategory === 'alpha' || 
     reviewCategory === 'totalIzin' || 
-    reviewCategory === 'pendingIzin'
+    reviewCategory === 'pendingIzin' ||
+    reviewCategory === 'hadirHariIni'
   )
 
   // Baca query parameters saat komponen mount
@@ -183,7 +184,7 @@ const Absensi: React.FC = () => {
           unit_kerja: att.nama_unit || '-',
           jamMasuk: formatTimeFromString(att.waktu_masuk_jakarta || att.waktu_masuk),
           jamPulang: formatTimeFromString(att.waktu_keluar_jakarta || att.waktu_keluar),
-          status: userLeave ? 'izin' : getAttendanceStatus(att),
+          status: userLeave ? 'izin' : getDisplayStatus(att.status),
           nik: att.nik || '-',
           jabatan: att.jabatan || '-',
           departemen: att.departemen || '-',
@@ -236,7 +237,7 @@ const Absensi: React.FC = () => {
           unit_kerja: att.nama_unit || '-',
           jamMasuk: formatTimeFromString(att.waktu_masuk_jakarta || att.waktu_masuk),
           jamPulang: formatTimeFromString(att.waktu_keluar_jakarta || att.waktu_keluar),
-          status: getAttendanceStatus(att),
+          status: getDisplayStatus(att.status),
           nik: att.nik || '-',
           jabatan: att.jabatan || '-',
           departemen: att.departemen || '-',
@@ -260,29 +261,17 @@ const Absensi: React.FC = () => {
     }
   }
 
-  const getAttendanceStatus = (attendance: any): 'tepat_waktu' | 'telat' | 'izin' => {
-    if (attendance.status === 'izin' || attendance.status === 'Izin') {
-      return 'izin';
-    }
+  // Normalisasi status dari DB ke format yang konsisten
+  // Backend menyimpan: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap'
+  const normalizeDbStatus = (status: string): string => {
+    if (!status) return 'tepat_waktu'
+    return status.toLowerCase().trim()
+  };
 
-    if (!attendance.waktu_masuk) {
-      return 'izin';
-    }
-
-    let isLate = false;
-    const waktuMasuk = attendance.waktu_masuk;
-
-    if (waktuMasuk.includes(':')) {
-      const timeParts = waktuMasuk.split(':');
-      const hours = parseInt(timeParts[0]);
-      const minutes = parseInt(timeParts[1]);
-
-      if (hours > 9 || (hours === 9 && minutes > 0)) {
-        isLate = true;
-      }
-    }
-
-    return isLate ? 'telat' : 'tepat_waktu';
+  // Mapping status DB ke status display di tabel
+  const getDisplayStatus = (dbStatus: string): string => {
+    const s = normalizeDbStatus(dbStatus)
+    return s
   };
 
   const getDataSource = () => {
@@ -311,17 +300,17 @@ const Absensi: React.FC = () => {
     return attendanceData
   }
 
-  const getReviewStatus = (item: any, category: string): 'tepat_waktu' | 'telat' | 'izin' | 'pulang_cepat' | 'telat_masuk' | 'alpha' | 'tidak_lengkap' => {
+  const getReviewStatus = (item: any, category: string): string => {
     switch (category) {
-      case 'alpha': return 'alpha'
-      case 'tepatWaktu': return 'tepat_waktu'
-      case 'telatMasuk': return 'telat'
-      case 'pulangCepat': return 'pulang_cepat'
-      case 'hadirHariIni': return 'tepat_waktu'
+      case 'alpha':              return 'alpha'
+      case 'tepatWaktu':        return 'tepat_waktu'
+      case 'telatMasuk':        return 'telat_masuk'
+      case 'pulangCepat':       return 'pulang_cepat'
+      case 'hadirHariIni':      return getDisplayStatus(item.status || 'tepat_waktu')
       case 'absensiTidakLengkap': return 'tidak_lengkap'
-      case 'totalIzin': return 'izin'
-      case 'pendingIzin': return 'izin'
-      default: return item.status || 'tepat_waktu'
+      case 'totalIzin':         return 'izin'
+      case 'pendingIzin':       return 'izin'
+      default:                  return getDisplayStatus(item.status || 'tepat_waktu')
     }
   }
 
@@ -363,27 +352,27 @@ const Absensi: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'tepat_waktu': return 'bg-green-100 text-green-800'
-      case 'telat': return 'bg-yellow-100 text-yellow-800'
-      case 'izin': return 'bg-blue-100 text-blue-800'
-      case 'pulang_cepat': return 'bg-orange-100 text-orange-800'
-      case 'telat_masuk': return 'bg-red-100 text-red-800'
-      case 'alpha': return 'bg-red-100 text-red-800'
-      case 'tidak_lengkap': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'tepat_waktu':             return 'bg-green-100 text-green-800'
+      case 'telat_masuk':             return 'bg-yellow-100 text-yellow-800'
+      case 'pulang_cepat':            return 'bg-orange-100 text-orange-800'
+      case 'telat_masuk_pulang_cepat': return 'bg-red-100 text-red-800'
+      case 'tidak_lengkap':           return 'bg-gray-100 text-gray-800'
+      case 'izin':                    return 'bg-blue-100 text-blue-800'
+      case 'alpha':                   return 'bg-red-100 text-red-800'
+      default:                        return 'bg-gray-100 text-gray-800'
     }
   }
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'tepat_waktu': return 'Tepat Waktu'
-      case 'terlambat': return 'Terlambat'
-      case 'izin': return 'Izin'
-      case 'pulang_cepat': return 'Pulang Cepat'
-      case 'telat_masuk': return 'Telat Masuk'
-      case 'alpha': return 'Alpha'
-      case 'tidak_lengkap': return 'Tidak Lengkap'
-      default: return status
+      case 'tepat_waktu':             return 'Tepat Waktu'
+      case 'telat_masuk':             return 'Telat Masuk'
+      case 'pulang_cepat':            return 'Pulang Cepat'
+      case 'telat_masuk_pulang_cepat': return 'Telat Masuk + Pulang Cepat'
+      case 'tidak_lengkap':           return 'Tidak Lengkap'
+      case 'izin':                    return 'Izin'
+      case 'alpha':                   return 'Alpha'
+      default:                        return status
     }
   }
 
@@ -404,7 +393,7 @@ const Absensi: React.FC = () => {
       item.waktu_masuk || item.jamMasuk !== '-'
     ).length
     const telat = dataToUse.filter((item: any) =>
-      item.status === 'telat' || item.status === 'telat_masuk'
+      item.status === 'telat_masuk' || item.status === 'telat_masuk_pulang_cepat'
     ).length
     const izin = dataToUse.filter((item: any) =>
       item.status === 'izin' || item.keteranganIzin

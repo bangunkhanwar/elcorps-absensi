@@ -40,39 +40,39 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c; // Distance in meters
 } 
 
-// Helper function: Calculate attendance status
+// Helper function: Calculate check-in status (digunakan saat clock-in)
+// Nilai: 'tepat_waktu' | 'terlambat'
 function calculateStatus(currentTime, shiftTime, tolerance) {
   if (!currentTime || typeof currentTime !== 'string' || !currentTime.includes(':')) {
-    return 'Invalid current time';
+    console.warn('⚠️ calculateStatus: invalid currentTime:', currentTime);
+    return 'tepat_waktu';
   }
   if (!shiftTime || typeof shiftTime !== 'string' || !shiftTime.includes(':')) {
-    return 'Invalid shift time';
+    console.warn('⚠️ calculateStatus: invalid shiftTime:', shiftTime);
+    return 'tepat_waktu';
   }
+
   const [currentHour, currentMinute] = currentTime.split(':').map(Number);
   const [shiftHour, shiftMinute] = shiftTime.split(':').map(Number);
 
   if (isNaN(currentHour) || isNaN(currentMinute) || isNaN(shiftHour) || isNaN(shiftMinute)) {
-    return 'Invalid time format';
+    console.warn('⚠️ calculateStatus: NaN in time parsing');
+    return 'tepat_waktu';
   }
 
   const currentTotalMinutes = currentHour * 60 + currentMinute;
   const shiftTotalMinutes = shiftHour * 60 + shiftMinute;
-  const batasTelat = shiftTotalMinutes + tolerance;
+  const batasTelat = shiftTotalMinutes + (tolerance || 5);
 
-  if (currentTotalMinutes <= batasTelat) {
-    return 'Tepat Waktu';
-  } else {
-    return 'Terlambat';
-  }
+  return currentTotalMinutes <= batasTelat ? 'tepat_waktu' : 'terlambat';
 }
 
-// Helper function: Calculate FULL attendance status (masuk + pulang)
-function calculateFullAttendanceStatus(attendance, userShift, leaveRecords) {
+// Helper function: Calculate FINAL attendance status (digunakan saat clock-out)
+// Nilai: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap'
+function calculateFullAttendanceStatus(attendance, userShift) {
   const {
     waktu_masuk,
     waktu_keluar,
-    tanggal_absen,
-    user_id
   } = attendance;
 
   const {
@@ -81,50 +81,34 @@ function calculateFullAttendanceStatus(attendance, userShift, leaveRecords) {
     toleransi_telat_minutes
   } = userShift;
 
-  // 1. Cek apakah ada izin yang disetujui pada tanggal tersebut
-  const hasApprovedLeave = leaveRecords && leaveRecords.some(leave => 
-    leave.user_id === user_id &&
-    leave.status === 'disetujui' &&
-    new Date(tanggal_absen) >= new Date(leave.start_date) &&
-    new Date(tanggal_absen) <= new Date(leave.end_date)
-  );
+  // 1. Hanya salah satu yang terisi → tidak lengkap
+  if (!waktu_masuk || !waktu_keluar) return 'tidak_lengkap';
 
-  if (hasApprovedLeave) return 'Izin';
-
-  // 2. Tidak ada data absensi sama sekali
-  if (!waktu_masuk && !waktu_keluar) return 'Alpha';
-
-  // 3. Hanya salah satu yang terisi
-  if (!waktu_masuk || !waktu_keluar) return 'Tidak Lengkap';
-
-  // 4. Parse waktu ke menit untuk perhitungan
+  // 2. Parse waktu ke menit
   const parseTimeToMinutes = (timeStr) => {
     if (!timeStr) return 0;
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours * 60 + minutes;
+    // Handle format HH:MM:SS atau HH:MM
+    const parts = timeStr.split(':').map(Number);
+    return parts[0] * 60 + parts[1];
   };
 
-  const masukMenit = parseTimeToMinutes(waktu_masuk);
+  const masukMenit  = parseTimeToMinutes(waktu_masuk);
   const keluarMenit = parseTimeToMinutes(waktu_keluar);
-  const jamMasukMenit = parseTimeToMinutes(jam_masuk);
+  const jamMasukMenit  = parseTimeToMinutes(jam_masuk);
   const jamKeluarMenit = parseTimeToMinutes(jam_keluar);
 
-  // 5. Toleransi keterlambatan
-  const isLate = masukMenit > (jamMasukMenit + (toleransi_telat_minutes || 5));
+  // 3. Cek keterlambatan masuk (dengan toleransi)
+  const isLate     = masukMenit  > (jamMasukMenit + (toleransi_telat_minutes || 5));
+  // 4. Cek pulang cepat
   const isEarlyOut = keluarMenit < jamKeluarMenit;
 
-  // 6. Tentukan status lengkap
-  if (!isLate && !isEarlyOut) {
-    return 'Tepat Waktu';
-  } else if (!isLate && isEarlyOut) {
-    return 'Pulang Cepat';
-  } else if (isLate && !isEarlyOut) {
-    return 'Masuk Telat';
-  } else if (isLate && isEarlyOut) {
-    return 'Masuk Telat + Pulang Cepat';
-  }
+  // 5. Tentukan status final
+  if (!isLate && !isEarlyOut)  return 'tepat_waktu';
+  if (!isLate && isEarlyOut)   return 'pulang_cepat';
+  if (isLate  && !isEarlyOut)  return 'telat_masuk';
+  if (isLate  && isEarlyOut)   return 'telat_masuk_pulang_cepat';
 
-  return 'Lainnya';
+  return 'tepat_waktu';
 }
 
 // Helper function: Get current time in specific timezone (SERVER TIME)
@@ -471,12 +455,36 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
 
     // AMBIL WAKTU SESUAI TIMEZONE UNIT KERJA
     const currentTime = getCurrentTimeInTimezone(timezone);
+
+    // Hitung status FINAL berdasarkan waktu masuk + waktu keluar + shift
+    const finalStatus = calculateFullAttendanceStatus(
+      {
+        waktu_masuk: attendance.waktu_masuk,
+        waktu_keluar: currentTime,
+      },
+      {
+        jam_masuk: user.jam_masuk || attendance.jam_seharusnya_masuk,
+        jam_keluar: user.jam_keluar || attendance.jam_seharusnya_keluar,
+        toleransi_telat_minutes: user.toleransi_telat_minutes
+      }
+    );
+
+    console.log('⏰ Final attendance status calculation:', {
+      waktu_masuk: attendance.waktu_masuk,
+      waktu_keluar: currentTime,
+      jam_masuk_shift: user.jam_masuk,
+      jam_keluar_shift: user.jam_keluar,
+      toleransi: user.toleransi_telat_minutes,
+      finalStatus
+    });
+
     const updatedAttendance = await Attendance.updateCheckOut(
       attendance.id,
       currentTime,
       req.file ? req.file.filename : '',
       {
-        lokasi_keluar
+        lokasi_keluar,
+        status: finalStatus
       }
     );
 

@@ -76,26 +76,47 @@ const AttendanceScreen = () => {
   const years = [2023, 2024, 2025, 2026, 2027];
 
   const filterOptions = [
-    { value: 'semua', label: 'Semua' },
-    { value: 'Tepat Waktu', label: 'Tepat Waktu' },
-    { value: 'Terlambat', label: 'Terlambat' },
-    { value: 'Izin', label: 'Izin' },
+    { value: 'semua',               label: 'Semua' },
+    { value: 'tepat_waktu',         label: 'Tepat Waktu' },
+    { value: 'telat_masuk',         label: 'Telat Masuk' },
+    { value: 'pulang_cepat',        label: 'Pulang Cepat' },
+    { value: 'telat_masuk_pulang_cepat', label: 'Telat + Pulang Cepat' },
+    { value: 'tidak_lengkap',       label: 'Tidak Lengkap' },
+    { value: 'izin',                label: 'Izin' },
   ];
 
   // Filter data
   const filteredData = attendanceData.filter(item => {
     if (selectedFilter === 'semua') return true;
-    return item.status === selectedFilter;
+    return (item.status || '').toLowerCase() === selectedFilter;
   });
 
   // Warna status
+  // Normalisasi status dari DB (lowercase snake_case)
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'Tepat Waktu': return 'bg-green-100 text-green-800';
-      case 'Terlambat': return 'bg-yellow-100 text-yellow-800';
-      case 'Tidak Hadir': return 'bg-red-100 text-red-800';
-      case 'Izin': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+    switch ((status || '').toLowerCase()) {
+      case 'tepat_waktu':             return 'bg-green-100 text-green-800';
+      case 'telat_masuk':             return 'bg-yellow-100 text-yellow-800';
+      case 'pulang_cepat':            return 'bg-orange-100 text-orange-800';
+      case 'telat_masuk_pulang_cepat': return 'bg-red-100 text-red-800';
+      case 'tidak_lengkap':           return 'bg-gray-100 text-gray-800';
+      case 'izin':                    return 'bg-blue-100 text-blue-800';
+      case 'alpha':                   return 'bg-red-100 text-red-800';
+      default:                        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Teks label status untuk ditampilkan ke karyawan
+  const getStatusText = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'tepat_waktu':             return 'Tepat Waktu';
+      case 'telat_masuk':             return 'Telat Masuk';
+      case 'pulang_cepat':            return 'Pulang Cepat';
+      case 'telat_masuk_pulang_cepat': return 'Telat Masuk + Pulang Cepat';
+      case 'tidak_lengkap':           return 'Tidak Lengkap';
+      case 'izin':                    return 'Izin';
+      case 'alpha':                   return 'Alpha';
+      default:                        return status || '-';
     }
   };
 
@@ -178,7 +199,7 @@ const AttendanceScreen = () => {
                       {formatDate(item.tanggal_absen)}
                     </h3>
                     <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(item.status)}`}>
-                      {item.status || 'Hadir'}
+                      {getStatusText(item.status)}
                     </span>
                   </div>
 

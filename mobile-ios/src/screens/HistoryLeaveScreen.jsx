@@ -189,13 +189,23 @@ const HistoryLeaveScreen = () => {
     );
   };
 
-  // Warna status
+  // Warna status izin
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'approved': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending':  return 'bg-yellow-100 text-yellow-800';
+      default:         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Label status izin dalam Bahasa Indonesia
+  const getStatusText = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'approved': return 'Disetujui';
+      case 'rejected': return 'Ditolak';
+      case 'pending':  return 'Menunggu';
+      default:         return status || 'Menunggu';
     }
   };
 
@@ -276,7 +286,7 @@ const HistoryLeaveScreen = () => {
                       </h3>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(item.status)}`}>
-                      {item.status?.toUpperCase() || 'PENDING'}
+                      {getStatusText(item.status)}
                     </span>
                   </div>
 

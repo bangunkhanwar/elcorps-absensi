@@ -164,39 +164,11 @@ const Dashboard: React.FC = () => {
     navigate(`/employees?role=${roleFilter || ''}`);
   };
 
-  // Fungsi konversi waktu ke menit
-  const timeToMinutes = (timeStr: string) => {
-    if (!timeStr || timeStr === '-') return 0
-    const [hours, minutes] = timeStr.split(':').map(Number)
-    return hours * 60 + minutes
-  }
-
-  // Fungsi untuk mendapatkan status absensi
-  const getAttendanceStatus = (attendance: any) => {
-    if (!attendance.waktu_masuk || attendance.waktu_masuk === '-') return null
-    
-    const waktuMasuk = timeToMinutes(attendance.waktu_masuk)
-    const jamSeharusnyaMasuk = timeToMinutes(attendance.jam_seharusnya_masuk || '09:00')
-    
-    if (attendance.status === 'tepat_waktu' || attendance.status === 'Tepat Waktu') {
-      return 'tepat_waktu'
-    } else if (attendance.status === 'telat' || attendance.status === 'Terlambat') {
-      return 'telat'
-    } else if (waktuMasuk <= jamSeharusnyaMasuk) {
-      return 'tepat_waktu'
-    } else {
-      return 'telat'
-    }
-  }
-
-  // Fungsi untuk mengecek apakah pulang cepat
-  const isPulangCepat = (attendance: any) => {
-    if (!attendance.waktu_keluar || attendance.waktu_keluar === '-' || !attendance.jam_seharusnya_keluar) {
-      return false
-    }
-    const waktuKeluar = timeToMinutes(attendance.waktu_keluar)
-    const jamSeharusnyaKeluar = timeToMinutes(attendance.jam_seharusnya_keluar)
-    return waktuKeluar < jamSeharusnyaKeluar
+  // Normalisasi nilai status dari DB ke format internal yang konsisten
+  // Backend menyimpan: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap'
+  const normalizeStatus = (status: string): string => {
+    if (!status) return ''
+    return status.toLowerCase().trim()
   }
 
   useEffect(() => {
@@ -287,11 +259,18 @@ const Dashboard: React.FC = () => {
           // Data untuk karyawan yang hadir (sudah absensi)
           const hadirUserIds = new Set()
           
-          // Proses data absensi
+          // Proses data absensi - status dibaca langsung dari DB (backend sebagai sumber kebenaran)
           filteredAttendance.forEach((att: any) => {
             const userInfo = usersMap.get(att.user_id)
             if (!userInfo) return
             
+            // Baca status dari DB, normalisasi ke lowercase
+            const dbStatus = normalizeStatus(att.status)
+            
+            // Absensi tidak lengkap: ada waktu masuk tapi belum checkout (status saat checkin)
+            const isComplete = att.waktu_masuk && att.waktu_keluar &&
+                               att.waktu_masuk !== '-' && att.waktu_keluar !== '-'
+
             const employeeData = {
               id: userInfo.id,
               nama: userInfo.nama,
@@ -303,33 +282,30 @@ const Dashboard: React.FC = () => {
               waktu_keluar: att.waktu_keluar,
               jam_seharusnya_masuk: att.jam_seharusnya_masuk,
               jam_seharusnya_keluar: att.jam_seharusnya_keluar,
-              status: att.status
+              status: isComplete ? dbStatus : 'tidak_lengkap'
             }
             
             // Tandai user ini sudah hadir
             hadirUserIds.add(att.user_id)
             
-            // Cek apakah absensi lengkap
-            const isComplete = att.waktu_masuk && att.waktu_masuk !== '-' && 
-                               att.waktu_keluar && att.waktu_keluar !== '-'
-            
+            // Semua yang punya record absensi masuk ke Total Hadir
+            hadirEmployees.push(employeeData)
+
             if (isComplete) {
-              hadirEmployees.push(employeeData)
-              
-              // Cek status tepat waktu atau telat
-              const status = getAttendanceStatus(att)
-              if (status === 'tepat_waktu') {
+              // Kategorisasi berdasarkan status dari DB
+              if (dbStatus === 'tepat_waktu') {
                 tepatWaktuEmployees.push(employeeData)
-              } else if (status === 'telat') {
+              } else if (dbStatus === 'telat_masuk') {
                 telatEmployees.push(employeeData)
-              }
-              
-              // Cek pulang cepat
-              if (isPulangCepat(att)) {
+              } else if (dbStatus === 'pulang_cepat') {
+                pulangCepatEmployees.push(employeeData)
+              } else if (dbStatus === 'telat_masuk_pulang_cepat') {
+                // Masuk telat sekaligus pulang cepat → tampil di kedua kategori
+                telatEmployees.push(employeeData)
                 pulangCepatEmployees.push(employeeData)
               }
             } else {
-              // Absensi tidak lengkap
+              // Belum checkout → tidak lengkap
               tidakLengkapEmployees.push(employeeData)
             }
           })
@@ -586,7 +562,7 @@ const Dashboard: React.FC = () => {
                     {/* Stats List 2 column */}
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { key: 'hadirHariIni' as const, label: 'Hadir Hari Ini', value: stats.hadirHariIni, description: 'Clock in & out' },
+                        { key: 'hadirHariIni' as const, label: 'Hadir Hari Ini', value: stats.hadirHariIni, description: 'Semua yang hadir' },
                         { key: 'tepatWaktu' as const, label: 'Tepat Waktu', value: stats.tepatWaktu, percentage: stats.hadirHariIni > 0 ? Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100) : 0 },
                         { key: 'telatMasuk' as const, label: 'Telat Masuk', value: stats.telatMasuk, percentage: stats.hadirHariIni > 0 ? Math.round((stats.telatMasuk / stats.hadirHariIni) * 100) : 0 },
                         { key: 'pulangCepat' as const, label: 'Pulang Cepat', value: stats.pulangCepat, percentage: stats.hadirHariIni > 0 ? Math.round((stats.pulangCepat / stats.hadirHariIni) * 100) : 0 },
@@ -671,7 +647,7 @@ const Dashboard: React.FC = () => {
                         <div>
                           <p className="text-xs font-medium text-slate-600">Total Hadir</p>
                           <p className="text-xl font-bold text-slate-900">{stats.hadirHariIni}</p>
-                          <p className="text-xs text-slate-500">Clock in & out</p>
+                          <p className="text-xs text-slate-500">Semua yang hadir</p>
                           {stats.hadirHariIni > 0 && (
                             <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                               Review →

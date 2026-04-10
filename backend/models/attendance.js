@@ -1,7 +1,6 @@
 const pool = require('../config/database');
 
 class Attendance {
-  // CREATE struktur
   static async create(attendanceData) {
     const { 
       user_id, tanggal_absen, waktu_masuk, foto_masuk, status,
@@ -31,14 +30,13 @@ class Attendance {
     return result.rows[0];
   }
 
-  // UPDATE CHECKOUT struktur
   static async updateCheckOut(id, waktu_keluar, foto_keluar, extraData = {}) {
-    const { lokasi_keluar } = extraData;
+    const { lokasi_keluar, status } = extraData;
     const query = `
       UPDATE absensi 
       SET waktu_keluar = $1, foto_keluar = $2,
-          lokasi_keluar = $3
-      WHERE id = $4 
+          lokasi_keluar = $3, status = $4
+      WHERE id = $5 
       RETURNING *
     `;
     
@@ -46,20 +44,19 @@ class Attendance {
       waktu_keluar, 
       foto_keluar, 
       lokasi_keluar || null,
+      status || null,
       id
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
   }
 
-  // FIND BY USER AND DATE 
   static async findByUserAndDate(user_id, tanggal_absen) {
     const query = 'SELECT * FROM absensi WHERE user_id = $1 AND tanggal_absen = $2';
     const result = await pool.query(query, [user_id, tanggal_absen]);
     return result.rows[0];
   }
 
-  // GET USER ATTENDANCE
   static async getUserAttendance(user_id, startDate, endDate) {
     const query = `
       SELECT 
@@ -79,14 +76,12 @@ class Attendance {
     return result.rows;
   }
 
-  // GET ALL ATTENDANCE - FIXED SYNTAX ERROR
   static async getAllAttendance(startDate, endDate, unitId = null) {
     console.log('📅 Executing getAllAttendance with:', { startDate, endDate, unitId });
     
     const queryStartDate = startDate || new Date().toISOString().split('T')[0];
     const queryEndDate = endDate || new Date().toISOString().split('T')[0];
     
-    // PERBAIKAN: TAMBAHKAN KOMA SETIAP KOLOM DENGAN BENAR
     let query = `
       SELECT 
         a.*, 
@@ -134,12 +129,10 @@ class Attendance {
       return result.rows;
     } catch (error) {
       console.error('❌ Database query error:', error.message);
-      console.error('❌ Full error details:', error);
       throw error;
     }
   }
 
-  // GET TODAY ATTENDANCE - FIXED SYNTAX
   static async getTodayAttendance(unitId = null) {
     const today = new Date().toISOString().split('T')[0];
     
