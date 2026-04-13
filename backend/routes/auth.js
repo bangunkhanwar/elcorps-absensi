@@ -160,7 +160,8 @@ router.post('/register', auth, async (req, res) => {
       foto_profile: foto_profile || '',
       role: role || 'karyawan',
       unit_kerja_id: finalUnitKerjaId,
-      shift_id: finalShiftId
+      shift_id: finalShiftId,
+      website_access
     };
 
     const newUser = await User.create(userData);
@@ -368,7 +369,7 @@ router.put('/users/:id', auth, async (req, res) => {
 
     const userId = req.params.id;
     // Hapus website_access dan website_privileges dari body karena sudah dihandle otomatis
-    const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role } = req.body;
+    const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, website_access } = req.body;
     
     //  model User.updateUser yang sudah otomatis mengatur website_access
     const updateData = {
@@ -381,7 +382,8 @@ router.put('/users/:id', auth, async (req, res) => {
       divisi,
       unit_kerja_id,
       shift_id,
-      role
+      role,
+      website_access
     };
 
     const updatedUser = await User.updateUser(userId, updateData);

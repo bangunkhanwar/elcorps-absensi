@@ -16,6 +16,7 @@ interface EmployeeForm {
   unit_kerja: string
   role: string
   shift_id?: number | null
+  website_access: boolean
 }
 
 interface Employee {
@@ -32,6 +33,7 @@ interface Employee {
   role: string
   shift_id: number | null
   nama_shift: string
+  website_access: boolean
 }
 
 interface MasterData {
@@ -61,7 +63,8 @@ const DataKaryawan: React.FC = () => {
     divisi: '',
     unit_kerja: '',
     role: 'karyawan',
-    shift_id: null
+    shift_id: null,
+    website_access: false
   })
   const [searchTerm, setSearchTerm] = useState('')
   const [unitKerjaList, setUnitKerjaList] = useState<any[]>([])
@@ -180,7 +183,8 @@ const DataKaryawan: React.FC = () => {
             nama_unit: finalNamaUnit,
             role: user.role,
             shift_id: user.shift_id || null,
-            nama_shift: user.nama_shift || '-'
+            nama_shift: user.nama_shift || '-',
+            website_access: user.website_access === true
           }
         })
         .sort((a: Employee, b: Employee) => a.nama.localeCompare(b.nama))
@@ -247,6 +251,7 @@ const DataKaryawan: React.FC = () => {
         unit_kerja_id: formData.unit_kerja,
         role: formData.role,
         shift_id: formData.shift_id,
+        website_access: formData.website_access,
         koordinat_lokasi: '',
         foto_profile: ''
       }
@@ -267,6 +272,7 @@ const DataKaryawan: React.FC = () => {
         divisi: '',
         unit_kerja: '',
         role: 'karyawan',
+        website_access: false,
       })
 
       fetchEmployees()
@@ -289,7 +295,8 @@ const DataKaryawan: React.FC = () => {
       divisi: employee.divisi,
       unit_kerja: employee.nama_unit,
       role: employee.role,
-      shift_id: employee.shift_id
+      shift_id: employee.shift_id,
+      website_access: employee.website_access === true
     })
     setShowEditModal(true)
   }
@@ -315,6 +322,7 @@ const DataKaryawan: React.FC = () => {
         divisi: formData.divisi,
         unit_kerja_id: selectedUnit ? selectedUnit.id : null,
         role: formData.role,
+        website_access: formData.website_access,
       }
 
       if (formData.password) {

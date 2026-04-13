@@ -5,15 +5,22 @@ class User {
   static async create(userData) {
     const {
       nama, nik, email, password, jabatan, departemen, divisi, 
-      foto_profile, role, unit_kerja_id, shift_id
+      foto_profile, role, unit_kerja_id, shift_id, website_access
     } = userData;
     
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Tentukan website_access dan website_privileges berdasarkan jabatan
-    const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
-    const websiteAccess = isStoreLeaderOrLeaderArea;
-    const websitePrivileges = isStoreLeaderOrLeaderArea ? ['shift-management'] : [];
+    // 🟢 Gunakan nilai manual jika ada, jika tidak hitung otomatis dari jabatan
+    let finalWebsiteAccess;
+    if (website_access !== undefined) {
+      finalWebsiteAccess = Boolean(website_access);
+    } else {
+      // Fallback untuk kompatibilitas
+      const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
+      finalWebsiteAccess = isStoreLeaderOrLeaderArea;
+    }
+
+    const websitePrivileges = finalWebsiteAccess ? ['shift-management'] : [];
     
     const query = `
       INSERT INTO users (nama, nik, email, password, jabatan, departemen, divisi, 
@@ -24,7 +31,7 @@ class User {
     
     const values = [
       nama, nik, email, hashedPassword, jabatan, departemen, divisi,
-      foto_profile, role, unit_kerja_id, shift_id, websiteAccess, JSON.stringify(websitePrivileges)
+      foto_profile, role, unit_kerja_id, shift_id, finalWebsiteAccess, JSON.stringify(websitePrivileges)
     ];
     
     const result = await pool.query(query, values);
@@ -79,30 +86,35 @@ class User {
   }
 
   static async updateUser(id, updateData) {
-    const { nama, nik, email, password, jabatan, departemen, divisi, unit_kerja_id, shift_id, role } = updateData;
+    const { 
+      nama, nik, email, password, jabatan, departemen, divisi, 
+      unit_kerja_id, shift_id, role, website_access 
+    } = updateData;
 
-    // Ambil data user saat ini untuk mempertahankan website_privileges
     const currentUser = await this.findById(id);
     if (!currentUser) {
       throw new Error('User tidak ditemukan');
     }
 
-    // Tentukan website_access berdasarkan jabatan
-    const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
-    const websiteAccess = isStoreLeaderOrLeaderArea;
-
-    // SELALU PERTAHANKAN website_privileges yang sudah ada, jangan pernah reset
-    // Kecuali jika berubah dari non-leader menjadi leader, maka berikan default
-    let websitePrivileges = currentUser.website_privileges || [];
-
-    if (isStoreLeaderOrLeaderArea && !currentUser.website_access) {
-      // Jika berubah dari non-leader menjadi leader, berikan default privileges
-      websitePrivileges = ['shift-management'];
-    } else if (!isStoreLeaderOrLeaderArea) {
-      // Jika bukan leader, kosongkan privileges
-      websitePrivileges = [];
+    // 🟢 Gunakan nilai manual jika ada, jika tidak hitung otomatis dari jabatan
+    let finalWebsiteAccess;
+    if (website_access !== undefined) {
+      finalWebsiteAccess = Boolean(website_access);
+    } else {
+      // Fallback untuk kompatibilitas
+      const isStoreLeaderOrLeaderArea = jabatan === 'Store Leader' || jabatan === 'Leader Area';
+      finalWebsiteAccess = isStoreLeaderOrLeaderArea;
     }
-    // Jika tetap leader, pertahankan privileges yang sudah ada (tidak diubah)
+
+    // Pertahankan privileges yang sudah ada, kecuali jika akses website dicabut
+    let websitePrivileges = currentUser.website_privileges || [];
+    
+    if (!finalWebsiteAccess) {
+      websitePrivileges = [];  // akses dicabut → privileges dihapus
+    } else if (finalWebsiteAccess && !currentUser.website_access) {
+      websitePrivileges = ['shift-management']; // baru diberi akses → beri default
+    }
+    // Jika akses tetap true dan sebelumnya sudah true, privileges tidak diubah
 
     let query = '';
     let values = [];
@@ -117,7 +129,7 @@ class User {
         WHERE id = $13
         RETURNING *
       `;
-      values = [nama, nik, email, hashedPassword, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, websiteAccess, JSON.stringify(websitePrivileges), id];
+      values = [nama, nik, email, hashedPassword, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, finalWebsiteAccess, JSON.stringify(websitePrivileges), id];
     } else {
       query = `
         UPDATE users 
@@ -127,7 +139,7 @@ class User {
         WHERE id = $12
         RETURNING *
       `;
-      values = [nama, nik, email, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, websiteAccess, JSON.stringify(websitePrivileges), id];
+      values = [nama, nik, email, jabatan, departemen, divisi, unit_kerja_id, shift_id, role, finalWebsiteAccess, JSON.stringify(websitePrivileges), id];
     }
     
     const result = await pool.query(query, values);

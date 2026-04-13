@@ -10,6 +10,7 @@ interface EmployeeForm {
   divisi: string
   unit_kerja: string
   role: string
+  website_access: boolean
 }
 
 interface Props {
@@ -66,6 +67,8 @@ const EditKaryawan: React.FC<Props> = ({
   }
 
   // Searchable dropdown states
+  const [openRole, setOpenRole] = useState(false)
+  const [openAksesWebsite, setOpenAksesWebsite] = useState(false)
   const [openJabatan, setOpenJabatan] = useState(false)
   const [searchJabatan, setSearchJabatan] = useState("")
   const [openDepartemen, setOpenDepartemen] = useState(false)
@@ -84,6 +87,8 @@ const EditKaryawan: React.FC<Props> = ({
   const filteredUnits = unitOptions.filter(opt => opt.toLowerCase().includes(searchUnit.toLowerCase())).sort()
 
   // refs for click-outside
+  const roleRef = useRef<HTMLDivElement>(null)
+  const aksesWebsiteRef = useRef<HTMLDivElement>(null)
   const jabatanRef = useRef<HTMLDivElement>(null)
   const departemenRef = useRef<HTMLDivElement>(null)
   const divisiRef = useRef<HTMLDivElement>(null)
@@ -92,8 +97,8 @@ const EditKaryawan: React.FC<Props> = ({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node
-      const refs = [jabatanRef, departemenRef, divisiRef, unitRef]
-      const states = [setOpenJabatan, setOpenDepartemen, setOpenDivisi, setOpenUnit]
+      const refs = [roleRef, aksesWebsiteRef, jabatanRef, departemenRef, divisiRef, unitRef]
+      const states = [setOpenRole, setOpenAksesWebsite, setOpenJabatan, setOpenDepartemen, setOpenDivisi, setOpenUnit]
       
       refs.forEach((ref, index) => {
         if (ref.current && !ref.current.contains(target)) {
@@ -151,67 +156,124 @@ const EditKaryawan: React.FC<Props> = ({
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Email</label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white pl-10"
-                        placeholder="Masukan email"
-                      />
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">📧</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Role Sistem</label>
-                    <div className="relative">
-                      <select
-                        name="role"
-                        value={formData.role}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none pl-10"
-                      >
-                        <option value="karyawan">Karyawan - Akses Mobile App</option>
-                        <option value="hr">HR/Admin - Akses Website & Mobile</option>
-                      </select>
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🏷️</div>
-                    </div>
+                {/* Kolom 1 Baris 1: Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Email</label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white pl-10"
+                      placeholder="Masukan email"
+                    />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">📧</div>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Password Baru</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white pl-10 pr-10"
-                        placeholder="Kosongkan jika tidak diubah"
-                      />
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🔒</div>
-                      <button
-                        type="button"
-                        onClick={togglePasswordVisibility}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
-                      >
-                        {showPassword ? '👁️' : '🙈'}
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center">
-                      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></span>
-                      Biarkan kosong jika tidak ingin mengubah password
-                    </p>
+                {/* Kolom 2 Baris 1: Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Password Baru</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white pl-10 pr-10"
+                      placeholder="Kosongkan jika tidak diubah"
+                    />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🔒</div>
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                    >
+                      {showPassword ? '👁️' : '🙈'}
+                    </button>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1 flex items-center">
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1"></span>
+                    Biarkan kosong jika tidak ingin mengubah password
+                  </p>
+                </div>
+
+                {/* Kolom 1 Baris 2: Role Sistem */}
+                <div ref={roleRef}>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Role Sistem</label>
+                  <div className="relative">
+                    <div
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 bg-white cursor-pointer pl-10 flex justify-between items-center"
+                      onClick={() => setOpenRole(!openRole)}
+                    >
+                      <span>{formData.role === 'hr' ? 'HR/Admin - Akses Website & Mobile' : 'Karyawan - Akses Mobile App'}</span>
+                      <span className="text-gray-400">▼</span>
+                    </div>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🏷️</div>
+                    {openRole && (
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow">
+                        <div className="max-h-48 overflow-y-auto text-xs">
+                          {[
+                            { value: 'karyawan', label: 'Karyawan - Akses Mobile App' },
+                            { value: 'hr', label: 'HR/Admin - Akses Website & Mobile' }
+                          ].map(opt => (
+                            <div
+                              key={opt.value}
+                              className={`px-3 py-2 hover:bg-green-100 cursor-pointer ${formData.role === opt.value ? 'bg-green-50 font-medium' : ''}`}
+                              onClick={() => {
+                                setFormData({ ...formData, role: opt.value })
+                                setOpenRole(false)
+                              }}
+                            >
+                              {opt.label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Kolom 2 Baris 2: Akses Website */}
+                <div ref={aksesWebsiteRef}>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Akses Website</label>
+                  <div className="relative">
+                    <div
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 bg-white cursor-pointer pl-10 flex justify-between items-center"
+                      onClick={() => setOpenAksesWebsite(!openAksesWebsite)}
+                    >
+                      <span>{formData.website_access ? 'Bisa Akses Website' : 'Tidak Bisa Akses Website'}</span>
+                      <span className="text-gray-400">▼</span>
+                    </div>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">🌐</div>
+                    {openAksesWebsite && (
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow">
+                        <div className="max-h-48 overflow-y-auto text-xs">
+                          {[
+                            { value: false, label: 'Tidak Bisa Akses Website' },
+                            { value: true, label: 'Bisa Akses Website' }
+                          ].map(opt => (
+                            <div
+                              key={String(opt.value)}
+                              className={`px-3 py-2 hover:bg-green-100 cursor-pointer ${formData.website_access === opt.value ? 'bg-green-50 font-medium' : ''}`}
+                              onClick={() => {
+                                setFormData({ ...formData, website_access: opt.value })
+                                setOpenAksesWebsite(false)
+                              }}
+                            >
+                              {opt.label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 flex items-center">
+                    <span className={`w-1.5 h-1.5 rounded-full mr-1 ${formData.website_access ? 'bg-green-400' : 'bg-gray-300'}`}></span>
+                    {formData.website_access ? 'Karyawan dapat login ke website HR' : 'Hanya akses mobile app'}
+                  </p>
                 </div>
               </div>
             </div>
