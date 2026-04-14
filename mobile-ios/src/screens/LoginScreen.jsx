@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { authAPI } from '../services/api';
-import logo from '../assets/logo.png';
+import logo from '../assets/elcorps_img.png';
 
 const LoginScreen = () => {
   const navigate = useNavigate();
@@ -76,171 +76,127 @@ const LoginScreen = () => {
   };
 
   return (
-    <div className={`min-h-screen bg-white transition-opacity duration-800 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
-      {/* Header dengan logo dan teks - menggunakan inline style sementara */}
-      <div className="rounded-b-3xl shadow-lg py-10" style={{ backgroundColor: '#25a298' }}>
-        <div className="flex flex-col items-center">
-          <div className="w-36 h-28 -mb-7">
-            <img 
-              src={logo} 
-              alt="elcorps Logo" 
-              className="w-full h-full object-contain"
+  <div className={`min-h-screen relative overflow-hidden bg-white transition-opacity duration-700 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
+
+    {/* Soft background gradient (lebih hidup + ada brand color) */}
+    <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-[#25a298]/10" />
+
+    {/* Glow / ambient light */}
+    <div className="absolute top-[-80px] left-[-80px] w-[250px] h-[250px] bg-[#25a298]/20 rounded-full blur-3xl" />
+    <div className="absolute bottom-[-100px] right-[-80px] w-[250px] h-[250px] bg-[#25a298]/10 rounded-full blur-3xl" />
+
+    {/* Content */}
+    <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-5">
+
+      {/* Glass Card */}
+      <div className="
+        w-full max-w-md p-6 rounded-3xl
+        bg-white/80 backdrop-blur-xl
+        border border-[#25a298]/10
+        shadow-[0_10px_40px_rgba(0,0,0,0.08)]
+      ">
+
+        {/* Logo */}
+      <div className="flex flex-col items-center mb-6">
+        <div className="w-40 h-28 mb-0">
+          <img
+            src={logo}
+            alt="logo"
+            className="w-full h-full object-contain drop-shadow-md"
+          />
+        </div>
+
+        <p className="text-gray-500 text-sm tracking-wide leading-tight -mt-5">
+          Absensi Karyawan
+        </p>
+      </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-xl text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* Email */}
+          <div>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              className="
+                w-full px-4 py-3 rounded-xl
+                bg-white text-gray-800 placeholder-gray-400
+                border border-gray-200
+                focus:outline-none focus:ring-2 focus:ring-[#25a298]/40
+                focus:border-[#25a298]
+                transition-all duration-300
+              "
+              placeholder="✉ Masukkan email"
             />
           </div>
-          <p className="text-white/90 text-lg">Absensi Karyawan</p>
-        </div>
-      </div>
 
-      {/* Login Card */}
-      <div className="flex flex-col items-center justify-center px-6 -mt-8">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200 w-full max-w-md">
-
-          {error && (
-            <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded-xl">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">!</span>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-red-800 text-sm font-medium">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
-            <div>
-              <div className="flex items-center mb-3">
-                <Mail style={{ color: '#25a298' }} size={20} />
-                <span className="text-gray-700 font-medium ml-2">Email</span>
-              </div>
+          {/* Password */}
+          <div>
+            <div className="relative">
               <input
-                type="email"
-                name="email"
-                value={form.email}
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={form.password}
                 onChange={handleChange}
-                required
-                disabled={loading}
-                className="w-full px-4 py-4 bg-gray-50 rounded-xl text-gray-800 placeholder-gray-500 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] disabled:opacity-50"
-                placeholder="Masukkan email Anda"
-                style={{ borderColor: 'rgba(37, 162, 152, 0.5)' }}
+                className="
+                  w-full px-4 py-3 pr-12 rounded-xl
+                  bg-white text-gray-800 placeholder-gray-400
+                  border border-gray-200
+                  focus:outline-none focus:ring-2 focus:ring-[#25a298]/40
+                  focus:border-[#25a298]
+                  transition-all duration-300
+                "
+                placeholder="🔐 Masukkan password"
               />
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <div className="flex items-center mb-3">
-                <Lock style={{ color: '#25a298' }} size={20} />
-                <span className="text-gray-700 font-medium ml-2">Password</span>
-              </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="w-full px-4 py-4 bg-gray-50 rounded-xl text-gray-800 placeholder-gray-500 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] pr-12 disabled:opacity-50"
-                  placeholder="Masukkan password"
-                  style={{ borderColor: 'rgba(37, 162, 152, 0.5)' }}
-                />
-                <button
-                  type="button"
-                  onClick={toggleShowPassword}
-                  disabled={loading}
-                  className="absolute right-4 top-4 disabled:opacity-50"
-                  style={{ color: '#25a298' }}
-                >
-                  {showPassword ? <EyeOff size={24} /> : <Eye size={24} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  className="w-4 h-4 bg-gray-100 border-gray-300 rounded focus:ring-2"
-                  style={{ 
-                    color: '#25a298',
-                    '--tw-ring-color': '#25a298'
-                  }}
-                />
-                <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
-                  Ingat saya
-                </label>
-              </div>
-              <Link 
-                to="/forgot-password" 
-                className="text-sm font-medium hover:underline"
-                style={{ color: '#25a298' }}
+              <button
+                type="button"
+                onClick={toggleShowPassword}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#25a298] transition"
               >
-                Lupa password?
-              </Link>
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ 
-                backgroundColor: loading ? '#3ac2b5' : '#25a298',
-                color: 'white'
-              }}
-              className="w-full py-4 rounded-xl font-bold text-lg shadow-lg transition duration-200 hover:opacity-90 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Memproses...
-                </div>
-              ) : (
-                'Masuk ke Aplikasi'
-              )}
-            </button>
-          </form>
-
-          {/* Links Section */}
-          
-          {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-            <p className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} elcorps • Version 1.0
-            </p>
           </div>
-        </div>
-      </div>
 
-      {/* Custom CSS for animations */}
-      <style jsx="true">{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        .animate-fade-in {
-          animation: fadeIn 0.8s ease-out;
-        }
-        
-        .-mt-8 {
-          margin-top: -2rem;
-        }
-        
-        /* Custom focus styles */
-        input:focus {
-          --tw-ring-color: #25a298;
-          border-color: #25a298;
-        }
-      `}</style>
+          {/* Actions */}
+          <div className="flex justify-between text-gray-500 text-sm">
+            <label className="flex items-center gap-2">
+              <input type="checkbox" className="accent-[#25a298]" />
+              Ingat
+            </label>
+
+            <Link to="/forgot-password" className="hover:text-[#25a298] transition">
+              Lupa Password?
+            </Link>
+          </div>
+
+          {/* Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="
+              w-full py-3 rounded-xl font-semibold
+              bg-[#25a298] text-white
+              shadow-[0_8px_20px_rgba(37,162,152,0.3)]
+              hover:bg-[#1f8e85]
+              transition-all duration-300
+            "
+          >
+            {loading ? 'Memproses...' : 'Masuk'}
+          </button>
+        </form>
+      </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default LoginScreen;

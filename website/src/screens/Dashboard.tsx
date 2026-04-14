@@ -86,8 +86,8 @@ const Dashboard: React.FC = () => {
     },
     {
       id: 2,
-      title: 'Absensi Hari Ini',
-      description: 'Lihat rekap harian',
+      title: 'Data Absensi',
+      description: 'Analisis & export data',
       icon: '📊',
       path: '/attendance',
     },

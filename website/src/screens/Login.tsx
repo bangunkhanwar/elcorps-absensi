@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import logo from '../assets/logoelcorps2.png'
+import logo from '../assets/logo3.png'
 import { authAPI } from '../services/api'
 
 const Login: React.FC = () => {
@@ -12,17 +12,16 @@ const Login: React.FC = () => {
   const navigate = useNavigate()
 
   const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setIsLoading(true)
-  setMessage('')
+    e.preventDefault()
+    setIsLoading(true)
+    setMessage('')
 
     try {
       const response = await authAPI.login({ email, password, login_type: 'website' })
 
       const user = response.data.user
-      console.log('👤 User login data:', user) // Debug log
+      console.log('👤 User login data:', user)
       
-      // Updated validation: Allow hr, leader_store, OR karyawan with website_access
       const allowedRoles = ['hr', 'leader_store']
       const hasWebsiteAccess = user.website_access === true
       
@@ -48,19 +47,21 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 px-4">
-      {/* Login Card */}
-      <div className="max-w-xs w-full sm:w-96 p-8 rounded-2xl bg-white/95 backdrop-blur-md shadow-2xl z-10 border border-white/30 transform transition-all duration-500 hover:shadow-3xl">
+      {/* Login Card - LEBIH TRANSPARAN */}
+      <div className="max-w-xs w-full sm:w-96 p-8 rounded-2xl bg-white/30 backdrop-blur-md shadow-2xl z-10 border border-white/40 transform transition-all duration-500 hover:shadow-3xl">
         {/* Header */}
-        <div className="text-center mb-7">
-          <div className="w-32 h-32 mx-auto mb-4 transform transition-all duration-700 hover:scale-105">
-            <img
-              src={logo}
-              alt="Logo Elcorps"
-              className="w-full h-full object-contain transform transition-all duration-500 ease-out hover:scale-110 hover:rotate-2 filter drop-shadow-lg"
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-primary-600 transform transition-all duration-300 hover:scale-105">Admin</h1>
-          <p className="text-gray-600 mt-1 text-sm transition-all duration-300 hover:text-primary-500">Manajemen Absensi karyawan</p>
+        <div className="w-[180px] mx-auto mb-1 transform transition-all duration-700 hover:scale-105">
+          <img
+            src={logo}
+            alt="Logo Elcorps"
+            className="w-full h-auto object-contain transform transition-all duration-500 ease-out hover:scale-110 hover:rotate-2 filter drop-shadow-lg"
+          />
+        </div>
+
+        <div className="text-center -mt-3 mb-6">
+          <p className="text-sm font-medium tracking-wide text-white/80">
+            Manajemen Absensi Karyawan
+          </p>
         </div>
 
         {/* Form */}
@@ -73,7 +74,7 @@ const Login: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="Masukan Email"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 text-gray-900 placeholder-gray-400 hover:border-primary-300"
+              className="w-full px-4 py-3 rounded-xl border border-gray-300/50 bg-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 text-gray-900 placeholder-gray-400 hover:border-primary-300"
             />
           </div>
 
@@ -85,12 +86,12 @@ const Login: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Masukan password"
-              className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 text-gray-900 placeholder-gray-400 hover:border-primary-300"
+              className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300/50 bg-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 text-gray-900 placeholder-gray-400 hover:border-primary-300"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-primary-600 transition-all duration-300 hover:scale-110"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-primary-600 transition-all duration-300 hover:scale-110"
             >
               {showPassword ? '🔓' : '🔒'}
             </button>
@@ -118,23 +119,13 @@ const Login: React.FC = () => {
             )}
           </button>
 
-          {/* Extra Links */}
-          <div className="flex justify-center items-center gap-3 text-sm mt-6 transform transition-all duration-300 hover:scale-105">
-            <a href="/forgot-password" className="text-primary-600 font-medium hover:text-primary-700 transition-all duration-300 hover:underline">
-              Lupa Password
-            </a>
-            <span className="text-primary-600 opacity-75 transition-all duration-300">•</span>
-            <a href="/register" className="text-primary-600 font-medium hover:text-primary-700 transition-all duration-300 hover:underline">
-              Daftar
-            </a>
-          </div>
 
           {/* Message */}
           {message && (
             <div className={`mt-4 p-3 rounded-xl text-center font-medium text-sm transform transition-all duration-500 animate-pulse ${
               message.includes('berhasil') 
-                ? 'bg-green-50 text-green-700 border border-green-200' 
-                : 'bg-red-50 text-red-700 border border-red-200'
+                ? 'bg-green-50/70 text-green-800 border border-green-200/50 backdrop-blur-sm' 
+                : 'bg-red-50/70 text-red-800 border border-red-200/50 backdrop-blur-sm'
             }`}>
               {message}
             </div>
@@ -142,11 +133,7 @@ const Login: React.FC = () => {
         </form>
 
         {/* Footer Note */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500 transition-all duration-300 hover:text-primary-600">
-            Secure Admin Access • Elcorps HR System
-          </p>
-        </div>
+       
       </div>
 
       {/* Floating particles background */}
