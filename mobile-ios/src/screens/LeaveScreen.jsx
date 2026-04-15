@@ -26,13 +26,35 @@ const LeaveScreen = () => {
   const [showLeaveTypeModal, setShowLeaveTypeModal] = useState(false);
   const [showAttachmentModal, setShowAttachmentModal] = useState(false);
   const [user, setUser] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceError, setBalanceError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) setUser(JSON.parse(userData));
     fetchTeamApprovals();
+    fetchBalance();
   }, []);
+
+  const fetchBalance = async () => {
+    setBalanceLoading(true);
+    setBalanceError('');
+    try {
+      const res = await leaveAPI.getBalance();
+      if (res.success) {
+        setBalance(res.data);
+      } else {
+        setBalanceError('Saldo cuti belum tersedia');
+      }
+    } catch (e) {
+      console.log('Error fetching balance:', e);
+      setBalanceError(e.message || 'Gagal memuat saldo cuti');
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
 
   const fetchTeamApprovals = async () => {
     try {
@@ -44,10 +66,8 @@ const LeaveScreen = () => {
         setIsHR(res.isHR);
         setIsSupervisor(res.isSupervisor);
         
-        // Show tab only if user is NOT HR and IS a supervisor
-        // Note: HR can see all but if they are not specifically a supervisor for someone, we hide the tab
-        // based on user request "hanya muncul bagi supervisor saja"
-        setHasSubordinates(res.isSupervisor && !res.isHR);
+        // Approval tab harus muncul untuk supervisor maupun HR.
+        setHasSubordinates(res.isSupervisor || res.isHR);
       }
     } catch (err) {
       console.log('User has no subordinate access');
@@ -123,6 +143,16 @@ const LeaveScreen = () => {
       return showError('Harap isi semua data dengan benar. Keterangan minimal 10 karakter.');
     }
 
+    if (leaveType.toLowerCase() === 'cuti') {
+      const durasi = calculateDuration();
+      if (!balance) {
+        return showError('Saldo cuti belum dimuat. Silakan coba lagi sebentar.');
+      }
+      if (durasi > balance.saldo_sisa) {
+        return showError(`Saldo cuti tidak cukup. Sisa: ${balance.saldo_sisa} hari, Diajukan: ${durasi} hari.`);
+      }
+    }
+
     setLoading(true);
     try {
       let fileUrl = null;
@@ -133,7 +163,9 @@ const LeaveScreen = () => {
         uploadData.append('file', attachment.file);
         const uploadRes = await leaveAPI.upload(uploadData);
         if (uploadRes.success) {
-          fileUrl = uploadRes.fileUrl;
+          fileUrl = uploadRes.relativePath || uploadRes.fileUrl;
+        } else {
+          throw new Error(uploadRes.error || 'Gagal mengunggah lampiran');
         }
       }
 
@@ -297,15 +329,40 @@ const LeaveScreen = () => {
       <div className="p-4">
         {activeTab === 'my-leave' ? (
           <>
+            {/* Saldo Cuti */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm mb-4 flex flex-col items-center">
+              {balanceLoading ? (
+                <>
+                  <h3 className="text-gray-500 font-semibold mb-2">Memuat saldo cuti...</h3>
+                  <div className="text-4xl font-black text-primary">—</div>
+                </>
+              ) : balance ? (
+                <>
+                  <h3 className="text-gray-500 font-semibold mb-2">Sisa Saldo Cuti Anda</h3>
+                  <div className="text-5xl font-black text-primary">{balance.saldo_sisa} <span className="text-lg text-gray-500 font-medium">Hari</span></div>
+                  <div className="w-full mt-4 flex justify-between text-sm text-gray-400 font-medium border-t border-gray-100 pt-3">
+                    <span>Total Hak: {balance.saldo_awal} Hari</span>
+                    <span>Terpakai: {balance.saldo_terpakai} Hari</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-gray-500 font-semibold mb-2">Saldo Cuti Tidak Tersedia</h3>
+                  <div className="text-4xl font-black text-gray-400">0 <span className="text-lg text-gray-500 font-medium">Hari</span></div>
+                  <p className="text-xs text-gray-400 mt-3 text-center">{balanceError || 'Data saldo cuti belum berhasil dimuat.'}</p>
+                </>
+              )}
+            </div>
+
             {/* Form Container */}
             <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
+              {/* <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">
                 Form Pengajuan Izin
-              </h2>
+              </h2> */}
               {/* ... (existing form content) ... */}
-              <p className="text-gray-600 text-center mb-6">
+              {/* <p className="text-gray-600 text-center mb-6">
                 Isi form di bawah untuk mengajukan izin
-              </p>
+              </p> */}
 
               {/* Jenis Izin */}
               <div className="mb-6">
@@ -441,7 +498,7 @@ const LeaveScreen = () => {
                 <div className="flex items-start">
                   <AlertCircle className="text-blue-500 mr-2 flex-shrink-0 mt-1" size={20} />
                   <p className="text-blue-800 text-sm">
-                    Pastikan semua data yang diisi sudah benar. Pengajuan izin akan diproses dalam 1-2 hari kerja.
+                    Pastikan semua data yang diisi sudah benar. Pengajuan izin akan diproses dalam 2-3 hari kerja.
                   </p>
                 </div>
               </div>
@@ -479,9 +536,16 @@ const LeaveScreen = () => {
                </div>
              )}
 
-             {teamApprovals.map(approval => (
+             {teamApprovals.map(approval => {
+               // Logic tombol
+               const canApproveAtasan = !isHR && approval.approval_atasan === 'pending' && approval.status === 'pending';
+               const canApproveHR = isHR && approval.approval_atasan === 'approved' && approval.approval_hr === 'pending' && approval.status === 'pending';
+               const canRejectHR = isHR && approval.approval_hr === 'pending' && approval.status === 'pending';
+               const showActions = canApproveAtasan || canApproveHR || canRejectHR;
+
+               return (
                <div key={approval.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 animate-fade-in">
-                  <div className="flex justify-between mb-4">
+                  <div className="flex justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="font-bold text-gray-900 text-lg">{approval.nama}</h3>
                       <p className="text-sm text-gray-500 font-medium">{approval.nama_jabatan || 'Staff'}</p>
@@ -489,6 +553,16 @@ const LeaveScreen = () => {
                     <span className="bg-yellow-100 text-yellow-700 px-4 py-1.5 rounded-full text-xs font-bold h-fit shadow-sm">
                       {approval.jenis_izin.toUpperCase()}
                     </span>
+                  </div>
+
+                  {/* Dual Approval Badges */}
+                  <div className="flex gap-2 mb-4">
+                    <div className={`flex-1 py-1 px-2 rounded-lg text-center text-xs font-bold border ${approval.approval_atasan === 'approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : approval.approval_atasan === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                      Atasan: {(approval.approval_atasan || 'pending').toUpperCase()}
+                    </div>
+                    <div className={`flex-1 py-1 px-2 rounded-lg text-center text-xs font-bold border ${approval.approval_hr === 'approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : approval.approval_hr === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                      HR: {(approval.approval_hr || 'pending').toUpperCase()}
+                    </div>
                   </div>
                   
                   <div className="bg-gray-50 p-4 rounded-xl mb-5 text-sm text-gray-700 space-y-2">
@@ -513,31 +587,37 @@ const LeaveScreen = () => {
                     {renderAttachment(approval.lampiran)}
                   </div>
 
-                  {/* Action Buttons (Hide if user is HR/View Only or status is no longer pending) */}
-                  {!isHR && approval.status === 'pending' ? (
+                  {/* Action Buttons */}
+                  {showActions ? (
                     <div className="flex space-x-3">
-                      <button 
-                        onClick={() => handleAction(approval.id, 'rejected')}
-                        className="flex-1 flex items-center justify-center space-x-2 py-3.5 border-2 border-red-500 text-red-500 rounded-xl font-bold hover:bg-red-50 transition"
-                      >
-                        <XCircle size={20} /> <span>Tolak</span>
-                      </button>
-                      <button 
-                        onClick={() => handleAction(approval.id, 'approved')}
-                        className="flex-1 flex items-center justify-center space-x-2 py-3.5 bg-primary text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition"
-                      >
-                        <CheckCircle size={20} /> <span>Setujui</span>
-                      </button>
+                      {(canApproveAtasan || canRejectHR) && (
+                        <button 
+                          onClick={() => handleAction(approval.id, 'rejected')}
+                          className="flex-1 flex items-center justify-center space-x-2 py-3.5 border-2 border-red-500 text-red-500 rounded-xl font-bold hover:bg-red-50 transition"
+                        >
+                          <XCircle size={20} /> <span>Tolak</span>
+                        </button>
+                      )}
+                      {(canApproveAtasan || canApproveHR) && (
+                        <button 
+                          onClick={() => handleAction(approval.id, 'approved')}
+                          className="flex-1 flex items-center justify-center space-x-2 py-3.5 bg-primary text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition"
+                        >
+                          <CheckCircle size={20} /> <span>Setujui</span>
+                        </button>
+                      )}
                     </div>
                   ) : (
-                    <div className="text-center py-2 px-4 bg-gray-100 rounded-xl">
+                    <div className="text-center py-3 px-4 bg-gray-100 rounded-xl">
                       <p className="text-gray-500 font-bold text-sm">
-                        {approval.status === 'pending' ? 'Hanya View (HR Access)' : `Status: ${approval.status.toUpperCase()}`}
+                        {approval.status === 'pending' 
+                          ? (isHR ? 'Menunggu Approval Atasan' : 'Menunggu Approval HR') 
+                          : `Status Final: ${approval.status.toUpperCase()}`}
                       </p>
                     </div>
                   )}
                </div>
-             ))}
+             )})}
           </div>
         )}
       </div>

@@ -213,6 +213,7 @@ export const leaveAPI = {
   getMyLeaves: () => api.get('/leave/my-leaves'),
   getTeamApprovals: () => api.get('/leave/team-approval'),
   action: (data) => api.post('/leave/action', data),
+  getBalance: () => api.get('/leave/balance'),
   upload: (formData) => api.post('/leave/upload', formData, {
     headers: { 
       'Content-Type': 'multipart/form-data'
@@ -223,24 +224,37 @@ export const leaveAPI = {
 export const getMediaUrl = (path) => {
   if (!path || path === '{}' || typeof path !== 'string') return null;
 
-  let filename = path;
+  let mediaPath = path;
 
   // Handle if path is already a full URL
   if (path.startsWith('http')) {
-    // If it's already a correct remote URL (not localhost), we might keep it
-    // But to be safe and consistent with current server, we extract filename and rebuild
     try {
       const url = new URL(path);
-      // Only extract filename if it's localhost or we want to force current server
-      const pathParts = url.pathname.split('/');
-      filename = pathParts[pathParts.length - 1];
+      const uploadsPrefix = '/uploads/leave/';
+      const idx = url.pathname.indexOf(uploadsPrefix);
+
+      if (idx !== -1) {
+        mediaPath = url.pathname.slice(idx + 1); // remove leading slash for join below
+      } else {
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        mediaPath = pathParts.slice(-3).join('/');
+      }
     } catch (e) {
       // Not a valid URL, treat as filename
     }
   }
 
+  const cleanedPath = mediaPath.replace(/^\/+/, '');
+  if (cleanedPath.startsWith('uploads/leave/')) {
+    return `${api.defaults.baseURL.replace('/api', '')}/${cleanedPath}`;
+  }
+
+  if (cleanedPath.includes('/')) {
+    return `${api.defaults.baseURL.replace('/api', '')}/uploads/leave/${cleanedPath}`;
+  }
+
   const baseUrl = api.defaults.baseURL.replace('/api', '');
-  return `${baseUrl}/uploads/leave/${filename}`;
+  return `${baseUrl}/uploads/leave/${cleanedPath}`;
 };
 
 // API endpoints untuk notifications
@@ -249,6 +263,16 @@ export const notificationAPI = {
   markAsRead: (id) => api.patch(`/notifications/${id}/read`),
   getVapidKey: () => api.get('/notifications/vapid-key'),
   subscribe: (subscription) => api.post('/notifications/subscribe', subscription),
+};
+
+// API endpoints untuk overtime
+export const overtimeAPI = {
+  apply: (data) => api.post('/overtime/apply', data),
+  getMyOvertime: () => api.get('/overtime/my-overtime'),
+  getTeamApprovals: () => api.get('/overtime/team-approval'),
+  action: (data) => api.post('/overtime/action', data),
+  getDayOffBalance: () => api.get('/overtime/day-off-balance'),
+  claimDayOff: (data) => api.post('/overtime/claim-day-off', data),
 };
 
 export default api;

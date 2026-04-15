@@ -290,6 +290,16 @@ const HistoryLeaveScreen = () => {
                     </span>
                   </div>
 
+                  {/* Dual Approval Status */}
+                  <div className="flex gap-2 mb-4">
+                    <div className={`flex-1 py-1.5 px-2 rounded-lg text-center text-[10px] font-bold border ${item.approval_atasan === 'approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : item.approval_atasan === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                      Atasan: {(item.approval_atasan || 'pending').toUpperCase()}
+                    </div>
+                    <div className={`flex-1 py-1.5 px-2 rounded-lg text-center text-[10px] font-bold border ${item.approval_hr === 'approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : item.approval_hr === 'rejected' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                      HR: {(item.approval_hr || 'pending').toUpperCase()}
+                    </div>
+                  </div>
+
                   {/* Tanggal Pengajuan */}
                   <div className="mb-3">
                     <p className="text-gray-600 text-sm">Diajukan:</p>

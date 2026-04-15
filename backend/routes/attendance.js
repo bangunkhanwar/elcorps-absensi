@@ -9,7 +9,20 @@ const crypto = require('crypto');
 
 const router = express.Router();
 
+const MONTH_NAMES = [
+  'januari', 'februari', 'maret', 'april', 'mei', 'juni',
+  'juli', 'agustus', 'september', 'oktober', 'november', 'desember'
+];
+
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+
+// Helper: Mendapatkan relative path dengan tahun/bulan untuk upload
+function getRelativeUploadPath(type, filename) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = MONTH_NAMES[now.getMonth()];
+  return `${year}/${month}/${filename}`;
+}
 
 // Helper: Validate Payload Signature
 function validateSignature(payload, signature) {
@@ -312,7 +325,7 @@ router.post('/checkin', auth, upload.single('foto_masuk'), optimizeImage, async 
       user_id: req.user.id,
       tanggal_absen: today,
       waktu_masuk: currentTime,
-      foto_masuk: req.file ? req.file.filename : '',
+      foto_masuk: req.file ? getRelativeUploadPath('attendance', req.file.filename) : '',
       status: status,
       user_latitude: lat,
       user_longitude: lng,
@@ -481,7 +494,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
     const updatedAttendance = await Attendance.updateCheckOut(
       attendance.id,
       currentTime,
-      req.file ? req.file.filename : '',
+      req.file ? getRelativeUploadPath('attendance', req.file.filename) : '',
       {
         lokasi_keluar,
         status: finalStatus

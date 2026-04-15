@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X, Bell, CheckCircle } from 'lucide-react';
-import api, { attendanceAPI } from '../services/api';
+import { Calendar, Clock, MapPin, LogOut, Menu, Camera, AlertCircle, X, Bell, CheckCircle, Timer } from 'lucide-react';
+import api, { attendanceAPI, leaveAPI, notificationAPI } from '../services/api';
 import { useModal } from '../context/ModalContext';
 import { useLocation } from '../hooks/useLocation';
 import { useNotifications } from '../hooks/useNotifications';
@@ -30,6 +30,7 @@ const HomeScreen = () => {
   const [clockInStatus, setClockInStatus] = useState('Belum Clock In');
   const [user, setUser] = useState(null);
   const [todayAttendance, setTodayAttendance] = useState(null);
+  const [leaveBalance, setLeaveBalance] = useState(null);
 
   // State Lokasi
   const [unitKerjaData, setUnitKerjaData] = useState(null);
@@ -62,6 +63,7 @@ const HomeScreen = () => {
       await syncTimeWithServer();
       loadUserData();
       checkTodayAttendance();
+      fetchLeaveBalance();
       checkCameraPermissionStatus();
     };
 
@@ -206,6 +208,17 @@ const HomeScreen = () => {
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+    }
+  };
+
+  const fetchLeaveBalance = async () => {
+    try {
+      const response = await leaveAPI.getBalance();
+      if (response.success) {
+        setLeaveBalance(response.data);
+      }
+    } catch (error) {
+      console.log('Gagal mengambil saldo cuti:', error);
     }
   };
 
@@ -441,6 +454,32 @@ const HomeScreen = () => {
             </div>
           </div>
         </div>
+
+        {leaveBalance && (
+          <div className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-emerald-100 text-xs font-semibold uppercase tracking-wide">Saldo Cuti</p>
+                <h3 className="text-lg font-bold">Sisa Tahun Ini</h3>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center">
+                <Calendar size={24} />
+              </div>
+            </div>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <div className="text-4xl font-black leading-none">{leaveBalance.saldo_sisa}</div>
+                <p className="text-emerald-50 text-sm mt-1">dari {leaveBalance.saldo_awal} hari hak cuti</p>
+              </div>
+              <button
+                onClick={() => navigate('/leave')}
+                className="px-4 py-2 rounded-xl bg-white text-emerald-700 font-bold text-sm shadow-sm"
+              >
+                Ajukan Izin
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Waktu dan Tanggal */}
@@ -538,6 +577,12 @@ const HomeScreen = () => {
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3"><AlertCircle className="text-white" size={20} /></div>
                     <div className="text-left"><p className="font-semibold text-gray-800">Pengajuan Izin</p></div>
+                  </div>
+                </button>
+                <button onClick={() => navigate('/overtime')} className="w-full flex items-center justify-between p-4 bg-amber-50 rounded-xl">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-amber-500 rounded-lg flex items-center justify-center mr-3"><Timer className="text-white" size={20} /></div>
+                    <div className="text-left"><p className="font-semibold text-gray-800">Pengajuan Lembur</p></div>
                   </div>
                 </button>
                 <button onClick={() => navigate('/notifications')} className="w-full flex items-center justify-between p-4 bg-orange-50 rounded-xl relative">

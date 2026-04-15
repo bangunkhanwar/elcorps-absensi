@@ -6,6 +6,7 @@ import ResetPasswordScreen from './screens/ResetPasswordScreen';
 import HomeScreen from './screens/HomeScreen';
 import AttendanceScreen from './screens/AttendanceScreen';
 import LeaveScreen from './screens/LeaveScreen';
+import OvertimeScreen from './screens/OvertimeScreen';
 import HistoryLeaveScreen from './screens/HistoryLeaveScreen';
 import NotificationScreen from './screens/NotificationScreen';
 import PrivateRoute from './components/PrivateRoute';
@@ -48,6 +49,12 @@ function App() {
             <Route path="/leave" element={
               <PrivateRoute>
                 <LeaveScreen />
+              </PrivateRoute>
+            } />
+
+            <Route path="/overtime" element={
+              <PrivateRoute>
+                <OvertimeScreen />
               </PrivateRoute>
             } />
             

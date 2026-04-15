@@ -111,7 +111,7 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
       retryCount.current = 0;
       const { latitude, longitude } = pos.coords;
       setLocation(prev => {
-        // Only update address if location changed significantly (approx 10m)
+        // Only update   if location changed significantly (approx 10m)
         if (!prev || Math.abs(prev.lat - latitude) > 0.0001 || Math.abs(prev.lng - longitude) > 0.0001) {
           reverseGeocode(latitude, longitude);
         }
@@ -361,9 +361,9 @@ const CameraWithWatermark = ({ onCapture, onClose, title = "Ambil Foto", initial
       <div className="h-32 bg-black flex items-center justify-center px-10">
         <button
           onClick={capturePhoto}
-          disabled={loading || !location || address === "Mencari alamat..."}
+          disabled={loading || !location}
           className={`w-20 h-20 rounded-full border-4 border-white flex items-center justify-center transition active:scale-90 ${
-            (loading || !location || address === "Mencari alamat...") ? 'opacity-50' : 'bg-white/20'
+            (loading || !location) ? 'opacity-50' : 'bg-white/20'
           }`}
         >
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">

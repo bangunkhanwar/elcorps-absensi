@@ -11,6 +11,7 @@ const app = express();
 const authRoutes = require('./routes/auth');
 const attendanceRoutes = require('./routes/attendance');
 const leaveRoutes = require('./routes/leave');
+const overtimeRoutes = require('./routes/overtime');
 const shiftRoutes = require('./routes/shift'); 
 const { router: notificationRoutes } = require('./routes/notification');
 
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
+app.use('/api/overtime', overtimeRoutes);
 app.use('/api/shifts', shiftRoutes); 
 app.use('/api/notifications', notificationRoutes); 
 
@@ -40,6 +42,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       attendance: '/api/attendance', 
       leave: '/api/leave',
+      overtime: '/api/overtime',
       shifts: '/api/shifts'
     }
   });
@@ -72,6 +75,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🔐 Auth: http://localhost:${PORT}/api/auth`);
   console.log(`📊 Attendance: http://localhost:${PORT}/api/attendance`);
   console.log(`📝 Leave: http://localhost:${PORT}/api/leave`);
+  console.log(`⏰ Overtime: http://localhost:${PORT}/api/overtime`);
   console.log(`🕒 Shifts: http://localhost:${PORT}/api/shifts`);
   console.log(`📁 Uploads: http://localhost:${PORT}/uploads/leave`);
 });

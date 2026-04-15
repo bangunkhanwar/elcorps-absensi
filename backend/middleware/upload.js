@@ -2,9 +2,19 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const MONTH_NAMES = [
+  'januari', 'februari', 'maret', 'april', 'mei', 'juni',
+  'juli', 'agustus', 'september', 'oktober', 'november', 'desember'
+];
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '..', 'uploads/attendance/');
+    // Buat folder berdasarkan tahun dan nama bulan: uploads/attendance/2026/april/
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = MONTH_NAMES[now.getMonth()];
+    
+    const uploadDir = path.join(__dirname, '..', 'uploads', 'attendance', String(year), month);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
