@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { attendanceAPI, leaveAPI, authAPI } from '../../services/api'
 import PengajuanIzin from './PengajuanIzin'
@@ -13,7 +13,7 @@ interface AttendanceData {
   tipe_unit?: string
   jamMasuk: string
   jamPulang: string
-  status: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap' | 'izin' | 'alpha'
+  status: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap' | 'izin' | 'alpha' | 'day_off'
   nik: string
   jabatan: string
   departemen: string
@@ -81,34 +81,6 @@ const Absensi: React.FC = () => {
     reviewCategory === 'pendingIzin' ||
     reviewCategory === 'hadirHariIni'
   )
-
-  const [openStoreDropdown, setOpenStoreDropdown] = useState(false);
-  const [searchStore, setSearchStore] = useState('');
-
-  const storeDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (storeDropdownRef.current && !storeDropdownRef.current.contains(event.target as Node)) {
-        setOpenStoreDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // ✅ Pindahkan storeUnits ke sini (sebelum digunakan)
-  const storeUnits = unitKerjaList.filter(u => {
-    const tipe = (u.tipe_unit || '').toLowerCase().trim();
-    return tipe === 'store';
-  });
-
-  // ✅ Sekarang filteredStoreUnits bisa menggunakan storeUnits
-  const filteredStoreUnits = storeUnits
-    .filter(unit => 
-      unit.nama_unit.toLowerCase().includes(searchStore.toLowerCase())
-    )
-    .sort((a, b) => a.nama_unit.localeCompare(b.nama_unit));
 
   // Baca query params untuk review mode dari Dashboard
   useEffect(() => {
@@ -184,31 +156,36 @@ const Absensi: React.FC = () => {
 
   const fetchUnitKerja = async () => {
     try {
-      const response = await authAPI.getAllUnitKerja();
-      console.log('📍 getAllUnitKerja raw response:', response);
+      const response = await authAPI.getAllUnitKerja()
+      console.log('📍 getAllUnitKerja raw response:', response)
 
-      let units: any[] = [];
+      // Handle berbagai format response:
+      // 1. axios: response.data (array langsung)
+      // 2. axios: response.data.unit_kerja
+      // 3. intercepted: response langsung array
+      // 4. intercepted: response.unit_kerja
+      let units: any[] = []
 
       if (Array.isArray(response)) {
         units = response;
-      } else if (Array.isArray(response?.data)) {
-        units = response.data;
-      } else if (Array.isArray(response?.data?.unit_kerja)) {
-        units = response.data.unit_kerja;
-      } else if (response && typeof response === 'object' && 'unit_kerja' in response && Array.isArray(response.unit_kerja)) {
-        units = response.unit_kerja;
-      } else if (response?.data && typeof response.data === 'object') {
-        const firstArray = Object.values(response.data).find(v => Array.isArray(v));
+      } else if (Array.isArray((response as any)?.data)) {
+        units = (response as any).data;
+      } else if (Array.isArray((response as any)?.data?.unit_kerja)) {
+        units = (response as any).data.unit_kerja;
+      } else if (Array.isArray((response as any)?.unit_kerja)) {
+        units = (response as any).unit_kerja;
+      } else if ((response as any)?.data && typeof (response as any).data === 'object') {
+        const firstArray = Object.values((response as any).data).find((v) => Array.isArray(v));
         if (firstArray) units = firstArray as any[];
       }
 
-      console.log('📍 Unit kerja parsed:', units.length, 'items');
-      console.log('📍 Sample item:', units[0]);
-      setUnitKerjaList(units);
+      console.log('📍 Unit kerja parsed:', units.length, 'items')
+      console.log('📍 Sample item:', units[0])
+      setUnitKerjaList(units)
     } catch (error) {
-      console.error('Error fetching unit kerja:', error);
+      console.error('Error fetching unit kerja:', error)
     }
-  };
+  }
 
   const formatTimeFromString = (timeString: string): string => {
     if (!timeString || timeString === 'null' || timeString === 'undefined') return '-'
@@ -283,10 +260,16 @@ const Absensi: React.FC = () => {
 
           let status: AttendanceData['status']
           if (att) {
-            const hasLeave = approvedLeaves.some(
-              (l: any) => (l.user_id === user.id || l.nik === user.nik)
-            )
-            status = hasLeave ? 'izin' : (normalizeStatus(att.status) as AttendanceData['status'])
+            const dbStatus = normalizeStatus(att.status)
+            // Day Off langsung dari DB — tidak dioverride oleh izin
+            if (dbStatus === 'day_off') {
+              status = 'day_off'
+            } else {
+              const hasLeave = approvedLeaves.some(
+                (l: any) => (l.user_id === user.id || l.nik === user.nik)
+              )
+              status = hasLeave ? 'izin' : (dbStatus as AttendanceData['status'])
+            }
           } else if (leave) {
             status = 'izin'
           } else {
@@ -381,6 +364,12 @@ const Absensi: React.FC = () => {
   }
 
   // Daftar store untuk dropdown — nilai DB: 'store'
+  // Filter unit kerja bertipe store — nilai DB: 'store' (lowercase)
+  const storeUnits = unitKerjaList.filter(u => {
+    const tipe = (u.tipe_unit || '').toLowerCase().trim()
+    return tipe === 'store'
+  })
+
   // Filter berdasarkan tipe unit & unit spesifik — nilai DB: 'head_office' | 'store'
   const applyUnitFilter = (data: AttendanceData[]): AttendanceData[] => {
     if (reviewMode) return data
@@ -435,6 +424,7 @@ const Absensi: React.FC = () => {
       case 'tidak_lengkap':            return 'bg-gray-100 text-gray-800'
       case 'izin':                     return 'bg-blue-100 text-blue-800'
       case 'alpha':                    return 'bg-red-50 text-red-400'
+      case 'day_off':                  return 'bg-purple-100 text-purple-700'
       default:                         return 'bg-gray-100 text-gray-800'
     }
   }
@@ -448,6 +438,7 @@ const Absensi: React.FC = () => {
       case 'tidak_lengkap':            return 'Tidak Lengkap'
       case 'izin':                     return 'Izin'
       case 'alpha':                    return 'Alpha'
+      case 'day_off':                  return 'Day Off'
       default:                         return status
     }
   }
@@ -473,11 +464,12 @@ const Absensi: React.FC = () => {
   const getStats = () => {
     const data = reviewMode ? reviewData : filteredAttendanceData
     return {
-      hadir:  data.filter((i: any) => ['tepat_waktu','telat_masuk','pulang_cepat','telat_masuk_pulang_cepat','tidak_lengkap'].includes(i.status)).length,
-      telat:  data.filter((i: any) => ['telat_masuk','telat_masuk_pulang_cepat'].includes(i.status)).length,
-      izin:   data.filter((i: any) => i.status === 'izin').length,
-      alpha:  data.filter((i: any) => i.status === 'alpha').length,
-      total:  data.length,
+      hadir:    data.filter((i: any) => ['tepat_waktu','telat_masuk','pulang_cepat','telat_masuk_pulang_cepat','tidak_lengkap'].includes(i.status)).length,
+      telat:    data.filter((i: any) => ['telat_masuk','telat_masuk_pulang_cepat'].includes(i.status)).length,
+      izin:     data.filter((i: any) => i.status === 'izin').length,
+      alpha:    data.filter((i: any) => i.status === 'alpha').length,
+      day_off:  data.filter((i: any) => i.status === 'day_off').length,
+      total:    data.length,
     }
   }
   const stats = getStats()
@@ -627,7 +619,7 @@ const Absensi: React.FC = () => {
                       {/* Tombol filter: Semua | HO | STORE */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
-                          onClick={() => { setSelectedTipe('semua'); setSelectedUnitId(null); setOpenStoreDropdown(false); }}
+                          onClick={() => { setSelectedTipe('semua'); setSelectedUnitId(null) }}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
                             selectedTipe === 'semua'
                               ? 'bg-[#25a298] text-white border-[#25a298]'
@@ -637,7 +629,7 @@ const Absensi: React.FC = () => {
                           Semua
                         </button>
                         <button
-                          onClick={() => { setSelectedTipe('head_office'); setSelectedUnitId(null); setOpenStoreDropdown(false); }}
+                          onClick={() => { setSelectedTipe('head_office'); setSelectedUnitId(null) }}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
                             selectedTipe === 'head_office'
                               ? 'bg-[#25a298] text-white border-[#25a298]'
@@ -647,7 +639,7 @@ const Absensi: React.FC = () => {
                           HO
                         </button>
                         <button
-                          onClick={() => { setSelectedTipe('store'); setSelectedUnitId(null); setOpenStoreDropdown(false); }}
+                          onClick={() => { setSelectedTipe('store'); setSelectedUnitId(null) }}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-200 ${
                             selectedTipe === 'store'
                               ? 'bg-[#25a298] text-white border-[#25a298]'
@@ -659,88 +651,33 @@ const Absensi: React.FC = () => {
 
                         {/* Dropdown pilih store spesifik — muncul hanya jika pilih Store */}
                         {selectedTipe === 'store' && (
-                          <div ref={storeDropdownRef} className="relative" style={{ minWidth: '220px' }}>
+                          <div className="relative">
                             {storeUnits.length === 0 ? (
                               <div className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-400">
                                 Memuat store...
                               </div>
                             ) : (
                               <>
-                                {/* Tombol trigger dropdown */}
-                                <div
-                                  className="pl-9 pr-8 py-1.5 rounded-lg border border-slate-300 bg-white cursor-pointer text-sm flex justify-between items-center"
-                                  onClick={() => {
-                                    setOpenStoreDropdown(!openStoreDropdown);
-                                    setSearchStore(''); // reset pencarian saat buka
-                                  }}
+                                <select
+                                  value={selectedUnitId || ''}
+                                  onChange={(e) => setSelectedUnitId(e.target.value ? Number(e.target.value) : null)}
+                                  className="pl-3 pr-8 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] text-sm text-slate-700 bg-white appearance-none cursor-pointer max-w-[220px]"
                                 >
-                                  <span className="truncate">
-                                    {selectedUnitId 
-                                      ? storeUnits.find(u => u.id === selectedUnitId)?.nama_unit || 'Pilih Store'
-                                      : `Semua Store (${storeUnits.length})`
-                                    }
-                                  </span>
-                                  <span className="text-slate-400 ml-2">▼</span>
+                                  <option value="">Semua Store ({storeUnits.length})</option>
+                                  {storeUnits
+                                    .sort((a, b) => a.nama_unit.localeCompare(b.nama_unit))
+                                    .map(unit => (
+                                      <option key={unit.id} value={unit.id}>
+                                        {unit.nama_unit}
+                                      </option>
+                                    ))
+                                  }
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-slate-400">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
                                 </div>
-                                
-                                {/* Ikon lokasi di kiri */}
-                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm">
-                                  🏢
-                                </div>
-
-                                {/* Panel dropdown */}
-                                {openStoreDropdown && (
-                                  <div className="absolute z-30 mt-1 w-full bg-white border border-slate-300 rounded-lg shadow-lg">
-                                    {/* Input pencarian */}
-                                    <input
-                                      type="text"
-                                      className="w-full px-3 py-2 text-sm border-b border-slate-200 focus:outline-none rounded-t-lg"
-                                      placeholder="Cari store..."
-                                      value={searchStore}
-                                      onChange={(e) => setSearchStore(e.target.value)}
-                                      autoFocus
-                                      onClick={(e) => e.stopPropagation()}
-                                    />
-                                    
-                                    {/* Daftar opsi */}
-                                    <div className="max-h-60 overflow-y-auto text-sm">
-                                      {/* Opsi "Semua Store" */}
-                                      <div
-                                        className={`px-3 py-2 hover:bg-[#25a298]/10 cursor-pointer flex items-center ${
-                                          !selectedUnitId ? 'bg-[#25a298]/5 text-[#25a298] font-medium' : ''
-                                        }`}
-                                        onClick={() => {
-                                          setSelectedUnitId(null);
-                                          setOpenStoreDropdown(false);
-                                          setSearchStore('');
-                                        }}
-                                      >
-                                        Semua Store ({storeUnits.length})
-                                      </div>
-                                      
-                                      {/* Daftar store hasil filter */}
-                                      {filteredStoreUnits.length > 0 ? (
-                                        filteredStoreUnits.map(unit => (
-                                          <div
-                                            key={unit.id}
-                                            className={`px-3 py-2 hover:bg-[#25a298]/10 cursor-pointer ${
-                                              selectedUnitId === unit.id ? 'bg-[#25a298]/5 text-[#25a298] font-medium' : ''
-                                            }`}
-                                            onClick={() => {
-                                              setSelectedUnitId(unit.id);
-                                              setOpenStoreDropdown(false);
-                                              setSearchStore('');
-                                            }}
-                                          >
-                                            {unit.nama_unit}
-                                          </div>
-                                        ))
-                                      ) : (
-                                        <div className="px-3 py-2 text-gray-400 text-center">Tidak ada hasil</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
                               </>
                             )}
                           </div>
@@ -828,13 +765,14 @@ const Absensi: React.FC = () => {
 
                 {/* Cards Statistik */}
                 {!reviewMode && (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
                     {[
-                      { label: 'Hadir',      value: stats.hadir,  icon: '✅', color: 'bg-green-50' },
-                      { label: 'Telat Masuk',value: stats.telat,  icon: '⏰', color: 'bg-yellow-50' },
-                      { label: 'Izin',       value: stats.izin,   icon: '📝', color: 'bg-blue-50' },
-                      { label: 'Alpha',      value: stats.alpha,  icon: '❌', color: 'bg-red-50' },
-                      { label: 'Total',      value: stats.total,  icon: '👥', color: 'bg-slate-50' },
+                      { label: 'Hadir',      value: stats.hadir,    icon: '✅', color: 'bg-green-50' },
+                      { label: 'Telat Masuk',value: stats.telat,    icon: '⏰', color: 'bg-yellow-50' },
+                      { label: 'Izin',       value: stats.izin,     icon: '📝', color: 'bg-blue-50' },
+                      { label: 'Day Off',    value: stats.day_off,  icon: '🌴', color: 'bg-purple-50' },
+                      { label: 'Alpha',      value: stats.alpha,    icon: '❌', color: 'bg-red-50' },
+                      { label: 'Total',      value: stats.total,    icon: '👥', color: 'bg-slate-50' },
                     ].map(card => (
                       <div key={card.label} className="bg-white rounded-xl p-4 border border-slate-200">
                         <div className="flex items-center justify-between">
@@ -888,7 +826,10 @@ const Absensi: React.FC = () => {
                           {paginatedAttendanceData.map((item, index) => (
                             <tr
                               key={`${item.id}-${index}`}
-                              className={`hover:bg-slate-50 transition-colors duration-150 ${item.status === 'alpha' ? 'opacity-60' : ''}`}
+                              className={`hover:bg-slate-50 transition-colors duration-150 ${
+                                item.status === 'alpha' ? 'opacity-60' :
+                                item.status === 'day_off' ? 'bg-purple-50/50' : ''
+                              }`}
                             >
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{startDataIndex + index + 1}</td>
                               <td className="px-6 py-4 whitespace-nowrap">
@@ -924,7 +865,7 @@ const Absensi: React.FC = () => {
                                     )}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                    {item.status !== 'alpha' ? (
+                                    {(item.status !== 'alpha' && item.status !== 'day_off') ? (
                                       <button
                                         onClick={() => handleViewDetail(item)}
                                         className="text-[#25a298] hover:text-[#1f8a80] transition-colors duration-200 font-medium"

@@ -83,6 +83,7 @@ const AttendanceScreen = () => {
     { value: 'telat_masuk_pulang_cepat', label: 'Telat + Pulang Cepat' },
     { value: 'tidak_lengkap',       label: 'Tidak Lengkap' },
     { value: 'izin',                label: 'Izin' },
+    { value: 'day_off',             label: 'Day Off' },
   ];
 
   // Filter data
@@ -102,6 +103,7 @@ const AttendanceScreen = () => {
       case 'tidak_lengkap':           return 'bg-gray-100 text-gray-800';
       case 'izin':                    return 'bg-blue-100 text-blue-800';
       case 'alpha':                   return 'bg-red-100 text-red-800';
+      case 'day_off':                 return 'bg-purple-100 text-purple-700';
       default:                        return 'bg-gray-100 text-gray-800';
     }
   };
@@ -116,6 +118,7 @@ const AttendanceScreen = () => {
       case 'tidak_lengkap':           return 'Tidak Lengkap';
       case 'izin':                    return 'Izin';
       case 'alpha':                   return 'Alpha';
+      case 'day_off':                 return '🌴 Day Off';
       default:                        return status || '-';
     }
   };

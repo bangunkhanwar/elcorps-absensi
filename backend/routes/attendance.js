@@ -561,11 +561,15 @@ router.get('/today', auth, async (req, res) => {
       timezone: user.timezone
     };
     
+    // Cek apakah hari ini adalah day off
+    const isDayOff = attendance?.status === 'day_off';
+
     res.json({
       success: true,
-      message: 'Status absensi hari ini',
+      message: isDayOff ? 'Kamu sedang Day Off hari ini' : 'Status absensi hari ini',
       date: today,
       data: attendance || null,
+      is_day_off: isDayOff,
       unit_kerja: unitKerjaData
     });
   } catch (error) {
@@ -735,6 +739,169 @@ router.get('/server-time', async (req, res) => {
       iso: new Date().toISOString()
     }
   });
+});
+
+
+// =====================================================
+// DAY OFF MANAGEMENT
+// Siapa yang bisa: HR atau user dengan website_access
+// Mekanisme: insert record ke tabel absensi dengan status = 'day_off'
+
+// SET DAY OFF untuk karyawan tertentu
+router.post('/day-off', auth, async (req, res) => {
+  try {
+    // Cek akses: harus HR atau punya website_access
+    if (req.user.role !== 'hr' && !req.user.website_access) {
+      return res.status(403).json({
+        success: false,
+        error: 'Anda tidak memiliki akses untuk mengatur day off'
+      });
+    }
+
+    const { user_id, tanggal } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ success: false, error: 'user_id wajib diisi' });
+    }
+
+    // Ambil data user target
+    const targetUser = await User.findByIdWithUnitAndShift(user_id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'Karyawan tidak ditemukan' });
+    }
+
+    const timezone = targetUser.timezone || 'Asia/Jakarta';
+    const targetDate = tanggal || getCurrentDateInTimezone(timezone);
+
+    console.log(`📅 Setting day off for user ${user_id} on date ${targetDate}`);
+
+    // Cek apakah sudah ada record absensi untuk tanggal tersebut
+    const existing = await Attendance.findByUserAndDate(user_id, targetDate);
+    if (existing) {
+      if (existing.status === 'day_off') {
+        return res.status(400).json({
+          success: false,
+          error: 'Karyawan sudah dalam status Day Off untuk tanggal ini'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        error: 'Karyawan sudah memiliki record absensi untuk tanggal ini'
+      });
+    }
+
+    // Insert record day_off ke tabel absensi
+    const pool = require('../config/database');
+    const result = await pool.query(
+      `INSERT INTO absensi (
+        user_id, tanggal_absen, status,
+        unit_kerja_id, shift_id,
+        jam_seharusnya_masuk, jam_seharusnya_keluar
+      ) VALUES ($1, $2, 'day_off', $3, $4, $5, $6)
+      RETURNING *`,
+      [
+        user_id,
+        targetDate,
+        targetUser.unit_kerja_id || null,
+        targetUser.shift_id || null,
+        targetUser.jam_masuk || null,
+        targetUser.jam_keluar || null
+      ]
+    );
+
+    console.log(`✅ Day off set for user ${user_id}:`, result.rows[0]);
+
+    res.json({
+      success: true,
+      message: `Day Off berhasil diatur untuk ${targetUser.nama} pada ${targetDate}`,
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Set day off error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error: ' + error.message });
+  }
+});
+
+// CANCEL DAY OFF untuk karyawan tertentu
+router.delete('/day-off', auth, async (req, res) => {
+  try {
+    // Cek akses
+    if (req.user.role !== 'hr' && !req.user.website_access) {
+      return res.status(403).json({
+        success: false,
+        error: 'Anda tidak memiliki akses untuk membatalkan day off'
+      });
+    }
+
+    const { user_id, tanggal } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ success: false, error: 'user_id wajib diisi' });
+    }
+
+    const targetUser = await User.findByIdWithUnitAndShift(user_id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'Karyawan tidak ditemukan' });
+    }
+
+    const timezone = targetUser.timezone || 'Asia/Jakarta';
+    const targetDate = tanggal || getCurrentDateInTimezone(timezone);
+
+    const pool = require('../config/database');
+    const result = await pool.query(
+      `DELETE FROM absensi
+       WHERE user_id = $1 AND tanggal_absen = $2 AND status = 'day_off'
+       RETURNING *`,
+      [user_id, targetDate]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Record day off tidak ditemukan untuk tanggal ini'
+      });
+    }
+
+    console.log(`✅ Day off cancelled for user ${user_id} on ${targetDate}`);
+
+    res.json({
+      success: true,
+      message: `Day Off berhasil dibatalkan untuk ${targetUser.nama} pada ${targetDate}`
+    });
+
+  } catch (error) {
+    console.error('❌ Cancel day off error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error: ' + error.message });
+  }
+});
+
+// GET DAY OFF STATUS — cek apakah karyawan sedang day off hari ini
+// Dipakai oleh mobile untuk cek saat load HomeScreen
+router.get('/day-off/today', auth, async (req, res) => {
+  try {
+    const user = await User.findByIdWithUnitAndShift(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
+    }
+
+    const timezone = user.timezone || 'Asia/Jakarta';
+    const today = getCurrentDateInTimezone(timezone);
+
+    const attendance = await Attendance.findByUserAndDate(req.user.id, today);
+    const isDayOff = attendance?.status === 'day_off';
+
+    res.json({
+      success: true,
+      is_day_off: isDayOff,
+      date: today,
+      data: isDayOff ? attendance : null
+    });
+
+  } catch (error) {
+    console.error('❌ Day off today error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
 });
 
 module.exports = router;

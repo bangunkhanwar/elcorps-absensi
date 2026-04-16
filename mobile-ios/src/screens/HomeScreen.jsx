@@ -31,6 +31,7 @@ const HomeScreen = () => {
   const [user, setUser] = useState(null);
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [leaveBalance, setLeaveBalance] = useState(null);
+  const [isDayOff, setIsDayOff] = useState(false);
 
   // State Lokasi
   const [unitKerjaData, setUnitKerjaData] = useState(null);
@@ -229,31 +230,49 @@ const HomeScreen = () => {
       const response = await attendanceAPI.getToday(`?t=${cacheBuster}`);
       console.log("[PWA-Debug] API Response:", response);
       
-      if (response.success && response.data) {
+      if (response.success) {
         const data = response.data;
-        if (data.unit_kerja) {
-          setUnitKerjaData({
-            latitude: parseFloat(data.unit_kerja.latitude),
-            longitude: parseFloat(data.unit_kerja.longitude),
-            radius_meter: data.unit_kerja.radius_meter,
-            nama_unit: data.unit_kerja.nama_unit
-          });
+
+        // Cek apakah hari ini day off
+        if (response.is_day_off) {
+          console.log("[PWA-Debug] Hari ini adalah Day Off.");
+          setIsDayOff(true);
+          setTodayAttendance(data);
+          setClockInStatus('Day Off');
+          return;
         }
 
-        // VERIFIKASI KETAT: Hanya set absen jika waktu_masuk benar-benar ada
-        if (data.waktu_masuk !== undefined && data.waktu_masuk !== null) {
-          console.log("[PWA-Debug] Data absen ditemukan di DB.");
-          setTodayAttendance(data);
-          setClockInStatus(data.waktu_keluar ? 'Sudah Clock Out' : 'Sudah Clock In');
+        setIsDayOff(false);
+
+        if (data) {
+          if (data.unit_kerja) {
+            setUnitKerjaData({
+              latitude: parseFloat(data.unit_kerja.latitude),
+              longitude: parseFloat(data.unit_kerja.longitude),
+              radius_meter: data.unit_kerja.radius_meter,
+              nama_unit: data.unit_kerja.nama_unit
+            });
+          }
+
+          // VERIFIKASI KETAT: Hanya set absen jika waktu_masuk benar-benar ada
+          if (data.waktu_masuk !== undefined && data.waktu_masuk !== null) {
+            console.log("[PWA-Debug] Data absen ditemukan di DB.");
+            setTodayAttendance(data);
+            setClockInStatus(data.waktu_keluar ? 'Sudah Clock Out' : 'Sudah Clock In');
+          } else {
+            console.log("[PWA-Debug] Database kosong untuk hari ini.");
+            setTodayAttendance(null);
+            setClockInStatus('Belum Clock In');
+          }
         } else {
-          console.log("[PWA-Debug] Database kosong untuk hari ini.");
-          setTodayAttendance(null);
+          // Jika response.data adalah null, berarti belum absen
           setClockInStatus('Belum Clock In');
+          setTodayAttendance(null);
         }
       } else {
-        // Jika response.data.data adalah null, berarti belum absen
         setClockInStatus('Belum Clock In');
         setTodayAttendance(null);
+        setIsDayOff(false);
       }
     } catch (error) {
       console.error('Error checking attendance:', error);
@@ -497,54 +516,83 @@ const HomeScreen = () => {
 
       {/* Status Absensi */}
       <div className="bg-white rounded-xl shadow p-3 flex-shrink-0">
-        <h3 className="text-sm font-semibold text-gray-800 mb-2 text-center">
-          Status: <span className={clockInStatus === 'Belum Clock In' ? 'text-red-600' : 
-            clockInStatus === 'Sudah Clock In' ? 'text-yellow-600' : 'text-green-600'}>
-            {clockInStatus}
-          </span>
-        </h3>
-
-
+        {/* Status Badge */}
+        <div className="text-center mb-3">
+          {isDayOff ? (
+            <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-800 px-4 py-2 rounded-full">
+              <span className="font-bold text-sm">Hari Ini Day Off</span>
+            </div>
+          ) : (
+            <h3 className="text-sm font-semibold text-gray-800">
+              Status:{" "}
+              <span
+                className={
+                  clockInStatus === "Belum Clock In"
+                    ? "text-red-600"
+                    : clockInStatus === "Sudah Clock In"
+                    ? "text-yellow-600"
+                    : "text-green-600"
+                }
+              >
+                {clockInStatus}
+              </span>
+            </h3>
+          )}
+        </div>
 
         {/* Tombol Absensi */}
         <div className="space-y-3">
-          <button
-            onClick={() => {
-              if (locationStatus === 'out_of_radius') {
-                return showError('Anda berada di luar radius unit kerja.');
-              }
-              setShowClockInModal(true);
-            }}
-            disabled={clockInStatus !== 'Belum Clock In' || loadingLocation}
-            className={`w-full py-3 rounded-lg font-bold text-base flex items-center justify-center space-x-2 transition
-              ${clockInStatus === 'Belum Clock In' && !loadingLocation ? 
-                'bg-primary hover:bg-primary-dark text-white' : 
-                'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-          >
-            {loadingLocation && cameraType === 'in' ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-            ) : <Camera size={20} />}
-            <span>{loadingLocation && cameraType === 'in' ? 'MENCARI GPS...' : 'CLOCK IN'}</span>
-          </button>
+          {!isDayOff && (
+            <>
+              <button
+                onClick={() => {
+                  if (locationStatus === "out_of_radius") {
+                    return showError("Anda berada di luar radius unit kerja.");
+                  }
+                  setShowClockInModal(true);
+                }}
+                disabled={clockInStatus !== "Belum Clock In" || loadingLocation}
+                className={`w-full py-3 rounded-lg font-bold text-base flex items-center justify-center space-x-2 transition ${
+                  clockInStatus === "Belum Clock In" && !loadingLocation
+                    ? "bg-primary hover:bg-primary-dark text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                {loadingLocation && cameraType === "in" ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Camera size={20} />
+                )}
+                <span>
+                  {loadingLocation && cameraType === "in" ? "MENCARI GPS..." : "CLOCK IN"}
+                </span>
+              </button>
 
-          <button
-            onClick={() => {
-              if (locationStatus === 'out_of_radius') {
-                return alert('Anda berada di luar radius unit kerja.');
-              }
-              setShowClockOutModal(true);
-            }}
-            disabled={clockInStatus !== 'Sudah Clock In' || loadingLocation}
-            className={`w-full py-3 rounded-lg font-bold text-base flex items-center justify-center space-x-2 transition
-              ${clockInStatus === 'Sudah Clock In' && !loadingLocation ? 
-                'bg-primary hover:bg-primary-dark text-white' : 
-                'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-          >
-            {loadingLocation && cameraType === 'out' ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-            ) : <Camera size={20} />}
-            <span>{loadingLocation && cameraType === 'out' ? 'MENCARI GPS...' : 'CLOCK OUT'}</span>
-          </button>
+              <button
+                onClick={() => {
+                  if (locationStatus === "out_of_radius") {
+                    return alert("Anda berada di luar radius unit kerja.");
+                  }
+                  setShowClockOutModal(true);
+                }}
+                disabled={clockInStatus !== "Sudah Clock In" || loadingLocation}
+                className={`w-full py-3 rounded-lg font-bold text-base flex items-center justify-center space-x-2 transition ${
+                  clockInStatus === "Sudah Clock In" && !loadingLocation
+                    ? "bg-primary hover:bg-primary-dark text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                {loadingLocation && cameraType === "out" ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Camera size={20} />
+                )}
+                <span>
+                  {loadingLocation && cameraType === "out" ? "MENCARI GPS..." : "CLOCK OUT"}
+                </span>
+              </button>
+            </>
+          )}
 
           <button
             onClick={handleLogout}

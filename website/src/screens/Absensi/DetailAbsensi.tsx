@@ -14,7 +14,7 @@ interface AttendanceDetail {
   waktu_keluar: string
   foto_masuk: string
   foto_keluar: string
-  status: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap' | 'izin' | 'alpha' | string
+  status: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap' | 'izin' | 'alpha' | 'day_off' | string
   location: string
 }
 
@@ -79,6 +79,7 @@ const DetailAbsensi: React.FC = () => {
       case 'tidak_lengkap':            return 'bg-gray-100 text-gray-800 border-gray-200'
       case 'izin':                     return 'bg-blue-100 text-blue-800 border-blue-200'
       case 'alpha':                    return 'bg-red-100 text-red-800 border-red-200'
+      case 'day_off':                  return 'bg-purple-100 text-purple-700 border-purple-200'
       default:                         return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
@@ -92,6 +93,7 @@ const DetailAbsensi: React.FC = () => {
       case 'tidak_lengkap':            return 'Tidak Lengkap'
       case 'izin':                     return 'Izin'
       case 'alpha':                    return 'Alpha'
+      case 'day_off':                  return 'Day Off'
       default:                         return status
     }
   }

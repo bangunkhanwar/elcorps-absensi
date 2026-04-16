@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { authAPI, shiftAPI, settingsAPI } from '../services/api'
+import { authAPI, shiftAPI, settingsAPI, attendanceAPI } from '../services/api'
 import ShiftCalendar from './ShiftCalendar'
 import ShiftModal from './ShiftModal'
 
@@ -72,6 +72,10 @@ const ShiftManagement: React.FC = () => {
   })
 
   const [savingShift, setSavingShift] = useState(false)
+
+  // Day Off state — map user_id -> boolean (true = sedang day off hari ini)
+  const [dayOffMap, setDayOffMap] = useState<{[key: number]: boolean}>({})
+  const [dayOffLoading, setDayOffLoading] = useState<{[key: number]: boolean}>({})
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -236,6 +240,9 @@ const ShiftManagement: React.FC = () => {
         }
       })
       setEmployeeShifts(shiftsMap)
+
+      // Fetch status day off setelah employees di-load
+      fetchDayOffStatus(employeesData)
       
     } catch (error) {
       console.error('Error in fetchData:', error)
@@ -467,6 +474,47 @@ const ShiftManagement: React.FC = () => {
     unit.nama_unit.toLowerCase().includes(searchUnit.toLowerCase()) ||
     (unit.kode_unit && unit.kode_unit.toLowerCase().includes(searchUnit.toLowerCase()))
   )
+
+  // Fetch status day off semua karyawan unit ini untuk hari ini
+  const fetchDayOffStatus = async (employeeList: Employee[]) => {
+    if (!employeeList.length) return
+    const today = new Date().toISOString().split('T')[0]
+    try {
+      const response = await attendanceAPI.getAll(today, today)
+       const attendances = (response as any)?.data?.attendances || (response as any)?.attendances || [];
+      const newMap: {[key: number]: boolean} = {}
+      attendances.forEach((att: any) => {
+        if (att.status === 'day_off') {
+          newMap[att.user_id] = true
+        }
+      })
+      setDayOffMap(newMap)
+    } catch (error) {
+      console.error('Error fetching day off status:', error)
+    }
+  }
+
+  // Set atau cancel day off untuk karyawan
+  const handleToggleDayOff = async (employee: Employee) => {
+    const isCurrentlyDayOff = dayOffMap[employee.id] || false
+    setDayOffLoading(prev => ({ ...prev, [employee.id]: true }))
+
+    try {
+      if (isCurrentlyDayOff) {
+        await attendanceAPI.cancelDayOff(employee.id)
+        setDayOffMap(prev => ({ ...prev, [employee.id]: false })) 
+        alert(`✅ Day Off ${employee.nama} berhasil dibatalkan`)
+      } else {
+        await attendanceAPI.setDayOff(employee.id)
+        setDayOffMap(prev => ({ ...prev, [employee.id]: true }))
+        alert(`✅ Day Off berhasil diatur untuk ${employee.nama}`)
+      }
+    } catch (error: any) {
+      alert(`❌ ${error?.response?.data?.error || error?.message || 'Terjadi kesalahan'}`)
+    } finally {
+      setDayOffLoading(prev => ({ ...prev, [employee.id]: false }))
+    }
+  }
 
   const filteredEmployees = employees.filter(employee =>
     employee.nama.toLowerCase().includes(searchData.toLowerCase()) ||
@@ -759,7 +807,8 @@ const ShiftManagement: React.FC = () => {
                               <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Jabatan</th>
                               <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Unit Kerja</th>
                               <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Shift</th>
-                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Aksi</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Pilih Shift</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Day Off</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -804,13 +853,16 @@ const ShiftManagement: React.FC = () => {
                                       <span className="text-slate-400 text-sm">-</span>
                                     )}
                                   </td>
+                                  {/* Kolom Pilih Shift */}
                                   <td className="px-4 py-3 text-center">
                                     <select
                                       value={employeeShifts[employee.id]?.id || ''}
                                       onChange={(e) => handleShiftChange(employee.id, Number(e.target.value))}
-                                      disabled={shifts.filter(shift => shift.is_active).length === 0}
+                                      disabled={shifts.filter(shift => shift.is_active).length === 0 || dayOffMap[employee.id]}
                                       className={`text-sm border border-slate-300 rounded px-3 py-1 focus:outline-none focus:ring-1 focus:ring-[#25a298] focus:border-[#25a298] ${
-                                        shifts.filter(shift => shift.is_active).length === 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                                        shifts.filter(shift => shift.is_active).length === 0 || dayOffMap[employee.id]
+                                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                                          : ''
                                       }`}
                                     >
                                       <option value="">Pilih Shift</option>
@@ -822,11 +874,41 @@ const ShiftManagement: React.FC = () => {
                                       ))}
                                     </select>
                                   </td>
+
+                                  {/* Kolom Day Off */}
+                                  <td className="px-4 py-3 text-center">
+                                    <button
+                                      onClick={() => handleToggleDayOff(employee)}
+                                      disabled={dayOffLoading[employee.id]}
+                                      title={dayOffMap[employee.id] ? 'Batalkan Day Off' : 'Set Day Off hari ini'}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${
+                                        dayOffLoading[employee.id]
+                                          ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                          : dayOffMap[employee.id]
+                                            ? 'bg-purple-100 text-purple-700 border-purple-300 hover:bg-purple-200'
+                                            : 'bg-white text-slate-600 border-slate-300 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300'
+                                      }`}
+                                    >
+                                      {dayOffLoading[employee.id] ? (
+                                        <span className="flex items-center gap-1">
+                                          <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                          </svg>
+                                          ...
+                                        </span>
+                                      ) : dayOffMap[employee.id] ? (
+                                        <span className="flex items-center gap-1">Day Off</span>
+                                      ) : (
+                                        <span>Set Day Off</span>
+                                      )}
+                                    </button>
+                                  </td>
                                 </tr>
                               ))
                             ) : (
                               <tr>
-                                <td colSpan={7} className="px-6 py-6 text-center text-sm text-slate-500">
+                                <td colSpan={8} className="px-6 py-6 text-center text-sm text-slate-500">
                                   {searchData ? 'Tidak ada karyawan yang sesuai' : 'Tidak ada karyawan di unit ini'}
                                 </td>
                               </tr>

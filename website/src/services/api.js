@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://sb32k63z-5000.asse.devtunnels.ms/api';
-// const API_BASE_URL = 'https://hradmin.elhijab.com/api';
+// const API_BASE_URL = 'https://sb32k63z-5000.asse.devtunnels.ms/api';
+const API_BASE_URL = 'https://hradmin.elhijab.com/api';
 // 
 // Create axios instance
 const api = axios.create({
@@ -69,6 +69,8 @@ export const attendanceAPI = {
     api.get(`/attendance/all?startDate=${startDate}&endDate=${endDate}`),
   getTodayAll: () => api.get('/attendance/today-all'),
   getStoreStats: (unitId) => api.get(`/attendance/store/${unitId}/stats`),
+  setDayOff: (userId) => api.post('/attendance/day-off', { user_id: userId }),
+  cancelDayOff: (userId) => api.delete('/attendance/day-off', { data: { user_id: userId } }),
 };
 
 // Leave services
