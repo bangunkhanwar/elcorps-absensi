@@ -80,6 +80,7 @@ const ShiftManagement: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [currentPageKalender, setCurrentPageKalender] = useState(1)
+  const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date())
   const itemsPerPage = 10
 
   useEffect(() => {
@@ -134,6 +135,14 @@ const ShiftManagement: React.FC = () => {
       setEmployeeShifts(updatedShiftsMap)
     }
   }, [employees, shifts])
+
+  // Update waktu setiap detik
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const fetchUserProfile = async () => {
     try {
@@ -755,6 +764,8 @@ const ShiftManagement: React.FC = () => {
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-200">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+                      {/* KIRI: Judul */}
                       <div>
                         <h2 className="text-lg font-semibold text-slate-900">
                           Daftar Karyawan {selectedUnitName && `- ${selectedUnitName}`}
@@ -768,7 +779,25 @@ const ShiftManagement: React.FC = () => {
                           )}
                         </p>
                       </div>
-                      
+
+                      {/* TENGAH: Tanggal */}
+                      <div className="w-full sm:w-auto flex justify-center">
+                        <div className="text-slate-600 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                          <p className="text-xs sm:text-sm font-medium text-center whitespace-nowrap">
+                            {currentDateTime.toLocaleDateString('id-ID', { 
+                              weekday: 'long', 
+                              day: 'numeric', 
+                              month: 'long',
+                              year: 'numeric'
+                            })}, pukul {currentDateTime.toLocaleTimeString('id-ID', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            }).replace(':', '.')}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* KANAN: Search (tidak diubah) */}
                       {selectedUnit && (
                         <div className="relative w-full sm:w-64">
                           <input
@@ -783,6 +812,7 @@ const ShiftManagement: React.FC = () => {
                           </div>
                         </div>
                       )}
+
                     </div>
                   </div>
                   

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { attendanceAPI, leaveAPI, authAPI } from '../../services/api'
 import PengajuanIzin from './PengajuanIzin'
@@ -46,7 +46,7 @@ const Absensi: React.FC = () => {
     return (sessionStorage.getItem('absensiActiveTab') as 'data' | 'pengajuan') || 'data'
   })
 
-  // Review mode (dari Dashboard)
+  // Review mode (dari Dashboard)s
   const [reviewMode, setReviewMode] = useState(false)
   const [reviewTitle, setReviewTitle] = useState('')
   const [reviewCategory, setReviewCategory] = useState('')
@@ -59,14 +59,22 @@ const Absensi: React.FC = () => {
   const [endDate, setEndDate] = useState<string>(() => {
     return sessionStorage.getItem('absensiEndDate') || new Date().toISOString().split('T')[0]
   })
+  const isInitialMount = useRef(true);
 
   // Filter unit kerja
-  const [selectedTipe, setSelectedTipe] = useState<TipeFilter>('semua')
-  const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null)
+  const [selectedTipe, setSelectedTipe] = useState<TipeFilter>(() => {
+    const saved = sessionStorage.getItem('absensiSelectedTipe');
+    return (saved as TipeFilter) || 'semua';
+  });
+  const [selectedUnitId, setSelectedUnitId] = useState<number | null>(() => {
+    const saved = sessionStorage.getItem('absensiSelectedUnitId');
+    return saved ? Number(saved) : null;
+  });
   const [unitKerjaList, setUnitKerjaList] = useState<UnitKerja[]>([])
 
-  // Data
-  const [searchData, setSearchData] = useState('')
+  const [searchData, setSearchData] = useState<string>(() => {
+    return sessionStorage.getItem('absensiSearchData') || '';
+  });
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([])
   const [loading, setLoading] = useState(false)
   const [currentDataPage, setCurrentDataPage] = useState(() => {
@@ -74,12 +82,17 @@ const Absensi: React.FC = () => {
   })
   const itemsPerPage = 10
 
+  const [openStoreDropdown, setOpenStoreDropdown] = useState(false);
+  const [searchStore, setSearchStore] = useState('');
+  const storeDropdownRef = useRef<HTMLDivElement>(null);
+
   // isEmployeeOnlyView untuk review mode
   const isEmployeeOnlyView = reviewMode && (
     reviewCategory === 'alpha' ||
     reviewCategory === 'totalIzin' ||
     reviewCategory === 'pendingIzin' ||
-    reviewCategory === 'hadirHariIni'
+    reviewCategory === 'hadirHariIni' ||
+    reviewCategory === 'dayOff'
   )
 
   // Baca query params untuk review mode dari Dashboard
@@ -92,20 +105,26 @@ const Absensi: React.FC = () => {
       setReviewMode(true)
       setReviewCategory(reviewParam)
       const categoryTitles: { [key: string]: string } = {
-        'alpha':               'Karyawan Alpha (Tidak Hadir & Tidak Izin)',
-        'tepatWaktu':         'Karyawan Tepat Waktu',
-        'telatMasuk':         'Karyawan Terlambat Masuk',
-        'pulangCepat':        'Karyawan Pulang Cepat',
-        'hadirHariIni':       'Karyawan Hadir Hari Ini',
-        'absensiTidakLengkap':'Absensi Tidak Lengkap',
-        'totalIzin':          'Karyawan Izin Hari Ini',
-        'pendingIzin':        'Pengajuan Izin Pending'
+        'alpha':                   'Karyawan Alpha (Tidak Hadir & Tidak Izin)',
+        'tepatWaktu':             'Karyawan Tepat Waktu',
+        'telatMasuk':             'Karyawan Terlambat Masuk',
+        'pulangCepat':            'Karyawan Pulang Cepat',
+        'telatMasukPulangCepat':  'Karyawan Telat Masuk & Pulang Cepat',
+        'hadirHariIni':           'Karyawan Hadir Hari Ini',
+        'absensiTidakLengkap':    'Absensi Tidak Lengkap',
+        'totalIzin':              'Karyawan Izin Hari Ini',
+        'pendingIzin':            'Pengajuan Izin Pending',
+        'dayOff':                 'Karyawan Day Off Hari Ini'
       }
       setReviewTitle(categoryTitles[reviewParam] || `Review: ${reviewParam}`)
       const storedData = localStorage.getItem(`review_${reviewParam}`)
+      console.log('📦 reviewParam:', reviewParam)
+      console.log('📦 storedData:', storedData)
       if (storedData) {
         try {
           const parsedData = JSON.parse(storedData)
+          console.log('📦 parsedData:', parsedData)
+          console.log('📦 employees:', parsedData.employees)
           setReviewData(parsedData.employees || [])
         } catch (e) {
           console.error('Error parsing review data:', e)
@@ -117,6 +136,9 @@ const Absensi: React.FC = () => {
         sessionStorage.setItem('absensiStartDate', dateParam)
         sessionStorage.setItem('absensiEndDate', dateParam)
       }
+      setSelectedTipe('semua');
+      setSelectedUnitId(null);
+      setSearchData('');
     } else {
       setReviewMode(false)
       setReviewCategory('')
@@ -137,10 +159,35 @@ const Absensi: React.FC = () => {
     sessionStorage.setItem('absensiEndDate', endDate)
   }, [startDate, endDate])
 
+  useEffect(() => {
+    sessionStorage.setItem('absensiSelectedTipe', selectedTipe)
+    if (selectedUnitId) {
+      sessionStorage.setItem('absensiSelectedUnitId', String(selectedUnitId))
+    } else {
+      sessionStorage.removeItem('absensiSelectedUnitId')
+    }
+  }, [selectedTipe, selectedUnitId])
+
+
+  useEffect(() => {
+    sessionStorage.setItem('absensiSearchData', searchData);
+  }, [searchData]);
+
   // Load unit kerja list
   useEffect(() => {
     fetchUnitKerja()
   }, [])
+
+  // Tutup dropdown Store saat klik di luar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (storeDropdownRef.current && !storeDropdownRef.current.contains(event.target as Node)) {
+        setOpenStoreDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Fetch data saat tanggal berubah atau keluar review mode
   useEffect(() => {
@@ -149,10 +196,13 @@ const Absensi: React.FC = () => {
     }
   }, [startDate, endDate, reviewMode])
 
-  // Reset page saat filter/search berubah
   useEffect(() => {
-    setCurrentDataPage(1)
-  }, [startDate, endDate, selectedTipe, selectedUnitId, searchData])
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    setCurrentDataPage(1);
+  }, [startDate, endDate, selectedTipe, selectedUnitId, searchData]);
 
   const fetchUnitKerja = async () => {
     try {
@@ -167,16 +217,17 @@ const Absensi: React.FC = () => {
       let units: any[] = []
 
       if (Array.isArray(response)) {
-        units = response;
-      } else if (Array.isArray((response as any)?.data)) {
-        units = (response as any).data;
-      } else if (Array.isArray((response as any)?.data?.unit_kerja)) {
-        units = (response as any).data.unit_kerja;
+        units = response
+      } else if (Array.isArray(response?.data)) {
+        units = response.data
+      } else if (Array.isArray(response?.data?.unit_kerja)) {
+        units = response.data.unit_kerja
       } else if (Array.isArray((response as any)?.unit_kerja)) {
-        units = (response as any).unit_kerja;
-      } else if ((response as any)?.data && typeof (response as any).data === 'object') {
-        const firstArray = Object.values((response as any).data).find((v) => Array.isArray(v));
-        if (firstArray) units = firstArray as any[];
+        units = (response as any).unit_kerja
+      } else if (response?.data && typeof response.data === 'object') {
+        // Coba ambil array pertama yang ditemukan di dalam response.data
+        const firstArray = Object.values(response.data).find(v => Array.isArray(v))
+        if (firstArray) units = firstArray as any[]
       }
 
       console.log('📍 Unit kerja parsed:', units.length, 'items')
@@ -206,7 +257,10 @@ const Absensi: React.FC = () => {
     try {
       setLoading(true)
 
-      // Fetch semua data paralel
+      // 🔥 Ambil profil user saat ini untuk mendapatkan role dan unit_kerja_id
+      const profileRes = await authAPI.getProfile()
+      const currentUser = profileRes.data.user
+
       const [usersRes, attendanceRes, leaveRes] = await Promise.allSettled([
         authAPI.getAllUsers(),
         attendanceAPI.getAll(startDate, endDate),
@@ -214,16 +268,23 @@ const Absensi: React.FC = () => {
       ])
 
       // Users
-      const allUsers: any[] = usersRes.status === 'fulfilled'
+      let allUsers: any[] = usersRes.status === 'fulfilled'
         ? (usersRes.value?.data?.users || usersRes.value?.data || usersRes.value || [])
         : []
+
+      // 🔥 FILTER UNIT UNTUK LEADER (non-HR dengan website_access)
+      if (currentUser.role !== 'hr' && currentUser.website_access) {
+        allUsers = allUsers.filter((u: any) => 
+          u.unit_kerja_id === currentUser.unit_kerja_id
+        )
+      }
 
       // Absensi
       const attendances: any[] = attendanceRes.status === 'fulfilled'
         ? (attendanceRes.value?.data?.attendances || [])
         : []
 
-      // Izin approved yang mencakup periode
+      // Izin
       const allLeaves: any[] = leaveRes.status === 'fulfilled'
         ? (leaveRes.value?.data?.leaves || [])
         : []
@@ -251,9 +312,8 @@ const Absensi: React.FC = () => {
         if (leave.user_id) leaveMap.set(leave.user_id, leave)
       })
 
-      // Gabungkan: semua karyawan (exclude HR) + status absensi mereka
+      // Gabungkan: semua user (yang sudah difilter) + status absensi mereka
       const combined: AttendanceData[] = allUsers
-        .filter((user: any) => user.role !== 'hr')
         .map((user: any, index: number) => {
           const att = attendanceMap.get(user.id)
           const leave = leaveMap.get(user.id)
@@ -261,7 +321,6 @@ const Absensi: React.FC = () => {
           let status: AttendanceData['status']
           if (att) {
             const dbStatus = normalizeStatus(att.status)
-            // Day Off langsung dari DB — tidak dioverride oleh izin
             if (dbStatus === 'day_off') {
               status = 'day_off'
             } else {
@@ -276,7 +335,6 @@ const Absensi: React.FC = () => {
             status = 'alpha'
           }
 
-          // Ambil info unit kerja dari unitKerjaList jika tersedia
           const unitInfo = unitKerjaList.find(u => u.id === user.unit_kerja_id)
 
           return {
@@ -315,14 +373,22 @@ const Absensi: React.FC = () => {
   // Normalisasi status dari DB (lowercase snake_case)
   const normalizeStatus = (status: string): string => {
     if (!status) return 'tepat_waktu'
-    return status.toLowerCase().trim()
+    const s = status.toLowerCase().trim()
+    const map: {[key: string]: string} = {
+      'terlambat': 'telat_masuk',
+      'tepat waktu': 'tepat_waktu',
+      'terlambat_pulang_cepat': 'telat_masuk_pulang_cepat',
+    }
+    return map[s] || s
   }
 
   const getDisplayStatus = (dbStatus: string): string => normalizeStatus(dbStatus)
 
   // Data source: review mode atau normal
   const getDataSource = (): AttendanceData[] => {
-    if (reviewMode && reviewData.length > 0) {
+    console.log('📊 getDataSource called, reviewMode:', reviewMode, 'reviewData length:', reviewData.length)
+    if (reviewMode) {
+      if (reviewData.length === 0) return [];
       return reviewData.map((item: any, index: number) => ({
         id: item.id || -index,
         no: index + 1,
@@ -344,22 +410,24 @@ const Absensi: React.FC = () => {
         foto_masuk: item.foto_masuk || '',
         foto_keluar: item.foto_keluar || '',
         tanggal_absen: item.tanggal_absen || startDate
-      }))
+      }));
     }
-    return attendanceData
-  }
+    return attendanceData;
+  };
 
   const getReviewStatus = (item: any, category: string): string => {
     switch (category) {
-      case 'alpha':               return 'alpha'
-      case 'tepatWaktu':         return 'tepat_waktu'
-      case 'telatMasuk':         return 'telat_masuk'
-      case 'pulangCepat':        return 'pulang_cepat'
-      case 'hadirHariIni':       return getDisplayStatus(item.status || 'tepat_waktu')
-      case 'absensiTidakLengkap': return 'tidak_lengkap'
-      case 'totalIzin':          return 'izin'
-      case 'pendingIzin':        return 'izin'
-      default:                   return getDisplayStatus(item.status || 'tepat_waktu')
+      case 'alpha':                  return 'alpha'
+      case 'tepatWaktu':            return 'tepat_waktu'
+      case 'telatMasuk':            return 'telat_masuk'
+      case 'pulangCepat':           return 'pulang_cepat'
+      case 'telatMasukPulangCepat': return 'telat_masuk_pulang_cepat'
+      case 'hadirHariIni':          return getDisplayStatus(item.status || 'tepat_waktu')
+      case 'absensiTidakLengkap':   return 'tidak_lengkap'
+      case 'totalIzin':             return 'izin'
+      case 'pendingIzin':           return 'izin'
+      case 'dayOff':                return 'day_off'
+      default:                      return getDisplayStatus(item.status || 'tepat_waktu')
     }
   }
 
@@ -370,26 +438,30 @@ const Absensi: React.FC = () => {
     return tipe === 'store'
   })
 
+  // Filter store berdasarkan pencarian
+  const filteredStoreUnits = storeUnits
+    .filter(unit => unit.nama_unit.toLowerCase().includes(searchStore.toLowerCase()))
+    .sort((a, b) => a.nama_unit.localeCompare(b.nama_unit));
+
   // Filter berdasarkan tipe unit & unit spesifik — nilai DB: 'head_office' | 'store'
   const applyUnitFilter = (data: AttendanceData[]): AttendanceData[] => {
-    if (reviewMode) return data
     if (selectedTipe === 'head_office') {
       return data.filter(item => {
-        const unit = unitKerjaList.find(u => u.id === item.unit_kerja_id)
-        return unit?.tipe_unit?.toLowerCase() === 'head_office'
-      })
+        const unit = unitKerjaList.find(u => u.id === item.unit_kerja_id);
+        return unit?.tipe_unit?.toLowerCase() === 'head_office';
+      });
     }
     if (selectedTipe === 'store') {
       if (selectedUnitId) {
-        return data.filter(item => item.unit_kerja_id === selectedUnitId)
+        return data.filter(item => item.unit_kerja_id === selectedUnitId);
       }
       return data.filter(item => {
-        const unit = unitKerjaList.find(u => u.id === item.unit_kerja_id)
-        return unit?.tipe_unit?.toLowerCase() === 'store'
-      })
+        const unit = unitKerjaList.find(u => u.id === item.unit_kerja_id);
+        return unit?.tipe_unit?.toLowerCase() === 'store';
+      });
     }
-    return data
-  }
+    return data;
+  };
 
   const dataSource = getDataSource()
 
@@ -397,6 +469,8 @@ const Absensi: React.FC = () => {
     .filter(item =>
       item.nama.toLowerCase().includes(searchData.toLowerCase()) ||
       item.nik.toLowerCase().includes(searchData.toLowerCase()) ||
+      item.departemen.toLowerCase().includes(searchData.toLowerCase()) ||
+      item.divisi.toLowerCase().includes(searchData.toLowerCase()) ||
       item.unit_kerja.toLowerCase().includes(searchData.toLowerCase())
     )
     .sort((a, b) => a.nama.localeCompare(b.nama))
@@ -411,6 +485,7 @@ const Absensi: React.FC = () => {
 
   const handleViewDetail = (attendance: AttendanceData) => {
     sessionStorage.setItem('absensiStartDate', startDate)
+    sessionStorage.setItem('absensiDataPage', currentDataPage.toString())
     navigate('/attendance/detail', { state: { attendance } })
   }
 
@@ -486,50 +561,222 @@ const Absensi: React.FC = () => {
     return 'Semua Unit'
   }
 
-  // Export Excel — sesuai data yang ditampilkan
-  const exportToExcel = () => {
-    const dataToExport = filteredAttendanceData.map((item, index) => ({
-      'NO':            index + 1,
-      'NAMA':          item.nama,
-      'NIK':           item.nik,
-      'JABATAN':       item.jabatan,
-      'DEPARTEMEN':    item.departemen,
-      'DIVISI':        item.divisi,
-      'UNIT KERJA':    item.unit_kerja,
-      'TANGGAL':       item.tanggal_absen,
-      'JAM MASUK':     item.jamMasuk,
-      'JAM PULANG':    item.jamPulang,
-      'STATUS':        getStatusText(item.status),
-      'LOKASI MASUK':  item.lokasi_masuk || '-',
-      'LOKASI KELUAR': item.lokasi_keluar || '-',
-      'KETERANGAN':    item.keteranganIzin || '',
-    }))
+  // Export Excel
+  const exportToExcel = async () => {
+    setLoading(true);
+    try {
+      let dataToExport: any[] = [];
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Absensi')
-    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
-    })
+      // 🔥 Ambil profil user saat ini untuk filter unit (digunakan di kedua mode)
+      const profileRes = await authAPI.getProfile();
+      const currentUser = profileRes.data.user;
 
-    const unitLabel = selectedUnitId
-      ? (unitKerjaList.find(u => u.id === selectedUnitId)?.nama_unit || 'unit').replace(/\s+/g, '_')
-      : selectedTipe !== 'semua' ? selectedTipe : 'semua_unit'
+      // === Bagian Review Mode di exportToExcel ===
+      if (reviewMode) {
+        const [usersRes, attendanceRes, leaveRes] = await Promise.allSettled([
+          authAPI.getAllUsers(),
+          attendanceAPI.getAll(startDate, endDate),
+          leaveAPI.getAllLeaves()
+        ]);
 
-    const fileName = reviewMode
-      ? `absensi_${reviewCategory}_${startDate}.xlsx`
-      : `absensi_${unitLabel}_${startDate}${startDate !== endDate ? '_sd_' + endDate : ''}.xlsx`
+        let allUsers: any[] = usersRes.status === 'fulfilled'
+          ? (usersRes.value?.data?.users || usersRes.value?.data || usersRes.value || [])
+          : [];
 
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', fileName)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }
+        // 🔥 Filter unit untuk leader (sama seperti fetchAllData)
+        if (currentUser.role !== 'hr' && currentUser.website_access) {
+          allUsers = allUsers.filter((u: any) => 
+            u.unit_kerja_id === currentUser.unit_kerja_id
+          );
+        }
+
+        const attendances: any[] = attendanceRes.status === 'fulfilled'
+          ? (attendanceRes.value?.data?.attendances || [])
+          : [];
+        const allLeaves: any[] = leaveRes.status === 'fulfilled'
+          ? (leaveRes.value?.data?.leaves || [])
+          : [];
+
+        const periodStart = new Date(startDate);
+        const periodEnd = new Date(endDate);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd.setHours(23, 59, 59, 999);
+
+        const approvedLeaves = allLeaves.filter((l: any) => {
+          if (l.status !== 'approved') return false;
+          const ls = new Date(l.start_date);
+          const le = new Date(l.end_date);
+          ls.setHours(0, 0, 0, 0);
+          le.setHours(23, 59, 59, 999);
+          return ls <= periodEnd && le >= periodStart;
+        });
+
+        const attendanceMap = new Map();
+        attendances.forEach((att: any) => attendanceMap.set(att.user_id, att));
+        const leaveMap = new Map();
+        approvedLeaves.forEach((l: any) => leaveMap.set(l.user_id, l));
+
+        const combined: AttendanceData[] = allUsers
+          .filter((user: any) => user.role !== 'hr')
+          .map((user: any, idx: number) => {
+            const att = attendanceMap.get(user.id);
+            const leave = leaveMap.get(user.id);
+            let status: AttendanceData['status'];
+            if (att) {
+              const dbStatus = normalizeStatus(att.status);
+              if (dbStatus === 'day_off') {
+                status = 'day_off';
+              } else {
+                const hasLeave = approvedLeaves.some(
+                  (l: any) => (l.user_id === user.id || l.nik === user.nik)
+                );
+                status = hasLeave ? 'izin' : (dbStatus as AttendanceData['status']);
+              }
+            } else if (leave) {
+              status = 'izin';
+            } else {
+              status = 'alpha';
+            }
+            const unitInfo = unitKerjaList.find(u => u.id === user.unit_kerja_id);
+            return {
+              id: att?.id || -(user.id),
+              no: idx + 1,
+              nama: user.nama || '-',
+              unit_kerja: user.nama_unit || unitInfo?.nama_unit || '-',
+              unit_kerja_id: user.unit_kerja_id,
+              tipe_unit: unitInfo?.tipe_unit || user.tipe_unit || '',
+              jamMasuk: att ? formatTimeFromString(att.waktu_masuk_jakarta || att.waktu_masuk) : '-',
+              jamPulang: att ? formatTimeFromString(att.waktu_keluar_jakarta || att.waktu_keluar) : '-',
+              status,
+              nik: user.nik || '-',
+              jabatan: user.jabatan || '-',
+              departemen: user.departemen || '-',
+              divisi: user.divisi || '-',
+              lokasi: att?.location || user.nama_unit || '-',
+              lokasi_masuk: att?.lokasi_masuk || att?.location || user.nama_unit || '-',
+              lokasi_keluar: att?.lokasi_keluar || '-',
+              keteranganIzin: leave?.keterangan || '',
+              foto_masuk: att?.foto_masuk || '',
+              foto_keluar: att?.foto_keluar || '',
+              tanggal_absen: att?.tanggal_absen || startDate
+            };
+          });
+
+        // Filter berdasarkan kategori review
+        const filtered = combined.filter(item => {
+          const itemStatus = item.status;
+          switch (reviewCategory) {
+            case 'alpha': return itemStatus === 'alpha';
+            case 'tepatWaktu': return itemStatus === 'tepat_waktu';
+            case 'telatMasuk': return itemStatus === 'telat_masuk';
+            case 'pulangCepat': return itemStatus === 'pulang_cepat';
+            case 'telatMasukPulangCepat': return itemStatus === 'telat_masuk_pulang_cepat';
+            case 'hadirHariIni': return ['tepat_waktu','telat_masuk','pulang_cepat','telat_masuk_pulang_cepat','tidak_lengkap'].includes(itemStatus);
+            case 'absensiTidakLengkap': return itemStatus === 'tidak_lengkap';
+            case 'totalIzin': return itemStatus === 'izin';
+            case 'pendingIzin': return false;
+            case 'dayOff': return itemStatus === 'day_off';
+            default: return false;
+          }
+        });
+
+        // Filter unit (Head Office / Store)
+        let unitFiltered = filtered;
+        if (selectedTipe === 'head_office') {
+          unitFiltered = filtered.filter(item => {
+            const unit = unitKerjaList.find(u => u.id === item.unit_kerja_id);
+            return unit?.tipe_unit?.toLowerCase() === 'head_office';
+          });
+        } else if (selectedTipe === 'store') {
+          if (selectedUnitId) {
+            unitFiltered = filtered.filter(item => item.unit_kerja_id === selectedUnitId);
+          } else {
+            unitFiltered = filtered.filter(item => {
+              const unit = unitKerjaList.find(u => u.id === item.unit_kerja_id);
+              return unit?.tipe_unit?.toLowerCase() === 'store';
+            });
+          }
+        }
+
+        // Filter pencarian (search)
+        const searchFiltered = unitFiltered.filter(item =>
+          item.nama.toLowerCase().includes(searchData.toLowerCase()) ||
+          item.nik.toLowerCase().includes(searchData.toLowerCase()) ||
+          item.departemen.toLowerCase().includes(searchData.toLowerCase()) ||
+          item.divisi.toLowerCase().includes(searchData.toLowerCase()) ||
+          item.unit_kerja.toLowerCase().includes(searchData.toLowerCase())
+        );
+
+        // Mapping untuk Excel
+        dataToExport = searchFiltered.map((item, index) => ({
+          'NO': index + 1,
+          'NAMA': item.nama,
+          'NIK': item.nik,
+          'JABATAN': item.jabatan,
+          'DEPARTEMEN': item.departemen,
+          'DIVISI': item.divisi,
+          'UNIT KERJA': item.unit_kerja,
+          'TANGGAL': item.tanggal_absen,
+          'JAM MASUK': item.jamMasuk,
+          'JAM PULANG': item.jamPulang,
+          'STATUS': getStatusText(item.status),
+          'LOKASI MASUK': item.lokasi_masuk || '-',
+          'LOKASI KELUAR': item.lokasi_keluar || '-',
+          'KETERANGAN': item.keteranganIzin || '',
+        }));
+      } else {
+        // ✅ Mode normal: gunakan data yang sudah difilter dan ditampilkan di tabel
+        dataToExport = filteredAttendanceData.map((item, index) => ({
+          'NO': index + 1,
+          'NAMA': item.nama,
+          'NIK': item.nik,
+          'JABATAN': item.jabatan,
+          'DEPARTEMEN': item.departemen,
+          'DIVISI': item.divisi,
+          'UNIT KERJA': item.unit_kerja,
+          'TANGGAL': item.tanggal_absen,
+          'JAM MASUK': item.jamMasuk,
+          'JAM PULANG': item.jamPulang,
+          'STATUS': getStatusText(item.status),
+          'LOKASI MASUK': item.lokasi_masuk || '-',
+          'LOKASI KELUAR': item.lokasi_keluar || '-',
+          'KETERANGAN': item.keteranganIzin || '',
+        }));
+      }
+
+      // Proses pembuatan file Excel
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Absensi');
+      const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
+      });
+
+      const unitLabel = selectedUnitId
+        ? (unitKerjaList.find(u => u.id === selectedUnitId)?.nama_unit || 'unit').replace(/\s+/g, '_')
+        : selectedTipe !== 'semua' ? selectedTipe : 'semua_unit';
+
+      const fileName = reviewMode
+        ? `absensi_review_${reviewCategory}_${unitLabel}_${startDate}.xlsx`
+        : `absensi_${unitLabel}_${startDate}${startDate !== endDate ? '_sd_' + endDate : ''}.xlsx`;
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('Gagal mengekspor data.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExitReview = () => {
     navigate('/attendance')
@@ -546,7 +793,10 @@ const Absensi: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => {
+                  sessionStorage.removeItem('absensiSearchData');
+                  navigate('/dashboard');
+                }}
                 className="flex items-center space-x-2 text-slate-600 hover:text-[#25a298] transition-colors duration-200"
               >
                 <span>←</span>
@@ -649,35 +899,90 @@ const Absensi: React.FC = () => {
                           Store
                         </button>
 
-                        {/* Dropdown pilih store spesifik — muncul hanya jika pilih Store */}
+                        {/* Dropdown pilih store spesifik dengan pencarian */}
                         {selectedTipe === 'store' && (
-                          <div className="relative">
+                          <div ref={storeDropdownRef} className="relative" style={{ minWidth: '220px' }}>
                             {storeUnits.length === 0 ? (
                               <div className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-400">
                                 Memuat store...
                               </div>
                             ) : (
                               <>
-                                <select
-                                  value={selectedUnitId || ''}
-                                  onChange={(e) => setSelectedUnitId(e.target.value ? Number(e.target.value) : null)}
-                                  className="pl-3 pr-8 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] text-sm text-slate-700 bg-white appearance-none cursor-pointer max-w-[220px]"
+                                {/* Tombol trigger dropdown */}
+                                <div
+                                  className="pl-9 pr-8 py-1.5 rounded-lg border border-slate-300 bg-white cursor-pointer text-sm flex justify-between items-center"
+                                  onClick={() => {
+                                    setOpenStoreDropdown(!openStoreDropdown);
+                                    setSearchStore(''); // reset pencarian saat buka
+                                  }}
                                 >
-                                  <option value="">Semua Store ({storeUnits.length})</option>
-                                  {storeUnits
-                                    .sort((a, b) => a.nama_unit.localeCompare(b.nama_unit))
-                                    .map(unit => (
-                                      <option key={unit.id} value={unit.id}>
-                                        {unit.nama_unit}
-                                      </option>
-                                    ))
-                                  }
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-slate-400">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
+                                  <span className="truncate">
+                                    {selectedUnitId 
+                                      ? storeUnits.find(u => u.id === selectedUnitId)?.nama_unit || 'Pilih Store'
+                                      : `Semua Store (${storeUnits.length})`
+                                    }
+                                  </span>
+                                  <span className="text-slate-400 ml-2">▼</span>
                                 </div>
+                                
+                                {/* Ikon lokasi di kiri */}
+                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm">
+                                  🏢
+                                </div>
+
+                                {/* Panel dropdown */}
+                                {openStoreDropdown && (
+                                  <div className="absolute z-30 mt-1 w-full bg-white border border-slate-300 rounded-lg shadow-lg">
+                                    {/* Input pencarian */}
+                                    <input
+                                      type="text"
+                                      className="w-full px-3 py-2 text-sm border-b border-slate-200 focus:outline-none rounded-t-lg"
+                                      placeholder="Cari store..."
+                                      value={searchStore}
+                                      onChange={(e) => setSearchStore(e.target.value)}
+                                      autoFocus
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    
+                                    {/* Daftar opsi */}
+                                    <div className="max-h-60 overflow-y-auto text-sm">
+                                      {/* Opsi "Semua Store" */}
+                                      <div
+                                        className={`px-3 py-2 hover:bg-[#25a298]/10 cursor-pointer flex items-center ${
+                                          !selectedUnitId ? 'bg-[#25a298]/5 text-[#25a298] font-medium' : ''
+                                        }`}
+                                        onClick={() => {
+                                          setSelectedUnitId(null);
+                                          setOpenStoreDropdown(false);
+                                          setSearchStore('');
+                                        }}
+                                      >
+                                        Semua Store ({storeUnits.length})
+                                      </div>
+                                      
+                                      {/* Daftar store hasil filter */}
+                                      {filteredStoreUnits.length > 0 ? (
+                                        filteredStoreUnits.map(unit => (
+                                          <div
+                                            key={unit.id}
+                                            className={`px-3 py-2 hover:bg-[#25a298]/10 cursor-pointer ${
+                                              selectedUnitId === unit.id ? 'bg-[#25a298]/5 text-[#25a298] font-medium' : ''
+                                            }`}
+                                            onClick={() => {
+                                              setSelectedUnitId(unit.id);
+                                              setOpenStoreDropdown(false);
+                                              setSearchStore('');
+                                            }}
+                                          >
+                                            {unit.nama_unit}
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <div className="px-3 py-2 text-gray-400 text-center">Tidak ada hasil</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>
@@ -715,7 +1020,7 @@ const Absensi: React.FC = () => {
                     <div className="relative flex-1 min-w-0">
                       <input
                         type="text"
-                        placeholder="Cari nama, NIK, atau unit kerja..."
+                        placeholder="Cari nama, NIK, departemen, divisi atau unit kerja..."
                         value={searchData}
                         onChange={(e) => setSearchData(e.target.value)}
                         className="pl-9 pr-4 py-2 w-full rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#25a298] focus:border-[#25a298] text-sm"
@@ -724,20 +1029,22 @@ const Absensi: React.FC = () => {
                     </div>
 
                     {/* Export Excel */}
-                    <button
-                      onClick={exportToExcel}
-                      disabled={filteredAttendanceData.length === 0}
-                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium flex-shrink-0 ${
-                        filteredAttendanceData.length === 0
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'bg-[#25a298] text-white hover:bg-[#1f8a80] active:bg-[#1a7a70]'
-                      }`}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span>Export Excel</span>
-                    </button>
+                    {!reviewMode && (
+                      <button
+                        onClick={exportToExcel}
+                        disabled={filteredAttendanceData.length === 0}
+                        className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium flex-shrink-0 ${
+                          filteredAttendanceData.length === 0
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-[#25a298] text-white hover:bg-[#1f8a80] active:bg-[#1a7a70]'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Export Excel</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Tag filter aktif */}
@@ -817,7 +1124,9 @@ const Absensi: React.FC = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Jam Masuk</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Jam Pulang</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Aksi</th>
+                                {!reviewMode && (
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Aksi</th>
+                                )}
                               </>
                             )}
                           </tr>
@@ -864,18 +1173,20 @@ const Absensi: React.FC = () => {
                                       <div className="text-xs text-gray-500 mt-1">{item.keteranganIzin}</div>
                                     )}
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                    {(item.status !== 'alpha' && item.status !== 'day_off') ? (
-                                      <button
-                                        onClick={() => handleViewDetail(item)}
-                                        className="text-[#25a298] hover:text-[#1f8a80] transition-colors duration-200 font-medium"
-                                      >
-                                        Detail
-                                      </button>
-                                    ) : (
-                                      <span className="text-slate-300">—</span>
-                                    )}
-                                  </td>
+                                  {!reviewMode && (
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                      {(item.status !== 'alpha' && item.status !== 'day_off') ? (
+                                        <button
+                                          onClick={() => handleViewDetail(item)}
+                                          className="text-[#25a298] hover:text-[#1f8a80] transition-colors duration-200 font-medium"
+                                        >
+                                          Detail
+                                        </button>
+                                      ) : (
+                                        <span className="text-slate-300">—</span>
+                                      )}
+                                    </td>
+                                  )}
                                 </>
                               )}
                             </tr>

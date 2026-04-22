@@ -11,10 +11,12 @@ interface StatsData {
   tepatWaktu: number
   telatMasuk: number
   pulangCepat: number
+  telatMasukPulangCepat: number
   totalIzin: number
   pendingIzin: number
   absensiTidakLengkap: number
   alpha: number
+  dayOff: number
 }
 
 interface QuickAction {
@@ -46,10 +48,12 @@ const Dashboard: React.FC = () => {
     tepatWaktu: 0,
     telatMasuk: 0,
     pulangCepat: 0,
+    telatMasukPulangCepat: 0,
     totalIzin: 0,
     pendingIzin: 0,
     absensiTidakLengkap: 0,
-    alpha: 0
+    alpha: 0,
+    dayOff: 0
   })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -60,19 +64,23 @@ const Dashboard: React.FC = () => {
     tepatWaktu: EmployeeData[]
     telatMasuk: EmployeeData[]
     pulangCepat: EmployeeData[]
+    telatMasukPulangCepat: EmployeeData[]
     hadirHariIni: EmployeeData[]
     absensiTidakLengkap: EmployeeData[]
     totalIzin: EmployeeData[]
     pendingIzin: EmployeeData[]
+    dayOff: EmployeeData[]
   }>({
     alpha: [],
     tepatWaktu: [],
     telatMasuk: [],
     pulangCepat: [],
+    telatMasukPulangCepat: [],
     hadirHariIni: [],
     absensiTidakLengkap: [],
     totalIzin: [],
-    pendingIzin: []
+    pendingIzin: [],
+    dayOff: []
   })
 
   // All possible menu configurations
@@ -98,13 +106,13 @@ const Dashboard: React.FC = () => {
       icon: '🕒',
       path: '/shift-management',
     },
-    {
-      id: 4,
-      title: 'Laporan',
-      description: 'Analisis & export data',
-      icon: '📈',
-      path: '/reports',
-    },
+    // {
+    //   id: 4,
+    //   title: 'Laporan',
+    //   description: 'Analisis & export data',
+    //   icon: '📈',
+    //   path: '/reports',
+    // },
     {
       id: 5,
       title: 'Pengaturan',
@@ -167,8 +175,14 @@ const Dashboard: React.FC = () => {
   // Normalisasi nilai status dari DB ke format internal yang konsisten
   // Backend menyimpan: 'tepat_waktu' | 'telat_masuk' | 'pulang_cepat' | 'telat_masuk_pulang_cepat' | 'tidak_lengkap'
   const normalizeStatus = (status: string): string => {
-    if (!status) return ''
-    return status.toLowerCase().trim()
+    if (!status) return 'tepat_waktu'
+    const s = status.toLowerCase().trim()
+    const map: {[key: string]: string} = {
+      'terlambat': 'telat_masuk',
+      'tepat waktu': 'tepat_waktu',
+      'terlambat_pulang_cepat': 'telat_masuk_pulang_cepat',
+    }
+    return map[s] || s
   }
 
   useEffect(() => {
@@ -251,25 +265,32 @@ const Dashboard: React.FC = () => {
           const tepatWaktuEmployees: EmployeeData[] = []
           const telatEmployees: EmployeeData[] = []
           const pulangCepatEmployees: EmployeeData[] = []
+          const telatMasukPulangCepatEmployees: EmployeeData[] = []
           const hadirEmployees: EmployeeData[] = []
           const tidakLengkapEmployees: EmployeeData[] = []
           const izinEmployees: EmployeeData[] = []
           const pendingIzinEmployees: EmployeeData[] = []
+          const dayOffEmployees: EmployeeData[] = []
           
-          // Data untuk karyawan yang hadir (sudah absensi)
+          // Set user_id yang sudah ada keterangan (hadir/izin/day_off) — tidak dihitung alpha
           const hadirUserIds = new Set()
           
           // Proses data absensi - status dibaca langsung dari DB (backend sebagai sumber kebenaran)
-          filteredAttendance.forEach((att: any) => {
+          // PENTING: filter hanya record untuk tanggal hari ini
+          const todayAttendance = filteredAttendance.filter((att: any) => {
+            if (!att.tanggal_absen) return false
+            return att.tanggal_absen.split('T')[0] === today
+          })
+
+          todayAttendance.forEach((att: any) => {
             const userInfo = usersMap.get(att.user_id)
             if (!userInfo) return
-            
+
             // Baca status dari DB, normalisasi ke lowercase
             const dbStatus = normalizeStatus(att.status)
-            
-            // Absensi tidak lengkap: ada waktu masuk tapi belum checkout (status saat checkin)
-            const isComplete = att.waktu_masuk && att.waktu_keluar &&
-                               att.waktu_masuk !== '-' && att.waktu_keluar !== '-'
+
+            // Tandai user ini sudah ada keterangan (tidak alpha)
+            hadirUserIds.add(att.user_id)
 
             const employeeData = {
               id: userInfo.id,
@@ -282,31 +303,41 @@ const Dashboard: React.FC = () => {
               waktu_keluar: att.waktu_keluar,
               jam_seharusnya_masuk: att.jam_seharusnya_masuk,
               jam_seharusnya_keluar: att.jam_seharusnya_keluar,
-              status: isComplete ? dbStatus : 'tidak_lengkap'
+              status: dbStatus
             }
-            
-            // Tandai user ini sudah hadir
-            hadirUserIds.add(att.user_id)
-            
-            // Semua yang punya record absensi masuk ke Total Hadir
+
+            // Day Off — tidak masuk Total Hadir, masuk kategori sendiri
+            if (dbStatus === 'day_off') {
+              dayOffEmployees.push(employeeData)
+              return
+            }
+
+            // Absensi tidak lengkap: ada waktu masuk tapi belum checkout
+            const isComplete = att.waktu_masuk && att.waktu_keluar &&
+                               att.waktu_masuk !== '-' && att.waktu_keluar !== '-'
+
+            if (!isComplete) {
+              // Belum checkout → tidak lengkap
+              tidakLengkapEmployees.push({ ...employeeData, status: 'tidak_lengkap' })
+              hadirEmployees.push({ ...employeeData, status: 'tidak_lengkap' })
+              return
+            }
+
+            // Masuk Total Hadir
             hadirEmployees.push(employeeData)
 
-            if (isComplete) {
-              // Kategorisasi berdasarkan status dari DB
-              if (dbStatus === 'tepat_waktu') {
-                tepatWaktuEmployees.push(employeeData)
-              } else if (dbStatus === 'telat_masuk') {
-                telatEmployees.push(employeeData)
-              } else if (dbStatus === 'pulang_cepat') {
-                pulangCepatEmployees.push(employeeData)
-              } else if (dbStatus === 'telat_masuk_pulang_cepat') {
-                // Masuk telat sekaligus pulang cepat → tampil di kedua kategori
-                telatEmployees.push(employeeData)
-                pulangCepatEmployees.push(employeeData)
-              }
-            } else {
-              // Belum checkout → tidak lengkap
-              tidakLengkapEmployees.push(employeeData)
+            // Kategorisasi berdasarkan status dari DB
+            if (dbStatus === 'tepat_waktu') {
+              tepatWaktuEmployees.push(employeeData)
+            } else if (dbStatus === 'telat_masuk') {
+              telatEmployees.push(employeeData)
+            } else if (dbStatus === 'pulang_cepat') {
+              pulangCepatEmployees.push(employeeData)
+            } else if (dbStatus === 'telat_masuk_pulang_cepat') {
+              // Kategori sendiri + masuk juga ke telat dan pulang cepat
+              telatMasukPulangCepatEmployees.push(employeeData)
+              telatEmployees.push(employeeData)
+              pulangCepatEmployees.push(employeeData)
             }
           })
           
@@ -372,10 +403,12 @@ const Dashboard: React.FC = () => {
           const tepatWaktu = tepatWaktuEmployees.length
           const telatMasuk = telatEmployees.length
           const pulangCepat = pulangCepatEmployees.length
+          const telatMasukPulangCepat = telatMasukPulangCepatEmployees.length
           const absensiTidakLengkap = tidakLengkapEmployees.length
           const totalIzin = izinEmployees.length
           const pendingIzin = pendingIzinEmployees.length
           const alpha = alphaEmployees.length
+          const dayOff = dayOffEmployees.length
           
           // Simpan data detail untuk masing-masing kategori
           setDetailData({
@@ -383,10 +416,12 @@ const Dashboard: React.FC = () => {
             tepatWaktu: tepatWaktuEmployees,
             telatMasuk: telatEmployees,
             pulangCepat: pulangCepatEmployees,
+            telatMasukPulangCepat: telatMasukPulangCepatEmployees,
             hadirHariIni: hadirEmployees,
             absensiTidakLengkap: tidakLengkapEmployees,
             totalIzin: izinEmployees,
-            pendingIzin: pendingIzinEmployees
+            pendingIzin: pendingIzinEmployees,
+            dayOff: dayOffEmployees
           })
           
           console.log('📊 Dashboard stats calculated:', {
@@ -396,10 +431,12 @@ const Dashboard: React.FC = () => {
             tepatWaktu,
             telatMasuk,
             pulangCepat,
+            telatMasukPulangCepat,
             totalIzin,
             pendingIzin,
             absensiTidakLengkap,
-            alpha
+            alpha,
+            dayOff
           })
           
           setStats({
@@ -409,10 +446,12 @@ const Dashboard: React.FC = () => {
             tepatWaktu,
             telatMasuk,
             pulangCepat,
+            telatMasukPulangCepat,
             totalIzin,
             pendingIzin,
             absensiTidakLengkap,
-            alpha
+            alpha,
+            dayOff
           })
           
         } else {
@@ -428,10 +467,12 @@ const Dashboard: React.FC = () => {
           tepatWaktu: 0,
           telatMasuk: 0,
           pulangCepat: 0,
+          telatMasukPulangCepat: 0,
           totalIzin: 0,
           pendingIzin: 0,
           absensiTidakLengkap: 0,
-          alpha: 0
+          alpha: 0,
+          dayOff: 0
         })
       } finally {
         setLoading(false)
@@ -566,8 +607,10 @@ const Dashboard: React.FC = () => {
                         { key: 'tepatWaktu' as const, label: 'Tepat Waktu', value: stats.tepatWaktu, percentage: stats.hadirHariIni > 0 ? Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100) : 0 },
                         { key: 'telatMasuk' as const, label: 'Telat Masuk', value: stats.telatMasuk, percentage: stats.hadirHariIni > 0 ? Math.round((stats.telatMasuk / stats.hadirHariIni) * 100) : 0 },
                         { key: 'pulangCepat' as const, label: 'Pulang Cepat', value: stats.pulangCepat, percentage: stats.hadirHariIni > 0 ? Math.round((stats.pulangCepat / stats.hadirHariIni) * 100) : 0 },
+                        { key: 'telatMasukPulangCepat' as const, label: 'Telat + Pulang Cepat', value: stats.telatMasukPulangCepat, description: 'Keduanya terjadi' },
                         { key: 'absensiTidakLengkap' as const, label: 'Tidak Lengkap', value: stats.absensiTidakLengkap, description: 'Hanya masuk/keluar' },
                         { key: 'alpha' as const, label: 'Alpha', value: stats.alpha, description: 'Tidak hadir & tidak izin' },
+                        { key: 'dayOff' as const, label: 'Day Off', value: stats.dayOff, description: 'Libur hari ini' },
                         { key: 'totalIzin' as const, label: 'Total Izin', value: stats.totalIzin, description: 'Termasuk multi-day' },
                         { key: 'pendingIzin' as const, label: 'Pending Izin', value: stats.pendingIzin, description: 'Perlu persetujuan' },
                       ].map((stat) => (
@@ -595,7 +638,7 @@ const Dashboard: React.FC = () => {
                 {/* Desktop View - Original Grid Cards */}
                 <div className="hidden sm:block">
                   {/* Row 1: 5 Cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-6">
                     {/* Total Karyawan */}
                     <button 
                       onClick={() => navigateToEmployees()}
@@ -700,128 +743,117 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
                     </button>
+
+                    <button onClick={() => handleReview('dayOff', detailData.dayOff)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-purple-400 text-left group">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors duration-300">
+                          <span className="text-lg">🌴</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Day Off</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.dayOff}</p>
+                          <p className="text-xs text-slate-500">Libur hari ini</p>
+                          {stats.dayOff > 0 && <p className="text-xs text-purple-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Review →</p>}
+                        </div>
+                      </div>
+                    </button>
                   </div>
 
-                  {/* Row 2: 5 Cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                  {/* Row 2: 6 Cards — 3 kolom kiri, 3 kanan */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-6">
                     {/* Tepat Waktu */}
-                    <button 
-                      onClick={() => handleReview('tepatWaktu', detailData.tepatWaktu)}
-                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                    >
+                    <button onClick={() => handleReview('tepatWaktu', detailData.tepatWaktu)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors duration-300">
-                          <span className="text-lg text-[#25a298]">⏱️</span>
+                          <span className="text-lg">⏱️</span>
                         </div>
                         <div>
                           <p className="text-xs font-medium text-slate-600">Tepat Waktu</p>
                           <p className="text-xl font-bold text-slate-900">{stats.tepatWaktu}</p>
-                          {stats.hadirHariIni > 0 && (
-                            <p className="text-xs text-slate-500">
-                              {Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100)}%
-                            </p>
-                          )}
-                          {stats.tepatWaktu > 0 && (
-                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              Review →
-                            </p>
-                          )}
+                          {stats.hadirHariIni > 0 && <p className="text-xs text-slate-500">{Math.round((stats.tepatWaktu / stats.hadirHariIni) * 100)}%</p>}
+                          {stats.tepatWaktu > 0 && <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Review →</p>}
                         </div>
                       </div>
                     </button>
 
                     {/* Telat Masuk */}
-                    <button 
-                      onClick={() => handleReview('telatMasuk', detailData.telatMasuk)}
-                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                    >
+                    <button onClick={() => handleReview('telatMasuk', detailData.telatMasuk)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
-                          <span className="text-lg text-[#25a298]">⏰</span>
+                        <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center group-hover:bg-yellow-100 transition-colors duration-300">
+                          <span className="text-lg">⏰</span>
                         </div>
                         <div>
                           <p className="text-xs font-medium text-slate-600">Telat Masuk</p>
                           <p className="text-xl font-bold text-slate-900">{stats.telatMasuk}</p>
-                          {stats.hadirHariIni > 0 && (
-                            <p className="text-xs text-slate-500">
-                              {Math.round((stats.telatMasuk / stats.hadirHariIni) * 100)}%
-                            </p>
-                          )}
-                          {stats.telatMasuk > 0 && (
-                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              Review →
-                            </p>
-                          )}
+                          {stats.hadirHariIni > 0 && <p className="text-xs text-slate-500">{Math.round((stats.telatMasuk / stats.hadirHariIni) * 100)}%</p>}
+                          {stats.telatMasuk > 0 && <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Review →</p>}
                         </div>
                       </div>
                     </button>
 
                     {/* Pulang Cepat */}
-                    <button 
-                      onClick={() => handleReview('pulangCepat', detailData.pulangCepat)}
-                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                    >
+                    <button onClick={() => handleReview('pulangCepat', detailData.pulangCepat)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors duration-300">
-                          <span className="text-lg text-[#25a298]">🚶‍♂️</span>
+                          <span className="text-lg">🚶</span>
                         </div>
                         <div>
                           <p className="text-xs font-medium text-slate-600">Pulang Cepat</p>
                           <p className="text-xl font-bold text-slate-900">{stats.pulangCepat}</p>
-                          {stats.hadirHariIni > 0 && (
-                            <p className="text-xs text-slate-500">
-                              {Math.round((stats.pulangCepat / stats.hadirHariIni) * 100)}%
-                            </p>
-                          )}
-                          {stats.pulangCepat > 0 && (
-                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              Review →
-                            </p>
-                          )}
+                          {stats.hadirHariIni > 0 && <p className="text-xs text-slate-500">{Math.round((stats.pulangCepat / stats.hadirHariIni) * 100)}%</p>}
+                          {stats.pulangCepat > 0 && <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Review →</p>}
                         </div>
                       </div>
                     </button>
 
-                    {/* Absensi Tidak Lengkap */}
-                    <button 
-                      onClick={() => handleReview('absensiTidakLengkap', detailData.absensiTidakLengkap)}
-                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                    >
+                    {/* Telat Masuk + Pulang Cepat */}
+                    <button onClick={() => handleReview('telatMasukPulangCepat', detailData.telatMasukPulangCepat)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
+                          <span className="text-lg">🔴</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-600">Telat Masuk + Pulang Cepat</p>
+                          <p className="text-xl font-bold text-slate-900">{stats.telatMasukPulangCepat}</p>
+                          <p className="text-xs text-slate-500">Keduanya terjadi</p>
+                          {stats.telatMasukPulangCepat > 0 && <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Review →</p>}
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Tidak Lengkap */}
+                    <button onClick={() => handleReview('absensiTidakLengkap', detailData.absensiTidakLengkap)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-gray-100 transition-colors duration-300">
-                          <span className="text-lg text-[#25a298]">⚠️</span>
+                          <span className="text-lg">⚠️</span>
                         </div>
                         <div>
                           <p className="text-xs font-medium text-slate-600">Tidak Lengkap</p>
                           <p className="text-xl font-bold text-slate-900">{stats.absensiTidakLengkap}</p>
-                          <p className="text-xs text-slate-500">Hanya masuk/keluar</p>
-                          {stats.absensiTidakLengkap > 0 && (
-                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              Review →
-                            </p>
-                          )}
+                          <p className="text-xs text-slate-500">Belum clock out</p>
+                          {stats.absensiTidakLengkap > 0 && <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Review →</p>}
                         </div>
                       </div>
                     </button>
 
-                    {/* ALPHA - KARYAWAN TIDAK ADA KETERANGAN */}
-                    <button 
-                      onClick={() => handleReview('alpha', detailData.alpha)}
-                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group"
-                    >
+                    {/* Alpha */}
+                    <button onClick={() => handleReview('alpha', detailData.alpha)}
+                      className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 hover:border-[#25a298] text-left group">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-100 transition-colors duration-300">
-                          <span className="text-lg text-[#25a298]">❌</span>
+                          <span className="text-lg">❌</span>
                         </div>
                         <div>
                           <p className="text-xs font-medium text-slate-600">Alpha</p>
                           <p className="text-xl font-bold text-slate-900">{stats.alpha}</p>
                           <p className="text-xs text-slate-500">Tidak hadir & tidak izin</p>
-                          {stats.alpha > 0 && (
-                            <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              Review →
-                            </p>
-                          )}
+                          {stats.alpha > 0 && <p className="text-xs text-[#25a298] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Review →</p>}
                         </div>
                       </div>
                     </button>
@@ -836,33 +868,14 @@ const Dashboard: React.FC = () => {
             <div className="mb-6">
               {quickActions.length > 0 ? (
                 <>
-                  {/* Mobile View - 2 column for Data Karyawan - Laporan, 1 column for Pengaturan */}
+                  {/* Mobile View - 2 column */}
                   <div className="sm:hidden">
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      {quickActions
-                        .filter((action) => action.title !== 'Pengaturan')
-                        .map((action) => (
-                          <button
-                            key={action.id}
-                            onClick={() => handleNavigation(action.path)}
-                            className="w-full bg-white p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left flex items-center justify-between"
-                          >
-                            <div>
-                              <h3 className="font-bold text-sm text-slate-900">{action.title}</h3>
-                              <p className="text-xs text-slate-600 mt-1">{action.description}</p>
-                            </div>
-                            <span className="text-slate-400 ml-4">→</span>
-                          </button>
-                        ))}
-                    </div>
-                    {/* Pengaturan tetap 1 kolom */}
-                    {quickActions
-                      .filter((action) => action.title === 'Pengaturan')
-                      .map((action) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      {quickActions.map((action) => (
                         <button
                           key={action.id}
                           onClick={() => handleNavigation(action.path)}
-                          className="w-full bg-white p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left flex items-center justify-between mb-2"
+                          className="w-full bg-white p-3 rounded-lg border border-slate-200 hover:border-[#25a298] hover:bg-slate-50 transition-colors text-left flex items-center justify-between"
                         >
                           <div>
                             <h3 className="font-bold text-sm text-slate-900">{action.title}</h3>
@@ -871,11 +884,12 @@ const Dashboard: React.FC = () => {
                           <span className="text-slate-400 ml-4">→</span>
                         </button>
                       ))}
+                    </div>
                   </div>
 
                   {/* Desktop View - Grid with Icons */}
                   <div className="hidden sm:block">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
                       {quickActions.map((action) => (
                         <button
                           key={action.id}

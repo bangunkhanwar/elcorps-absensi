@@ -32,16 +32,14 @@ const TambahKaryawan: React.FC<Props> = ({
   setShowModal,
   formData,
   setFormData,
-  handleSubmit:_,
+  handleSubmit,
   message,
   unitKerjaList,
-  // PROPS BARU - PERBAIKI TYPO
   jabatanOptions = [],
   departemenOptions = [],
-  divisiOptions = []  // ← PERBAIKI: dari "dvisiOption" menjadi "divisiOptions"
+  divisiOptions = [] 
 }) => {
   const [showPassword, setShowPassword] = useState(false)
-  const [submitLoading, setSubmitLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -53,87 +51,6 @@ const TambahKaryawan: React.FC<Props> = ({
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword)
-  }
-
-  // Fungsi handleSubmit yang diperbaiki dengan token
-  const handleSubmitFixed = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitLoading(true)
-    
-    try {
-      if (!formData.unit_kerja) {
-        alert('Unit kerja harus dipilih')
-        return
-      }
-
-      const selectedUnit = unitKerjaList.find(unit => unit.nama_unit === formData.unit_kerja)
-      
-      if (!selectedUnit) {
-        alert('Unit kerja tidak valid')
-        return
-      }
-
-      // Ambil token dari localStorage
-      const token = localStorage.getItem('token')
-      if (!token) {
-        alert('Token tidak ditemukan. Silakan login ulang.')
-        return
-      }
-
-      const payload = {
-        nama: formData.nama,
-        nik: formData.nik,
-        email: formData.email,
-        password: formData.password,
-        jabatan: formData.jabatan,
-        departemen: formData.departemen,
-        divisi: formData.divisi,
-        role: formData.role,
-        unit_kerja_id: selectedUnit.id,
-        website_access: formData.website_access
-      }
-
-      console.log('Data yang dikirim:', payload)
-
-      // Kirim dengan token di header
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        console.log('✅ Register success:', result)
-        setFormData({
-          email: '',
-          password: '',
-          nik: '',
-          nama: '',
-          jabatan: '',
-          departemen: '',
-          divisi: '',
-          unit_kerja: '',
-          role: 'karyawan',
-          website_access: false
-        })
-        setShowModal(false)
-        window.location.reload()
-      } else {
-        console.error('❌ Register error:', result)
-        alert(`Gagal mendaftarkan karyawan: ${result.message || 'Unknown error'}`)
-      }
-      
-    } catch (error) {
-      console.error('❌ Register error:', error)
-      alert('Terjadi kesalahan jaringan')
-    } finally {
-      setSubmitLoading(false)
-    }
   }
 
   // Searchable dropdown states
@@ -214,7 +131,7 @@ const TambahKaryawan: React.FC<Props> = ({
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50">
-          <form onSubmit={handleSubmitFixed} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Account Information */}
             <div className="bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-100">
@@ -589,12 +506,11 @@ const TambahKaryawan: React.FC<Props> = ({
                 Batal
               </button>
               <button
-                type="button"
-                onClick={handleSubmitFixed}
-                disabled={!formData.unit_kerja || submitLoading}
+                type="submit"
+                disabled={!formData.unit_kerja}
                 className="px-4 py-2 text-xs bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>{submitLoading ? 'Menyimpan...' : 'Simpan'}</span>
+                <span>Simpan</span>
               </button>
             </div>
           </div>

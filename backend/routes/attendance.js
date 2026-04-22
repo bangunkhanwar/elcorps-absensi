@@ -54,7 +54,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 } 
 
 // Helper function: Calculate check-in status (digunakan saat clock-in)
-// Nilai: 'tepat_waktu' | 'terlambat'
+// Nilai: 'tepat_waktu' | 'telat_masuk'
 function calculateStatus(currentTime, shiftTime, tolerance) {
   if (!currentTime || typeof currentTime !== 'string' || !currentTime.includes(':')) {
     console.warn('⚠️ calculateStatus: invalid currentTime:', currentTime);
@@ -77,7 +77,7 @@ function calculateStatus(currentTime, shiftTime, tolerance) {
   const shiftTotalMinutes = shiftHour * 60 + shiftMinute;
   const batasTelat = shiftTotalMinutes + (tolerance || 5);
 
-  return currentTotalMinutes <= batasTelat ? 'tepat_waktu' : 'terlambat';
+  return currentTotalMinutes <= batasTelat ? 'tepat_waktu' : 'telat_masuk';
 }
 
 // Helper function: Calculate FINAL attendance status (digunakan saat clock-out)
@@ -494,7 +494,7 @@ router.post('/checkout', auth, upload.single('foto_keluar'), optimizeImage, asyn
     const updatedAttendance = await Attendance.updateCheckOut(
       attendance.id,
       currentTime,
-      req.file ? getRelativeUploadPath('attendance', req.file.filename) : '',
+       req.file ? getRelativeUploadPath('attendance', req.file.filename) : '',
       {
         lokasi_keluar,
         status: finalStatus
@@ -561,6 +561,11 @@ router.get('/today', auth, async (req, res) => {
       timezone: user.timezone
     };
     
+    // Normalisasi status legacy jika ada
+    if (attendance) {
+      attendance.status = normalizeStatusLegacy(attendance.status);
+    }
+
     // Cek apakah hari ini adalah day off
     const isDayOff = attendance?.status === 'day_off';
 
@@ -597,12 +602,17 @@ router.get('/today-all', auth, async (req, res) => {
     }
     
     const attendance = await Attendance.getTodayAttendance(unitId);
+
+    const normalizedAttendanceTodayAll = attendance.map(att => ({
+      ...att,
+      status: normalizeStatusLegacy(att.status)
+    }));
     
     res.json({
       success: true,
       message: 'Data absensi hari ini',
       date: new Date().toISOString().split('T')[0],
-      attendances: attendance
+      attendances: normalizedAttendanceTodayAll
     });
   } catch (error) {
     console.error('Today-all error:', error);
@@ -653,12 +663,18 @@ router.get('/all', auth, async (req, res) => {
     );
     
     console.log(`✅ Successfully retrieved ${attendance.length} attendance records`);
+
+    // Normalisasi status lama dari DB untuk backward compatibility
+    const normalizedAttendance = attendance.map(att => ({
+      ...att,
+      status: normalizeStatusLegacy(att.status)
+    }));
     
     res.json({
       success: true,
       message: 'Data semua absensi',
       period: { startDate: queryStartDate, endDate: queryEndDate },
-      attendances: attendance
+      attendances: normalizedAttendance
     });
   } catch (error) {
     console.error('❌ All attendance error:', error.message);
@@ -903,5 +919,23 @@ router.get('/day-off/today', auth, async (req, res) => {
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
+
+// Helper: normalisasi status lama dari DB ke format baru
+// Menangani data lama yang masih menyimpan 'terlambat', 'Tepat Waktu', dll
+function normalizeStatusLegacy(status) {
+  if (!status) return status;
+  const s = status.toLowerCase().trim();
+  const map = {
+    'terlambat':              'telat_masuk',
+    'tepat waktu':            'tepat_waktu',
+    'tidak lengkap':          'tidak_lengkap',
+    'pulang cepat':           'pulang_cepat',
+    'telat masuk':            'telat_masuk',
+    'masuk telat':            'telat_masuk',
+    'masuk telat + pulang cepat': 'telat_masuk_pulang_cepat',
+    'telat masuk + pulang cepat': 'telat_masuk_pulang_cepat',
+  };
+  return map[s] || s;
+}
 
 module.exports = router;

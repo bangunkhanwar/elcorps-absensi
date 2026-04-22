@@ -53,7 +53,7 @@ const DataKaryawan: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
-  const [formData, setFormData] = useState<EmployeeForm>({
+  const initialFormData: EmployeeForm = {
     email: '',
     password: '',
     nik: '',
@@ -65,7 +65,8 @@ const DataKaryawan: React.FC = () => {
     role: 'karyawan',
     shift_id: null,
     website_access: false
-  })
+  };
+  const [formData, setFormData] = useState<EmployeeForm>(initialFormData);
   const [searchTerm, setSearchTerm] = useState('')
   const [unitKerjaList, setUnitKerjaList] = useState<any[]>([])
 
@@ -105,6 +106,28 @@ const DataKaryawan: React.FC = () => {
     
     
   }, [location.search])
+
+  useEffect(() => {
+    if (showModal) {
+      setFormData(initialFormData);
+      setMessage(''); 
+    }
+  }, [showModal]);
+
+  useEffect(() => {
+    const savedMessage = sessionStorage.getItem('karyawanMessage');
+    if (savedMessage) {
+      setMessage(savedMessage);
+      sessionStorage.removeItem('karyawanMessage');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -259,23 +282,8 @@ const DataKaryawan: React.FC = () => {
       console.log('📤 Sending data to register:', userData)
       await authAPI.register(userData)
       
-      setMessage('Karyawan berhasil ditambahkan!')
-      setShowModal(false)
-      
-      setFormData({
-        email: '',
-        password: '',
-        nik: '',
-        nama: '',
-        jabatan: '',
-        departemen: '',
-        divisi: '',
-        unit_kerja: '',
-        role: 'karyawan',
-        website_access: false,
-      })
-
-      fetchEmployees()
+      sessionStorage.setItem('karyawanMessage', 'Karyawan berhasil ditambahkan!');
+      window.location.reload();
 
     } catch (error: any) {
       console.error('❌ Register error:', error)
@@ -307,12 +315,12 @@ const DataKaryawan: React.FC = () => {
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedEmployee) return
-    
+    e.preventDefault();
+    if (!selectedEmployee) return;
+
     try {
-      const selectedUnit = unitKerjaList.find(unit => unit.nama_unit === formData.unit_kerja)
-      
+      const selectedUnit = unitKerjaList.find(unit => unit.nama_unit === formData.unit_kerja);
+
       const updateData: any = {
         nama: formData.nama,
         nik: formData.nik,
@@ -323,36 +331,33 @@ const DataKaryawan: React.FC = () => {
         unit_kerja_id: selectedUnit ? selectedUnit.id : null,
         role: formData.role,
         website_access: formData.website_access,
-      }
+      };
 
       if (formData.password) {
-        updateData.password = formData.password
+        updateData.password = formData.password;
       }
 
-      await authAPI.updateUser(selectedEmployee.id, updateData)
-      setMessage('Karyawan berhasil diupdate!')
-      setShowEditModal(false)
-      setSelectedEmployee(null)
-      fetchEmployees()
+      await authAPI.updateUser(selectedEmployee.id, updateData);
+
+      sessionStorage.setItem('karyawanMessage', 'Karyawan berhasil diupdate!');
+      window.location.reload();
     } catch (error: any) {
-      console.error('Update error:', error)
-      setMessage(error.response?.data?.error || 'Gagal mengupdate karyawan')
+      console.error('Update error:', error);
+      setMessage(error.response?.data?.error || 'Gagal mengupdate karyawan');
     }
-  }
+  };
 
   const confirmDelete = async () => {
-    if (!selectedEmployee) return
-    
+    if (!selectedEmployee) return;
+
     try {
-      await authAPI.deleteUser(selectedEmployee.id)
-      setMessage('Karyawan berhasil dihapus!')
-      setShowDeleteModal(false)
-      setSelectedEmployee(null)
-      fetchEmployees()
+      await authAPI.deleteUser(selectedEmployee.id);
+      sessionStorage.setItem('karyawanMessage', 'Karyawan berhasil dihapus!');
+      window.location.reload();
     } catch (error: any) {
-      setMessage(error.response?.data?.error || 'Gagal menghapus karyawan')
+      setMessage(error.response?.data?.error || 'Gagal menghapus karyawan');
     }
-  }
+  };
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage
