@@ -304,64 +304,124 @@ const Absensi: React.FC = () => {
       })
 
       // Map absensi & izin by user_id
-      const attendanceMap = new Map<number, any>()
-      attendances.forEach((att: any) => attendanceMap.set(att.user_id, att))
+      const isMultiDay = startDate !== endDate
+      if (isMultiDay) {
+        // Mode multi-hari: tampil per baris per tanggal
+        const leaveMap = new Map<number, any>()
+        approvedLeaves.forEach((leave: any) => {
+          if (leave.user_id) leaveMap.set(leave.user_id, leave)
+        })
 
-      const leaveMap = new Map<number, any>()
-      approvedLeaves.forEach((leave: any) => {
-        if (leave.user_id) leaveMap.set(leave.user_id, leave)
-      })
+        const combined: AttendanceData[] = attendances
+          .filter((att: any) => {
+            // Filter unit untuk leader
+            const user = allUsers.find((u: any) => u.id === att.user_id)
+            return !!user
+          })
+          .map((att: any, index: number) => {
+            const user = allUsers.find((u: any) => u.id === att.user_id)
+            if (!user) return null
 
-      // Gabungkan: semua user (yang sudah difilter) + status absensi mereka
-      const combined: AttendanceData[] = allUsers
-        .map((user: any, index: number) => {
-          const att = attendanceMap.get(user.id)
-          const leave = leaveMap.get(user.id)
-
-          let status: AttendanceData['status']
-          if (att) {
+            const leave = leaveMap.get(user.id)
+            const hasLeave = approvedLeaves.some((l: any) => l.user_id === user.id || l.nik === user.nik)
             const dbStatus = normalizeStatus(att.status)
+
+            let status: AttendanceData['status']
             if (dbStatus === 'day_off') {
               status = 'day_off'
             } else {
-              const hasLeave = approvedLeaves.some(
-                (l: any) => (l.user_id === user.id || l.nik === user.nik)
-              )
               status = hasLeave ? 'izin' : (dbStatus as AttendanceData['status'])
             }
-          } else if (leave) {
-            status = 'izin'
-          } else {
-            status = 'alpha'
-          }
 
-          const unitInfo = unitKerjaList.find(u => u.id === user.unit_kerja_id)
+            const unitInfo = unitKerjaList.find(u => u.id === user.unit_kerja_id)
 
-          return {
-            id: att?.id || -(user.id),
-            no: index + 1,
-            nama: user.nama || '-',
-            unit_kerja: user.nama_unit || unitInfo?.nama_unit || '-',
-            unit_kerja_id: user.unit_kerja_id,
-            tipe_unit: unitInfo?.tipe_unit || user.tipe_unit || '',
-            jamMasuk: att ? formatTimeFromString(att.waktu_masuk_jakarta || att.waktu_masuk) : '-',
-            jamPulang: att ? formatTimeFromString(att.waktu_keluar_jakarta || att.waktu_keluar) : '-',
-            status,
-            nik: user.nik || '-',
-            jabatan: user.jabatan || '-',
-            departemen: user.departemen || '-',
-            divisi: user.divisi || '-',
-            lokasi: att?.location || user.nama_unit || '-',
-            lokasi_masuk: att?.lokasi_masuk || att?.location || user.nama_unit || '-',
-            lokasi_keluar: att?.lokasi_keluar || '-',
-            keteranganIzin: leave?.keterangan || '',
-            foto_masuk: att?.foto_masuk || '',
-            foto_keluar: att?.foto_keluar || '',
-            tanggal_absen: att?.tanggal_absen || startDate
-          }
+            return {
+              id: att.id,
+              no: index + 1,
+              nama: user.nama || '-',
+              unit_kerja: user.nama_unit || unitInfo?.nama_unit || '-',
+              unit_kerja_id: user.unit_kerja_id,
+              tipe_unit: unitInfo?.tipe_unit || user.tipe_unit || '',
+              jamMasuk: formatTimeFromString(att.waktu_masuk_jakarta || att.waktu_masuk),
+              jamPulang: formatTimeFromString(att.waktu_keluar_jakarta || att.waktu_keluar),
+              status,
+              nik: user.nik || '-',
+              jabatan: user.jabatan || '-',
+              departemen: user.departemen || '-',
+              divisi: user.divisi || '-',
+              lokasi: att.location || user.nama_unit || '-',
+              lokasi_masuk: att.lokasi_masuk || att.location || user.nama_unit || '-',
+              lokasi_keluar: att.lokasi_keluar || '-',
+              keteranganIzin: leave?.keterangan || '',
+              foto_masuk: att.foto_masuk || '',
+              foto_keluar: att.foto_keluar || '',
+              tanggal_absen: att.tanggal_absen || startDate
+            }
+          })
+          .filter(Boolean) as AttendanceData[]
+
+        setAttendanceData(combined)
+
+      } else {
+        // Mode single-hari: tampil semua user + status (termasuk alpha)
+        const attendanceMap = new Map<number, any>()
+        attendances.forEach((att: any) => attendanceMap.set(att.user_id, att))
+
+        const leaveMap = new Map<number, any>()
+        approvedLeaves.forEach((leave: any) => {
+          if (leave.user_id) leaveMap.set(leave.user_id, leave)
         })
 
-      setAttendanceData(combined)
+        const combined: AttendanceData[] = allUsers
+          .map((user: any, index: number) => {
+            const att = attendanceMap.get(user.id)
+            const leave = leaveMap.get(user.id)
+
+            let status: AttendanceData['status']
+            if (att) {
+              const dbStatus = normalizeStatus(att.status)
+              if (dbStatus === 'day_off') {
+                status = 'day_off'
+              } else {
+                const hasLeave = approvedLeaves.some(
+                  (l: any) => (l.user_id === user.id || l.nik === user.nik)
+                )
+                status = hasLeave ? 'izin' : (dbStatus as AttendanceData['status'])
+              }
+            } else if (leave) {
+              status = 'izin'
+            } else {
+              status = 'alpha'
+            }
+
+            const unitInfo = unitKerjaList.find(u => u.id === user.unit_kerja_id)
+
+            return {
+              id: att?.id || -(user.id),
+              no: index + 1,
+              nama: user.nama || '-',
+              unit_kerja: user.nama_unit || unitInfo?.nama_unit || '-',
+              unit_kerja_id: user.unit_kerja_id,
+              tipe_unit: unitInfo?.tipe_unit || user.tipe_unit || '',
+              jamMasuk: att ? formatTimeFromString(att.waktu_masuk_jakarta || att.waktu_masuk) : '-',
+              jamPulang: att ? formatTimeFromString(att.waktu_keluar_jakarta || att.waktu_keluar) : '-',
+              status,
+              nik: user.nik || '-',
+              jabatan: user.jabatan || '-',
+              departemen: user.departemen || '-',
+              divisi: user.divisi || '-',
+              lokasi: att?.location || user.nama_unit || '-',
+              lokasi_masuk: att?.lokasi_masuk || att?.location || user.nama_unit || '-',
+              lokasi_keluar: att?.lokasi_keluar || '-',
+              keteranganIzin: leave?.keterangan || '',
+              foto_masuk: att?.foto_masuk || '',
+              foto_keluar: att?.foto_keluar || '',
+              tanggal_absen: att?.tanggal_absen || startDate
+            }
+          })
+
+        setAttendanceData(combined)
+      }
     } catch (error: any) {
       console.error('Error fetching data:', error)
       setAttendanceData([])
@@ -473,7 +533,13 @@ const Absensi: React.FC = () => {
       item.divisi.toLowerCase().includes(searchData.toLowerCase()) ||
       item.unit_kerja.toLowerCase().includes(searchData.toLowerCase())
     )
-    .sort((a, b) => a.nama.localeCompare(b.nama))
+    .sort((a, b) => {
+      if (startDate !== endDate) {
+        const dateDiff = a.tanggal_absen.localeCompare(b.tanggal_absen)
+        if (dateDiff !== 0) return dateDiff
+      }
+      return a.nama.localeCompare(b.nama)
+    })
 
   const totalDataPages = Math.ceil(filteredAttendanceData.length / itemsPerPage)
   const startDataIndex = (currentDataPage - 1) * itemsPerPage
@@ -716,7 +782,7 @@ const Absensi: React.FC = () => {
           'DEPARTEMEN': item.departemen,
           'DIVISI': item.divisi,
           'UNIT KERJA': item.unit_kerja,
-          'TANGGAL': item.tanggal_absen,
+          'TANGGAL': item.tanggal_absen ? item.tanggal_absen.split('T')[0] : '-',
           'JAM MASUK': item.jamMasuk,
           'JAM PULANG': item.jamPulang,
           'STATUS': getStatusText(item.status),
@@ -734,7 +800,7 @@ const Absensi: React.FC = () => {
           'DEPARTEMEN': item.departemen,
           'DIVISI': item.divisi,
           'UNIT KERJA': item.unit_kerja,
-          'TANGGAL': item.tanggal_absen,
+          'TANGGAL': item.tanggal_absen ? item.tanggal_absen.split('T')[0] : '-',
           'JAM MASUK': item.jamMasuk,
           'JAM PULANG': item.jamPulang,
           'STATUS': getStatusText(item.status),
@@ -1110,6 +1176,9 @@ const Absensi: React.FC = () => {
                           <tr className="bg-slate-50 border-b border-slate-200">
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">No</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nama</th>
+                            {startDate !== endDate && (
+                              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Tanggal</th>
+                            )}
                             {isEmployeeOnlyView ? (
                               <>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">NIK</th>
@@ -1133,18 +1202,20 @@ const Absensi: React.FC = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-200">
                           {paginatedAttendanceData.map((item, index) => (
-                            <tr
-                              key={`${item.id}-${index}`}
-                              className={`hover:bg-slate-50 transition-colors duration-150 ${
-                                item.status === 'alpha' ? 'opacity-60' :
-                                item.status === 'day_off' ? 'bg-purple-50/50' : ''
-                              }`}
-                            >
+                            <tr key={`${item.id}-${index}`} className={`hover:bg-slate-50 transition-colors duration-150 ${
+                              item.status === 'alpha' ? 'opacity-60' :
+                              item.status === 'day_off' ? 'bg-purple-50/50' : ''
+                            }`}>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{startDataIndex + index + 1}</td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-slate-900">{item.nama}</div>
                                 <div className="text-xs text-slate-500">{item.nik}</div>
                               </td>
+                              {startDate !== endDate && (
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                  {new Date(item.tanggal_absen.split('T')[0] + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </td>
+                              )}
                               {isEmployeeOnlyView ? (
                                 <>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{item.nik}</td>
@@ -1221,7 +1292,7 @@ const Absensi: React.FC = () => {
                               {Math.min(startDataIndex + paginatedAttendanceData.length, filteredAttendanceData.length)}
                             </span>
                             {' '}dari{' '}
-                            <span className="font-medium text-[#25a298]">{filteredAttendanceData.length}</span> karyawan
+                            <span className="font-medium text-[#25a298]">{filteredAttendanceData.length}</span> {startDate !== endDate ? 'data' : 'karyawan'}
                           </p>
 
                           {/* Desktop pagination */}
