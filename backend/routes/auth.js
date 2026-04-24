@@ -487,7 +487,7 @@ router.get('/unit/:unitId/employees', auth, async (req, res) => {
       FROM users u
       LEFT JOIN shifts s ON u.shift_id = s.id
       LEFT JOIN unit_kerja uk ON u.unit_kerja_id = uk.id
-      WHERE u.unit_kerja_id = $1 AND u.role = 'karyawan'
+      WHERE u.unit_kerja_id = $1
       ORDER BY u.nama
     `;
     

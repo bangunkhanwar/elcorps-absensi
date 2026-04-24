@@ -347,9 +347,9 @@ const LeaveScreen = () => {
                 </>
               ) : (
                 <>
-                  <h3 className="text-gray-500 font-semibold mb-2">Saldo Cuti Tidak Tersedia</h3>
-                  <div className="text-4xl font-black text-gray-400">0 <span className="text-lg text-gray-500 font-medium">Hari</span></div>
-                  <p className="text-xs text-gray-400 mt-3 text-center">{balanceError || 'Data saldo cuti belum berhasil dimuat.'}</p>
+                  <h3 className="text-red-600 font-semibold mb-2">Saldo Cuti Tidak Tersedia</h3>
+                  <div className="text-4xl font-black text-red-400">0 <span className="text-lg text-gray-500 font-medium">Hari</span></div>
+                  <p className="text-sm text-red-500 mt-3 text-center font-semibold">{balanceError || 'Data saldo cuti belum berhasil dimuat.'}</p>
                 </>
               )}
             </div>
@@ -515,8 +515,8 @@ const LeaveScreen = () => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!isFormValid || loading}
-                className={`flex-1 rounded-xl py-4 font-semibold text-lg transition ${isFormValid && !loading ? 
+                disabled={!isFormValid || loading || !!balanceError}
+                className={`flex-1 rounded-xl py-4 font-semibold text-lg transition ${isFormValid && !loading && !balanceError ? 
                   'bg-primary hover:bg-primary-dark text-white' : 
                   'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
               >

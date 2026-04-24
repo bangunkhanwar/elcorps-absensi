@@ -144,51 +144,18 @@ router.post('/upload', auth, upload.single('file'), optimizeImage, async (req, r
 router.get(['/balance', '/leave-balance'], auth, async (req, res) => {
   try {
     const user_id = req.user.id;
-    const currentYear = new Date().getFullYear();
-
-    // Cek apakah sudah ada saldo untuk tahun ini
-    let saldoResult = await pool.query(
-      'SELECT * FROM saldo_cuti WHERE user_id = $1 AND tahun = $2',
-      [user_id, currentYear]
-    );
-
-    if (saldoResult.rowCount === 0) {
-      // Buat saldo baru untuk tahun ini
-      // Cek akumulasi dari tahun sebelumnya
-      const prevYearResult = await pool.query(
-        'SELECT saldo_awal, saldo_terpakai FROM saldo_cuti WHERE user_id = $1 AND tahun = $2',
-        [user_id, currentYear - 1]
-      );
-
-      let saldoAwal = 12; // Default 12 hari
-
-      if (prevYearResult.rowCount > 0) {
-        const prev = prevYearResult.rows[0];
-        const sisaTahunLalu = prev.saldo_awal - prev.saldo_terpakai;
-        saldoAwal = 12 + Math.max(0, sisaTahunLalu); // Akumulasi sisa
-      }
-
-      await pool.query(
-        'INSERT INTO saldo_cuti (user_id, tahun, saldo_awal, saldo_terpakai) VALUES ($1, $2, $3, 0)',
-        [user_id, currentYear, saldoAwal]
-      );
-
-      saldoResult = await pool.query(
-        'SELECT * FROM saldo_cuti WHERE user_id = $1 AND tahun = $2',
-        [user_id, currentYear]
-      );
+    // Ambil saldo_cuti langsung dari tabel users
+    const userResult = await pool.query('SELECT saldo_cuti FROM users WHERE id = $1', [user_id]);
+    if (userResult.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'User tidak ditemukan' });
     }
-
-    const saldo = saldoResult.rows[0];
-    const saldoSisa = saldo.saldo_awal - saldo.saldo_terpakai;
-
+    const saldoCuti = userResult.rows[0].saldo_cuti ?? 0;
     res.json({
       success: true,
       data: {
-        tahun: saldo.tahun,
-        saldo_awal: saldo.saldo_awal,
-        saldo_terpakai: saldo.saldo_terpakai,
-        saldo_sisa: saldoSisa
+        saldo_awal: saldoCuti,
+        saldo_terpakai: 0, // Tidak ada tracking terpakai jika hanya pakai kolom users
+        saldo_sisa: saldoCuti
       }
     });
   } catch (error) {
@@ -237,7 +204,7 @@ router.post('/apply', auth, async (req, res) => {
     const user_id = req.user.id;
 
     // A. Dapatkan jabatan_id user saat ini
-    const userResult = await client.query('SELECT jabatan_id, jenis_kelamin FROM users WHERE id = $1', [user_id]);
+    const userResult = await client.query('SELECT jabatan_id FROM users WHERE id = $1', [user_id]);
     if (userResult.rowCount === 0) throw new Error('User tidak ditemukan');
     const userJabatanId = userResult.rows[0].jabatan_id;
 

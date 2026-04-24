@@ -434,13 +434,13 @@ const HomeScreen = () => {
       <div className="bg-white rounded-xl shadow p-4 flex-shrink-0">
         <div className="mb-2">
           <h2 className="text-lg font-semibold text-gray-900 truncate">
-            {toTitleCase(user?.nama) || 'Bangun Chaerudin Anwar'}
+            {toTitleCase(user?.nama) }
           </h2>
           <p className="text-sm text-gray-600">
-            {user?.nik || '52510.3138'}
+            {user?.nik }
           </p>
           <p className="text-sm text-gray-600 truncate">
-            {toTitleCase(user?.jabatan) || 'Staff Of Programmer'}
+            {toTitleCase(user?.jabatan)}
           </p>
         </div>
 
@@ -453,14 +453,14 @@ const HomeScreen = () => {
             <div className="flex justify-between items-center gap-2">
               <p className="text-sm text-gray-600">Departemen</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
-                {toTitleCase(user?.departemen) || 'IT & Technology'}
+                {toTitleCase(user?.departemen) }
               </p>
             </div>
 
             <div className="flex justify-between items-center gap-2">
               <p className="text-sm text-gray-600">Divisi</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
-                {toTitleCase(user?.divisi) || 'Strategic Support'}
+                {toTitleCase(user?.divisi) }
               </p>
             </div>
 
@@ -468,37 +468,13 @@ const HomeScreen = () => {
 
               <p className="text-sm text-gray-600">Lokasi Kerja</p>
               <p className="text-sm font-medium text-gray-700 truncate text-right">
-                {toTitleCase(user?.unit_kerja) || 'Head Office'}
+                {toTitleCase(user?.unit_kerja)}
               </p>
             </div>
           </div>
         </div>
 
-        {leaveBalance && (
-          <div className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-lg">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-emerald-100 text-xs font-semibold uppercase tracking-wide">Saldo Cuti</p>
-                <h3 className="text-lg font-bold">Sisa Tahun Ini</h3>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center">
-                <Calendar size={24} />
-              </div>
-            </div>
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <div className="text-4xl font-black leading-none">{leaveBalance.saldo_sisa}</div>
-                <p className="text-emerald-50 text-sm mt-1">dari {leaveBalance.saldo_awal} hari hak cuti</p>
-              </div>
-              <button
-                onClick={() => navigate('/leave')}
-                className="px-4 py-2 rounded-xl bg-white text-emerald-700 font-bold text-sm shadow-sm"
-              >
-                Ajukan Izin
-              </button>
-            </div>
-          </div>
-        )}
+       
       </div>
 
       {/* Waktu dan Tanggal */}

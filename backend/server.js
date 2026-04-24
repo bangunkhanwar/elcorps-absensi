@@ -17,8 +17,14 @@ const { router: notificationRoutes } = require('./routes/notification');
 
 // Middleware
 app.use(cors({
-    origin: ['https://elsa.elhijab.com', 'https://hradmin.elhijab.com', 'https://api.elhijab.com'],
-    credentials: true
+  origin: [
+    'https://elsa.elhijab.com',
+    'https://hradmin.elhijab.com',
+    'https://api.elhijab.com',
+    'https://sb32k63z-5000.asse.devtunnels.ms', // backend devtunnel
+    'https://sb32k63z-5174.asse.devtunnels.ms'  // frontend devtunnel
+  ],
+  credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
